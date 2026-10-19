@@ -1,0 +1,85 @@
+{
+ "items": [
+  {
+   "url": "https://hwbusters.com/news/linus-torvalds-uses-claude-code-to-rework-the-linux-page-cache-tripling-small-read-throughput/",
+   "title": "Linus Torvalds pushes a Claude Code–written page-cache rework that triples small-read throughput",
+   "summary": "Torvalds put an eight-patch branch in his own tree. Its cover letter says Claude Code wrote the code, the tests, the review of open problems and the letter's first draft, and that Torvalds ran the benchmarks. On his 8-thread laptop, reads of one shared file rose from ~10M to ~33M per second, and kernel cycles per read fell from ~2,950 to ~725. The branch is not merged, Torvalds calls its memory cost \"the part of this series that is least solved,\" and one single-thread case got slower.",
+   "why": "Agents are now doing performance work in the Linux kernel, among the most heavily reviewed code anywhere, under the name of its most demanding reviewer.",
+   "source": "Hardware Busters · first spotted by Phoronix",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://leaddev.com/leadership/your-engineering-strategy-has-a-new-failure-mode",
+   "title": "Survey: AI writes or assists 61% of enterprise code, and review is now the bottleneck",
+   "summary": "A September CloudBees survey of 213 enterprise tech leaders found that 57% name reviewing, testing and deploying code as their delivery bottleneck. Only 35% name writing code. LeadDev argues that engineering roadmaps need \"expiry dates,\" because the constraint keeps moving as generation gets cheaper.",
+   "why": "The next wave of coding-agent value (and startups) is in verification, CI and deployment, not more code generation.",
+   "source": "LeadDev",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://www.bloomberg.com/news/articles/2026-10-12/deepseek-backs-ex-tencent-ai-scientist-s-400-million-robot-lab",
+   "title": "DeepSeek reportedly leads the first round of robot-AI lab Winverse at ~$400M valuation",
+   "summary": "Per Bloomberg, DeepSeek aims to lead a round of tens of millions of dollars in Winverse AI. Ex-Tencent scientist Hu Han founded the startup this year, and Meituan's Long-Z has also committed. Terms and the investor list aren't final, and the money would come from DeepSeek's own reported $12B+ raise.",
+   "why": "Following its Unitree stake, this is DeepSeek's second robotics bet, a sign that China's leading open-weight lab sees embodied AI as its next frontier.",
+   "source": "Bloomberg (report)",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://www.bloomberg.com/news/articles/2026-10-11/amazon-is-in-talks-to-buy-ai-startup-decart-wsj-reports",
+   "title": "Amazon reportedly in talks to buy Decart for ~$7B",
+   "summary": "Per the WSJ, a deal could come together soon. Decart was valued at nearly $4B in May. It makes software that lets developers move workloads between AI chips, plus models that generate and simulate 3D worlds. Amazon gave it early access to Trainium3 in 2025.",
+   "why": "Custom chips like Trainium only win if moving workloads off Nvidia is easy, and Amazon may pay ~$7B for the software that makes it easy.",
+   "source": "WSJ via Bloomberg · Investing.com",
+   "layer": "business",
+   "importance": 4
+  },
+  {
+   "url": "https://www.techmeme.com/261012/p23",
+   "title": "Microsoft reportedly on track to pay Anthropic $2B+ a year for Copilot models",
+   "summary": "The Information's profile of Copilot chief Charles Lamanna says he pushed Satya Nadella to pay for Claude after customers called Copilot too weak at Excel and PowerPoint work. The figure comes from one source. Lamanna is still weighing Anthropic against OpenAI for capability and margin.",
+   "why": "OpenAI's biggest backer is becoming a top Anthropic customer. App-layer companies buy the best model per task, and that squeezes their margins.",
+   "source": "The Information (report) via Techmeme",
+   "layer": "business",
+   "importance": 4
+  },
+  {
+   "url": "https://www.prnewswire.com/news-releases/hcltech-and-anthropic-sign-global-premier-partnership-to-scale-governed-agentic-ai-across-global-enterprises-302905630.html",
+   "title": "HCLTech signs a Global Premier Partnership with Anthropic and creates a Claude business unit",
+   "summary": "The Indian IT giant is creating a dedicated Anthropic unit and Center of Excellence, staffed with forward-deployed engineers, for companies with $500M–$5B in revenue. It will also build Claude and Claude Code into its AI Force platform and HCLSoftware products like BigFix and AppScan. No financial terms or timelines were disclosed.",
+   "why": "Model labs are reaching the large mid-market through the IT-services firms that used to sell labor-based contracts.",
+   "source": "HCLTech press release",
+   "layer": "business",
+   "importance": 4
+  },
+  {
+   "url": "https://huggingface.co/papers/2610.12611",
+   "title": "SoftwareGym: an LLM pipeline builds 182 fake desktop apps to train computer-use agents",
+   "summary": "Researchers at SJTU and Zhejiang University had models write specs, build apps across 12 categories and repair them until GUI tests passed (91.5% mean pass rate). Training data was then generated from those apps. After fine-tuning on the trajectories, Qwen3.5-9B's OSWorld Pass@3 rose from 41.4% to 57.0% without any OSWorld training data.",
+   "why": "If agents can learn from synthetic software, cheap generated environments start replacing expensive human-recorded demonstrations.",
+   "source": "Hugging Face Daily Papers (#4 today) · arXiv 2610.12611",
+   "layer": "training",
+   "importance": 4
+  },
+  {
+   "url": "https://azure.microsoft.com/en-us/blog/deep-dive-into-azure-maia-300-architecture/",
+   "title": "Microsoft details Maia 300, its third-gen in-house inference chip",
+   "summary": "It is built on TSMC N2P, with eight HBM4 stacks (288 GB, 18 TB/s, ~2.5× Maia 200's bandwidth) and 96 accelerators in a 167 kW rack. Microsoft claims up to 7× Maia 200's rack-scale token throughput and more than 2.5× performance per watt. The target workloads are agentic inference for Microsoft 365 Copilot, GitHub Copilot and Foundry, and more details are due at Ignite in November.",
+   "why": "Copilot pays outside labs for models (see the Anthropic item above), so owning the inference silicon is how Microsoft protects its margin. Memory bandwidth is the spec it chose to lead with.",
+   "source": "Microsoft Azure Blog",
+   "layer": "compute",
+   "importance": 4
+  },
+  {
+   "url": "https://www.theregister.com/systems/2026/10/12/amd-unveils-helion-racks-for-ai-agents-at-ocp-summit/5302652",
+   "title": "AMD's Helion rack: up to 32,768 Zen 6 CPU cores, built for agent sandboxes",
+   "summary": "AMD unveiled the open reference design at OCP Global Summit. A CPU-only version holds up to 128 256-core EPYC \"Venice\" chips, and an enterprise version adds up to 16 Instinct MI350P GPUs plus a token router that sends calls to cloud or local models. OEMs including Dell, HPE and Supermicro will build it, and reports differ on whether it ships in November 2026 or H1 2027.",
+   "why": "Agents run tools, code and browsers as well as GPU inference, so general-purpose CPUs are back in demand.",
+   "source": "The Register",
+   "layer": "compute",
+   "importance": 4
+  }
+ ]
+}

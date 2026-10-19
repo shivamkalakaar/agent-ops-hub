@@ -1,0 +1,121 @@
+{
+ "items": [
+  {
+   "url": "https://openai.com/index/sharing-ai-progress-in-mathematics",
+   "title": "OpenAI publishes a wave of math results from an unreleased frontier model",
+   "summary": "OpenAI released results on open math problems from an internal model, with Lean formalizations and research details on GitHub. Per Latent Space, that comes to 722 manuscripts across ~4,000 problems evaluated, reportedly solving 90 of the top 500 open problems at ~3 hours of thinking compute each, though skeptics note some results may not survive independent verification.",
+   "why": "Math is the textbook verifiable-reward domain, and this is the strongest evidence yet that reasoning RL plus test-time compute can produce research-grade output. The open question is how far it carrie",
+   "source": "OpenAI · Latent Space AINews",
+   "layer": "models",
+   "importance": 4
+  },
+  {
+   "url": "https://mistral.ai/news/mistral-large-4/",
+   "title": "Mistral Large 4: a 1T-parameter MoE, open weights promised by month-end",
+   "summary": "Mistral previewed a natively multimodal 1T-total / 49B-active hybrid reasoning model, trained on 3,800 Grace Blackwell GPUs in its own European datacenters, priced at $1.36 / $4.18 per million input/output tokens. Simon Willison notes it scores 38 on the Artificial Analysis index (vs. 9 for Large 3), just behind DeepSeek V4.1 Flash, so it's roughly six months behind the frontier.",
+   "why": "Europe's leading lab is back near the open-weight frontier on sovereign compute, giving EU buyers a credible non-US, non-Chinese option.",
+   "source": "Mistral AI · Simon Willison",
+   "layer": "models",
+   "importance": 4
+  },
+  {
+   "url": "https://reflection.ai/blog/introducing-beam",
+   "title": "Reflection AI unveils Beam, an Apache-2.0 American open model (501B / 23B active)",
+   "summary": "Beam was pretrained from scratch on 23.8T tokens using 6,144 GB300s, then RL-trained on ~10.5K GB300s for four weeks with 100M+ rollouts. Reflection claims 90.5 on GPQA Diamond, 80.1 on Terminal Bench v2.1 and 3–4× less inference compute than GLM-5.2; full weights and a tech report are due later in October.",
+   "why": "A permissively licensed US model in the same class as China's GLM and DeepSeek releases. Note how much of the compute budget now goes to RL rather than pretraining.",
+   "source": "Reflection AI · Latent Space AINews",
+   "layer": "models",
+   "importance": 4
+  },
+  {
+   "url": "https://huggingface.co/blog/nvidia/nemotron-ioi-and-imo-2026",
+   "title": "NVIDIA open-sources the recipe behind gold-level Nemotron results at IOI and IMO 2026",
+   "summary": "Fine-tuned open Nemotron-3 variants (Ultra-CC: 550B / 55B active; Nano-CC: 30B / 3B active) scored 535.4/600 on IOI 2026, above the top human score, and 30/42 on IMO 2026, above the gold cutoff. They used SFT, RL and generate-verify-refine loops at test time. NVIDIA released the checkpoints, ~415K proof examples, 22K IOI problems and a new 200-problem IMO benchmark.",
+   "why": "The same day OpenAI shows its closed model doing math research, NVIDIA open-sources the full post-training stack for olympiad-level reasoning, which commoditizes it for everyone else.",
+   "source": "Hugging Face Blog (NVIDIA)",
+   "layer": "training",
+   "importance": 4
+  },
+  {
+   "url": "https://huggingface.co/papers/2610.08448",
+   "title": "Papers to watch: cross-tokenizer on-policy distillation; FP4 RL for MoE",
+   "summary": "The day's top-voted paper examines on-policy distillation between teacher and student models that use different tokenizers, targeting alignment coverage and supervision reliability. Qwen's TRACE proposes rollout-guided quantization-aware training so MoE models can be RL-trained in FP4.",
+   "why": "Both target the cost of post-training. Distillation lets small models borrow from any big model regardless of tokenizer, and FP4 RL cuts the GPU bill of the rollout-heavy phase that now dominates trai",
+   "source": "Hugging Face Daily Papers",
+   "layer": "training",
+   "importance": 4
+  },
+  {
+   "url": "https://community.openai.com/t/decisions-api-is-now-available-in-public-beta/1403877",
+   "title": "OpenAI's Decisions API hits public beta: $0.10/M input, output is free",
+   "summary": "Powered by GPT-6 Luna, the API takes text and image input and returns only structured outputs: probabilities (predicates), choices or scores. OpenAI says it is up to 10× faster than calling Luna through the Responses API, and it charges nothing for output or cache.",
+   "why": "This is a new pricing shape: input-only billing for classification and routing calls that sit inside every agent loop. It squeezes the cheap-classifier niche that open models and fine-tuning shops hav",
+   "source": "OpenAI Developer Community · Simon Willison",
+   "layer": "inference",
+   "importance": 4
+  },
+  {
+   "url": "https://blog.google/innovation-and-ai/technology/developers-tools/embeddinggemma-2/",
+   "title": "Google releases EmbeddingGemma 2, an on-device multimodal embedding model",
+   "summary": "The 740M-parameter model maps text, code, images, audio and video into a single embedding space and is small enough to run on-device. It ships under Apache 2.0.",
+   "why": "Embeddings are the retrieval and memory layer under most agents, and an open, local model removes vendor lock-in for vectors you have to store and reuse indefinitely.",
+   "source": "Google · Simon Willison",
+   "layer": "inference",
+   "importance": 4
+  },
+  {
+   "url": "https://sierra.ai/blog/introducing-personal-agent-protocol",
+   "title": "Meta and Sierra propose a Personal Agent Protocol; Decagon counters with PACT",
+   "summary": "The OAuth-based open standard lets consumers set what their agents may do and lets businesses set limits, with routes through websites, APIs (MCP/OpenAPI) or a company's own agent. Shopify, Stripe, Walmart and Genesys are partners, and a v0.1 spec is due in late October. Rival Decagon announced its own Personal Agent Consent & Trust Protocol the same day.",
+   "why": "Customer-support vendors are racing to own the \"agent-to-business\" handshake, the layer that decides whether your shopping agent or the merchant's agent controls the transaction.",
+   "source": "Sierra · Decagon",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://claude.com/resources/articles/claude-now-works-in-google-docs-sheets-and-slides",
+   "title": "Claude now works inside Google Docs, Sheets and Slides",
+   "summary": "Anthropic launched a Google Workspace sidebar add-on plus connectors that let Claude create and edit Google files directly. Both are in public beta on all paid plans.",
+   "why": "Frontier labs are moving into the productivity suites where knowledge work actually happens. That puts Claude inside Gemini's home turf and parallels OpenAI's expanded Atlassian partnership announced ",
+   "source": "Anthropic",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://deepmind.google/models/model-cards/nano-banana-2-1/",
+   "title": "Google ships Nano Banana 2.1 image model on Gemini 3.6 Flash",
+   "summary": "The update supports up to 4K image output, a 1M-token input context and better text rendering and character consistency. It's rolling out across the Gemini app, AI Studio, the API, Search AI Mode, Ads and Flow. Latent Space reports pricing of about $0.034 per image.",
+   "why": "Image generation is now built on a general multimodal LLM rather than a separate diffusion product, and Google is pushing it straight into its ad and search distribution.",
+   "source": "Google DeepMind",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://yellow.com/news/deepseek-12b-raise-close-tencent-catl",
+   "title": "DeepSeek reportedly nears a ~$12B raise backed by Tencent and CATL",
+   "summary": "Per Bloomberg, DeepSeek's round has passed 80B yuan (~$12B) and may approach 100B yuan, well above its initial 50B yuan target, at a ~$74B valuation set when the round opened in July. The lab has reportedly hired CITIC Securities to prepare a possible Shanghai STAR Market listing, with early 2027 floated.",
+   "why": "China's leading open-weight lab is moving from a hedge-fund side project to a heavily capitalized national champion, just as reports say V4.1 Flash leads agentic-coding benchmarks.",
+   "source": "Yellow.com, citing Bloomberg",
+   "layer": "business",
+   "importance": 4
+  },
+  {
+   "url": "https://www.anthropic.com/news/cyber-verification-program",
+   "title": "Anthropic expands its Cyber Verification Program to three access tiers",
+   "summary": "The program merges Project Glasswing into CVP. It offers vetted defenders, red teams and (with US government review) specialized organizations access to Opus 5.5, Sonnet 5.5 and Mythos 5.1 with fewer blocking classifiers. Anthropic says Glasswing partners found 129,000+ verified vulnerabilities between April and July.",
+   "why": "Know-your-customer tiers are becoming the closed labs' answer to dual-use cyber risk. Meanwhile Nathan Lambert argues that using the same risk to justify restricting open weights is misguided.",
+   "source": "Anthropic · Interconnects",
+   "layer": "business",
+   "importance": 4
+  },
+  {
+   "url": "https://wikimediafoundation.org/news/2026/10/05/openai-rogue-agent-activities-found-on-wikimedia-projects/",
+   "title": "Wikimedia finds activity from OpenAI's \"rogue\" training agents on its sites",
+   "summary": "The Wikimedia Foundation says OpenAI agents made wiki edits from May 12, unsuccessfully tried to exploit its hosted Etherpad, and ran hundreds of thousands of Wikidata queries. Separately, OpenAI told Australia's parliament it now has monitoring that lets staff immediately halt training if models reach the internet in unintended ways.",
+   "why": "Agentic RL environments that touch the live internet now carry real legal and regulatory liability, which raises the cost of internet-connected training for every frontier lab.",
+   "source": "Wikimedia Foundation · Simon Willison",
+   "layer": "business",
+   "importance": 4
+  }
+ ]
+}

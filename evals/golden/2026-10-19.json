@@ -1,0 +1,112 @@
+{
+ "items": [
+  {
+   "url": "https://www.bnnbloomberg.ca/business/artificial-intelligence/2026/10/19/how-one-hacker-used-ai-agents-and-a-few-thousand-dollars-to-break-into-scores-of-sites-reuters-exclusive/",
+   "title": "Reuters: one hacker's AI agents made 1,200+ intrusion attempts and broke into 100+ companies for about $5,000",
+   "summary": "NorForge researcher Snorre Fagerland found the Chinese-speaking attacker's exposed tooling. It used an open tool called Cairn that appeared to run on a mix of DeepSeek and Claude Code, steered by instructions under 100 Chinese characters, and its agents then worked for hours unattended. Deere, SharkNinja and Cummins were among the victims. Deere and SharkNinja said they saw no sign that sensitive data was accessed, and Reuters couldn't confirm whether any data was taken.",
+   "why": "At about $50 per successful hack, cheap agentic tokens change the economics of offense, and that will drive spending on agent security and identity.",
+   "source": "Reuters via BNN Bloomberg · TNW",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://arxiv.org/abs/2610.22319",
+   "title": "Four Gemini 4 Argon agents beat Minecraft end to end, with no human-written game tools",
+   "summary": "The four agents controlled players through the open-source Mineflayer library and had no assigned roles. They split up the work, shared memory and chat, and wrote 2,783 programs of their own. They killed the Ender Dragon after 27 hours 14 minutes and 605 deaths, on easy difficulty, at an estimated $1,620 in model cost. The authors call it the first fully autonomous Minecraft completion.",
+   "why": "The paper shows agents keeping a plan coherent across thousands of dependent steps, and that same skill is what long-running coding and enterprise agents are sold on.",
+   "source": "arXiv (Faldor, Singh, Raileanu) · The Decoder",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://the-decoder.com/stripe-says-ai-agent-purchases-are-adding-up-but-it-wont-share-the-numbers/",
+   "title": "Stripe Link data: agent purchases grew 38× and payment volume 20× in September",
+   "summary": "About 70 assistants were using Link when Stripe ran the numbers, and Stripe says there are now about 200. Most agent transactions are around $100, with retail at 36% of transactions and travel at 28% of volume. Stripe won't give absolute counts or dollar totals, so all the growth is from an undisclosed small base.",
+   "why": "This is the first payment-network data on agentic commerce, and it arrives as banks lock agents out of moving money, so checkout rails are now a contested layer.",
+   "source": "The Decoder · Upstarts Media (original)",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://www.anthropic.com/news/public-benefit-fund",
+   "title": "Anthropic commits 5% of its shares to a Public Benefit Fund, with 2% more for every 50% rise in value",
+   "summary": "Pending stockholder approval, the fund will be a wholly-owned LLC (not a 501(c)(3)) that can make donations or pay directly to affected groups, with AI's labor-market impact as the lead example. Anthropic says that with the co-founders' 80% equity pledges and its employee donation match, about 20% of its shares will go to the public good, and none can fund lobbying or political giving. The valuation baseline and governance details are promised \"in the coming months.\"",
+   "why": "Tying the fund's stake to valuation growth makes labor-disruption spending scale with the company's own success, and WSJ is already asking how this structure and the Long-Term Benefit Trust affect an ",
+   "source": "Anthropic · TechCrunch · WSJ (LTBT)",
+   "layer": "business",
+   "importance": 4
+  },
+  {
+   "url": "https://the-decoder.com/the-neocloud-shakeout-is-coming-and-nvidia-has-the-most-to-lose/",
+   "title": "Update: investors want Nscale's IPO at $16–19B, not $30B, and executives expect only 7–10 neoclouds to survive",
+   "summary": "Per Bloomberg, investors cite Microsoft's Essex exit, a Norway site about six months late, and Firmus's pulled IPO. Microsoft and Anthropic make up about 85% of Nscale's $103.4B backlog. The Information reports that executives expect a shakeout, and non-hyperscaler customers were 45% (about $40B) of Nvidia's July-quarter datacenter revenue. Goldman went the other way today, upgrading CoreWeave to Buy, and the stock rose about 6%.",
+   "why": "Neoclouds are where Nvidia sells outside the hyperscalers, so their cost of capital now feeds directly into GPU demand.",
+   "source": "The Decoder (The Information) · Bloomberg · 24/7 Wall St.",
+   "layer": "business",
+   "importance": 4
+  },
+  {
+   "url": "https://thenextweb.com/news/emil-michael-export-controls-ai-labs-anthropic-the-information",
+   "title": "Pentagon CTO Emil Michael says export controls can be used against AI labs that don't cooperate",
+   "summary": "Speaking to The Information a day after the White House AI task force's first full meeting, Michael named export limits, foreign-national access rules and Justice Department enforcement as levers. He claimed Anthropic was put under export controls within two hours of refusing to pull back a jailbroken model, which is his account and hasn't been independently confirmed. He also said existing law is enough, and he favors American open models like Nemotron, Reflection and Thinking Machines.",
+   "why": "Export controls aimed at domestic labs, not just China, would be a new kind of regulatory risk for frontier model companies.",
+   "source": "TNW · The Information",
+   "layer": "business",
+   "importance": 4
+  },
+  {
+   "url": "https://thenextweb.com/news/doubleai-maxwell-code-execution-model-compute-costs",
+   "title": "doubleAI's Maxwell rewrites running machine code to cut compute bills, and charges a share of the savings",
+   "summary": "Amnon Shashua's startup says Maxwell watches a program as it runs and rewrites the machine code underneath, leaving the source untouched and formally proving behavior doesn't change. The company claims 4.5× faster inference kernels, 38× faster data pipelines and a 67% compute-cost cut for one unnamed customer. LTX says Maxwell doubled its inference speed. doubleAI has raised about $220M and, per WSJ, spent roughly half of it on 1,000 B300s.",
+   "why": "Pricing as a cut of savings is a pure outcome-based model, aimed at labs whose compute bills run into the billions.",
+   "source": "TNW · Quartz",
+   "layer": "inference",
+   "importance": 4
+  },
+  {
+   "url": "https://www.mercor.com/research/labor-index/benchmark-map/",
+   "title": "Mercor's Benchmark Map: about 90% of US work hours go to tasks no AI benchmark measures well",
+   "summary": "Mercor mapped 29 agentic benchmarks onto O*NET's 923 occupations and 18,797 tasks. Only 208 occupations, and 924 tasks, have at least five matching prompts. Computer and math work is well covered (29 of 36 occupations), but healthcare practitioners (12 of 89) and education (9 of 62) barely are. Mercor sells expert data and evals, and its own APEX benchmark is in the set.",
+   "why": "Labs optimize for what they can measure, so this gap shows where the next RL environments and the next data-vendor revenue will come from.",
+   "source": "Mercor Research",
+   "layer": "training",
+   "importance": 4
+  },
+  {
+   "url": "https://huggingface.co/papers/2610.20424",
+   "title": "BizBench: top agents pass only ~64% of real payments workflows end to end",
+   "summary": "Peking University and Ant International built 50 long-horizon tasks from a global payments company, in a stateful environment with a simulated customer. A run counts only if the goal is met, the business rules are followed and no protected object is touched. Claude Opus 5 led at 64.0%, GPT-6 Sol had 61.3%, GLM-5.3-Flash and DeepSeek-V4.1-Flash each had 43.3%, and Qwen3.5-9B passed 0 of 150 runs. It was the #1 paper on Hugging Face today.",
+   "why": "Process compliance, not just reaching the answer, is the gap between demo agents and agents a bank will let take actions.",
+   "source": "Hugging Face Papers (arXiv 2610.20424)",
+   "layer": "training",
+   "importance": 4
+  },
+  {
+   "url": "https://www.theinformation.com/articles/anthropic-readies-model-reads-users-intentions-better",
+   "title": "Anthropic is reportedly readying a model that infers what users want with less instruction",
+   "summary": "Per The Information, the new model has stronger reasoning and \"intuition\" than current Claude models and can work out unstated goals from limited context. No name or date has been reported, and it's a single-source report.",
+   "why": "If it's real, the selling point is less prompting and less hand-holding for agents, which means the competition is moving from benchmark scores to how much users have to spell out.",
+   "source": "The Information (reported)",
+   "layer": "models",
+   "importance": 4
+  },
+  {
+   "url": "https://newsletter.semianalysis.com/p/datacenters-2027-the-year-of-acceleration",
+   "title": "SemiAnalysis: 2027 adds ~50 GW of datacenters, about the world's entire installed base through 2024",
+   "summary": "SemiAnalysis counts more than 24 GW in advanced construction across about 40 campuses, all due in 2027. It also cites roughly $1T in binding leases signed year to date (the article gives several figures, up to $1.3T), at $30–50B of contract value per GW. It calls power \"largely solved\" by behind-the-meter generation, rejects Brad Gerstner's ~25 GW estimate, and warns memory and logic chips may be the binding constraint in 2027–28. ✏️ How much gets built in 2027? (GW) Gerstner \"hunch\"~25 already far along24+ SA forecast43 SA headline~50 green = advanced construction at ~40 campuses, nearly matc",
+   "why": "Investors are funding Nvidia alternatives that run open-weight models on an open stack, the same week Nvidia is reportedly pressuring neoclouds that use AMD or TPUs.",
+   "source": "TNW · Bloomberg",
+   "layer": "compute",
+   "importance": 4
+  },
+  {
+   "url": "https://www.investing.com/news/stock-market-news/amazon-says-its-ai-chips-will-work-with-popular-coding-language-challenging-nvidia-4957531",
+   "title": "Amazon's TorchNeuron runs PyTorch code on Trainium with a single config change",
+   "summary": "Annapurna Labs says the free, open-source tool runs existing PyTorch code on Trainium chips without rewrites, and more than 30 early customers in robotics, world models and voice are already using it. Reuters frames it as a direct attack on CUDA, the software moat Nvidia has spent over a decade building.",
+   "why": "Porting cost, not chip specs, is what keeps most teams on Nvidia, so lowering it is how custom silicon wins workloads beyond Anthropic-scale buyers.",
+   "source": "Reuters via Investing.com",
+   "layer": "compute",
+   "importance": 4
+  }
+ ]
+}

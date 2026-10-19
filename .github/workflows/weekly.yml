@@ -1,0 +1,21 @@
+name: draft (weekly)
+on:
+  schedule:
+    - cron: "0 15 * * 5"   # Fri 08:00 PT (PDT)
+  workflow_dispatch:
+concurrency: { group: market-intel, cancel-in-progress: false }
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+      LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+      LANGFUSE_HOST: ${{ secrets.LANGFUSE_HOST }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen --no-dev
+      - run: uv run python -m agents.market_intel draft

@@ -1,0 +1,112 @@
+{
+ "items": [
+  {
+   "url": "https://x.ai/news/grok-voice-3",
+   "title": "xAI's Grok Voice 3 tops the speech-to-speech leaderboard at an unchanged $0.08/min",
+   "summary": "The new model scores 86.9 on Artificial Analysis's Speech-to-Speech Index, ahead of GPT-Live-1 (83.2) and Gemini 3.8 Live (82.6). xAI also claims about 40% lower latency than GPT-Live-1 on the τ-Voice support-call test at similar accuracy. All figures are vendor-reported. It is live in the Voice Agent API and already runs in Tesla cars and Starlink call centers.",
+   "why": "Voice support agents are where Sierra and Decagon make money, and a frontier lab now sells better quality at a flat per-minute price, which squeezes the app layer's margins.",
+   "source": "xAI News",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://github.com/google-research/harness2",
+   "title": "Google's Harness²: agents that rewrite their own harness, with the weights frozen",
+   "summary": "Google Research released a framework in which an agent proposes edits to its own prompts, tools, memory and orchestration. It tests those edits against each other on the same task and keeps a log of lessons backed by evidence, all without ground-truth labels. One round improved GLM-5 and Gemini 3.5 Flash by up to 11.5 points on WorkBuddy-Bench and 11.8 points on LAB's partial pass rate.",
+   "why": "This is \"recursive self-improvement\" applied to the cheap layer, the harness, not the weights. It suggests the harness is now a real source of advantage for agent builders.",
+   "source": "Google Research (GitHub · arXiv 2610.14224)",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://www.latent.space/p/crossing-the-threshold",
+   "title": "How OpenAI and Anthropic pitch autonomy for financial agents",
+   "summary": "At AI Engineer NYC, Anthropic described a three-part \"trust layer\": identity and permissions, a sandbox with an approval step, and ongoing checks that the agent still performs well. Its agents propose changes, such as trade amendments, and a human approves them. OpenAI's head of ChatGPT for Financial Services predicted that agents will be good enough for \"investment idea generation and trading\" by 2027.",
+   "why": "In regulated industries, the product being sold is increasingly the control system around the model, not the model itself.",
+   "source": "Latent Space",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://the-decoder.com/anthropics-q3-revenue-hits-16-8b-but-growth-slows-ahead-of-planned-november-ipo/",
+   "title": "Anthropic reportedly tells investors: $16.8B Q3, adjusted-profitable, and cutting off distillers",
+   "summary": "According to the FT, at a closed-door investor day ahead of a planned November IPO, Anthropic reported Q3 revenue of about $16.8B, up about 45% from Q2. That growth is far slower than Q2's 140%+ jump. It reported $1.70 of revenue for every $1 of compute and an 11% adjusted operating margin, which excludes stock-based compensation. It also said distillation, meaning other labs using Claude outputs to train their own models, made up 5–7% of revenue, and that it cut that back materially in Q3. ✏️ Anthropic quarterly revenue, 2026 (reported) Q1~$4.8B Q2$11.5B +140% Q3$16.8B +45% still growing fast",
+   "why": "AI spend has become a big enough budget line for a fintech decacorn to sell tools that manage it. Owning the router lets Ramp decide which model gets each request.",
+   "source": "Ramp (PR Newswire)",
+   "layer": "business",
+   "importance": 4
+  },
+  {
+   "url": "https://www.vals.ai/blogs/routers-new-ai-primitive",
+   "title": "Vals: a perfect router would beat the best model by 14 points at ~40% lower cost",
+   "summary": "Vals AI found that no model ranks in the top three on all eight benchmarks in its index. It calculates that an \"oracle\" router, one that picks the best model for each task with hindsight, would score 14 points higher than the best single model at about 40% lower cost. Vals is building a public router leaderboard. Separately, investor Gavin Baker argues that routers in front of a mix of open and frontier models will compress model margins while raising compute demand.",
+   "why": "If routing becomes the default, models compete on each request, not on brand loyalty. That favors cheap specialist models and whoever owns the router (OpenRouter, Fireworks, Not Diamond, and now Ramp)",
+   "source": "Vals AI",
+   "layer": "inference",
+   "importance": 4
+  },
+  {
+   "url": "https://vllm.ai/blog/2026-10-14-nixl-push-connector",
+   "title": "vLLM's push-based KV transfer cuts time-to-first-token ~3x under load",
+   "summary": "In disaggregated serving, one machine processes the prompt (prefill) and a different one generates the output (decode). Normally the decode machine waits until prefill finishes and then pulls the KV cache over. In the new push mode, the decode machine reserves memory in advance and the prefill machine writes into it directly. On Qwen3-32B with 16k-token prompts at 8 queries per second, time-to-first-token fell from ~1,744 ms to ~540 ms, and time per output token from ~10.4 to ~7 ms.",
+   "why": "Long-context agent workloads are mostly prefill. Shaving the handoff between the two phases is a free latency win in open-source serving, and it erodes the advantage of proprietary inference stacks.",
+   "source": "vLLM Blog",
+   "layer": "inference",
+   "importance": 4
+  },
+  {
+   "url": "https://arxiv.org/abs/2610.13521",
+   "title": "On-policy distillation takes over the paper charts: 4 of today's top 10",
+   "summary": "The #2 paper on Hugging Face (227 upvotes) tackles multi-teacher on-policy distillation. When each domain gets its own specialist teacher, those teachers can pull the shared student weights in opposite directions. The fix, \"Cross-Teacher Guarding,\" has the other teachers act as critics and reports gains of over 5 points when the teachers conflict most. Other papers in the top 10 test self-distillation in agentic RL, critique-guided distillation, and distilling decisions instead of tokens.",
+   "why": "Distillation is becoming a main post-training technique alongside RL. That is also why access to a strong teacher, such as Claude through the API, is worth billions.",
+   "source": "arXiv · Hugging Face Daily Papers",
+   "layer": "training",
+   "importance": 4
+  },
+  {
+   "url": "https://developer.nvidia.com/blog/optimizing-agent-reliability-and-tool-calling-efficiency-for-chip-design-using-nvidia-nemo-gym/",
+   "title": "Siemens + NVIDIA NeMo Gym: a verifier-gated environment takes a chip-design agent from 55% to 95%",
+   "summary": "Siemens built an agent environment for generating chip cell-timing files. Its verifier pays zero reward if any of four pass/fail checks fails, and otherwise pays the fraction of values within tolerance. Using that reward to refine the skills and tool schemas of Claude Opus 4.8 in Claude Code raised the composite score from ~55% to ~95%. Agent turns fell from 155 to 53. These are vendor results on a development subset.",
+   "why": "The same environment and verifier setup used to train models with RL can also tune a harness. Domain-specific environments are becoming valuable assets for vertical-agent companies.",
+   "source": "NVIDIA Technical Blog",
+   "layer": "training",
+   "importance": 4
+  },
+  {
+   "url": "https://huggingface.co/inclusionAI/Ling-3.1-flash",
+   "title": "inclusionAI's Ling-3.1-flash: 560B MoE, 25B active, 1M context, MIT license",
+   "summary": "Ant Group's open-weight hybrid reasoning model routes each token to 8 of 512 experts. It mixes 63 linear-attention (KDA) layers with 9 gated MLA layers, a 7:1 ratio designed to make million-token contexts affordable. The model card lists coding and agent benchmarks, including Terminal-Bench 4.0, SWE-bench Pro and MCP-Atlas, but the page we saw gave no scores.",
+   "why": "China's open models keep shipping frontier-scale MoE models under permissive licenses. Mostly-linear attention is becoming the standard way to make long context cheap to serve.",
+   "source": "Hugging Face (inclusionAI)",
+   "layer": "models",
+   "importance": 4
+  },
+  {
+   "url": "https://huggingface.co/blog/swiss-ai/apertus-v15-release-notes",
+   "title": "Apertus 1.5: Switzerland's open model adds vision, audio and a thinking mode",
+   "summary": "The 8B and 70B models (Apache 2.0) got 4T and 2T more pretraining tokens, for totals of 19T and 17T. They now accept image input and experimental audio input, offer an optional reasoning mode, and handle 262K-token context, four times version 1.0. The developers say the 8B matches GPT-OSS-20B on translation but still trails frontier open-weight models overall.",
+   "why": "Publicly funded \"sovereign\" models are now a few months behind the open frontier instead of years. That gives European buyers a credible option they can audit.",
+   "source": "Hugging Face Blog (Swiss AI)",
+   "layer": "models",
+   "importance": 4
+  },
+  {
+   "url": "https://www.trendforce.com/news/2026/10/15/news-tsmc-3q26-net-profit-surges-68-7-to-record-nt763b-eps-hits-nt29-43-2nm-sales-share-climbs-to-8/",
+   "title": "TSMC: record $46.7B quarter, net profit +68.7%, and 2nm jumps to 8% of wafer revenue",
+   "summary": "Q3 revenue rose 50.9% year over year, gross margin was 66.4%, and 2nm's share of wafer revenue rose from 3% to 8% in one quarter. TSMC guided Q4 revenue to $52.3–54.3B. CEO C.C. Wei also reportedly said TSMC is in talks over Elon Musk's Terafab project, but only if TSMC runs any fab involved (per Bloomberg).",
+   "why": "Every accelerator, including NVIDIA's, AMD's and the custom chips, is built at TSMC, so its numbers are the best measure of AI demand at the bottom of the stack. That demand is still growing.",
+   "source": "TrendForce · TSMC Investor Relations",
+   "layer": "compute",
+   "importance": 4
+  },
+  {
+   "url": "https://finance.yahoo.com/markets/live/copy-stock-market-today-hot-inflation-report-drops-tech-drives-sp-500-nasdaq-down-122056767.html",
+   "title": "Update: chip index heads for 8 straight down days, its longest streak since Oct 2008, as worries over AI debt spread",
+   "summary": "TSMC fell about 4% despite its record quarter. Korea's KOSPI fell 7% overnight, and yields on CoreWeave's bonds spiked after September wholesale inflation rose 1.3%, the most since March 2022, raising fears of further rate hikes. A Baird strategist said the market is \"tiring of the Bank of Nvidia, the Bank of AMD and the Bank of Broadcom,\" meaning chipmakers that help finance their own customers.",
+   "why": "Yesterday's CoreWeave debt story has spread to the whole sector. Demand is strong, but the 25→70 GW build-out depends on cheap borrowing, and borrowing just got more expensive.",
+   "source": "Yahoo Finance (live markets)",
+   "layer": "compute",
+   "importance": 4
+  }
+ ]
+}

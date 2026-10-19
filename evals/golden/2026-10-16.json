@@ -1,0 +1,112 @@
+{
+ "items": [
+  {
+   "url": "https://huggingface.co/papers/2610.22350",
+   "title": "FDE-Gym: the best agent completes only 14 of 95 real customer-delivery projects",
+   "summary": "FDE-Gym gives agents 95 forward-deployed-engineer tasks drawn from real delivery projects in 18 sectors, with scripted stakeholders and production-like systems. Each task is scored by how much the agent moves the customer's own metric. Claude Opus 5.5 led with a mean of 0.56 and resolved 14 tasks. Models that clear 88% of Terminal-Bench 2.1 scored only 0.19–0.56 here, and the main failure was finding constraints nobody had stated (scores fell from 0.73–0.82 to 0.39–0.62).",
+   "why": "The \"last mile\" of enterprise deployment still needs humans, so services-heavy GTM (FDEs, Palantir-style) stays a moat for now.",
+   "source": "Hugging Face Daily Papers (arXiv 2610.22350)",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://huggingface.co/papers/2610.22200",
+   "title": "Alibaba's OpenGCUA: computer-use agents that write code beat clicking, +19.6 points on OSWorld-v2",
+   "summary": "Alibaba's Tongyi-MAI team is building a fully open stack for computer-use agents. Its first release lets the model run code so each result can drive the next step, and moves decisions about what to observe from fixed harness rules to the model. On OSWorld-v2, all eight models tested improved, by 19.6 points on average, while using 53% fewer steps. Trajectories, a macOS harness and a cross-device SDK are open.",
+   "why": "More evidence that harness design, not just model choice, drives agent quality, and that the harness layer is going open.",
+   "source": "Hugging Face Daily Papers (arXiv 2610.22200)",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://cohere.com/blog/cohere-and-aisle-sign-letter-of-intent-to-advance-cyber-resilient-sovereign-ai",
+   "title": "Cohere moves to buy AISLE, the bug-hunting agent startup, and launches Cohere Cyber",
+   "summary": "Cohere has signed a non-binding letter of intent for AISLE, which says its agents found 500+ new CVEs in its first year, including all 12 in OpenSSL's January release. AISLE's founders will run the new cyber unit and become Cohere's CISO and VP of AI security, and Prague becomes Cohere's AI-security hub. Terms weren't disclosed.",
+   "why": "A second-tier model lab is buying a vertical agent to stand out in sovereign and air-gapped enterprise deals, after Reliant AI and Aleph Alpha.",
+   "source": "Cohere · Reuters",
+   "layer": "business",
+   "importance": 4
+  },
+  {
+   "url": "https://www.anthropic.com/news/an-update-on-independent-evaluators",
+   "title": "Anthropic embeds six METR staff inside the company, and Anthropic can't veto what they publish",
+   "summary": "METR evaluators now get employee-level access to hardware, offices and internal tools, close to Anthropic's own risk teams. They will publish on Anthropic's risk levels, incidents and practices, and Anthropic can redact only narrow categories such as customer data and architecture. SecureBio is reviewing the bio chapter of the August Risk Report, and Accenture and Faculty are signed up for red-teaming.",
+   "why": "Anthropic compares this to bank examiners and is pushing it as an industry norm weeks before its reported IPO, which could raise compliance costs for rivals.",
+   "source": "Anthropic News",
+   "layer": "business",
+   "importance": 4
+  },
+  {
+   "url": "https://vllm.ai/blog/2026-10-16-kimi-k3-mi355x",
+   "title": "vLLM: AMD MI355X beats Nvidia B300 on Kimi K3, with 24% more throughput and 87% more tokens per dollar",
+   "summary": "On AgentX, which replays real coding-agent sessions, eight MI355X GPUs served about 7,567 tokens/s per GPU against 6,083 for HGX B300, both at 50 tok/s per user. With modeled costs of $1.50 vs. $2.26 per GPU-hour, that works out to 18.2M vs. 9.7M tokens per dollar. The gains came from more than 50 merged ROCm PRs. One example: padding 12 attention heads to 16 to reach a faster kernel cut time per token from 43.8 to 23.6 ms. ✏️ Same model, same traffic, two chips throughput per GPU MI355X7,567 tok/s B3006,083 tok/s tokens per dollar MI355X18.2M B3009.7M a small speed edge becomes a big cost edg",
+   "why": "Most new open models are hybrids, and serving engines are now redesigning around a fixed-size state instead of the KV cache (see Concept of the day).",
+   "source": "NVIDIA Technical Blog",
+   "layer": "inference",
+   "importance": 4
+  },
+  {
+   "url": "https://already-clean.goodfire.com/",
+   "title": "Goodfire's Nick Cammarata: \"Neural networks are already clean,\" with agents as the evidence",
+   "summary": "Cammarata argues that most neurons, even in very large models, have one legible job. He says agentic analysis shows many famous \"polysemantic\" (multi-concept) neurons were misread. A summary of his work puts about 90% of Qwen-32B neurons as single-purpose, compared with about 2% found legible in OpenAI's 2023 automated interpretability effort. Neel Nanda, Leo Gao and others pushed back, and the full paper isn't out yet.",
+   "why": "If it holds, auditing models neuron by neuron becomes cheap enough to use in alignment and safety cases. Treat it as a claim until the paper is published.",
+   "source": "Goodfire · via Latent Space AINews",
+   "layer": "training",
+   "importance": 4
+  },
+  {
+   "url": "https://developer.nvidia.com/blog/nvidia-nemotron-3-5-super-vl-powers-specialized-agents-with-multimodal-reasoning/",
+   "title": "Nemotron 3.5 Super VL: a 120B/12B-active open VLM, distilled from Ultra, plus 2.8T Indic tokens",
+   "summary": "Nvidia's new hybrid-Mamba MoE was distilled from Nemotron 3 Ultra, then post-trained with multi-teacher on-policy distillation across text and vision. It scores 80.8% on CharXiv and beats Ultra on Hermes Bench (63.4 vs. 56.3). Nvidia also published how it built a 2.8T-token corpus in 22 Indian languages: translate English web data with Gemma-4-31B, score each translation with an LLM judge, and repair low scorers. 10B of those tokens lifted every Indic benchmark by 5–10 points.",
+   "why": "The recipe is now standard: distill from a big teacher, then use synthetic, judge-filtered data to add languages. The data pipeline is the scarce part, and Nvidia is giving it away to sell GPUs.",
+   "source": "NVIDIA Technical Blog · Hugging Face Blog (Indic data)",
+   "layer": "training",
+   "importance": 4
+  },
+  {
+   "url": "https://research.meta.ai/blog/muse-spark-open",
+   "title": "Meta releases Muse Spark Open: 816B MoE, 42B active, 1M context, weights on Hugging Face",
+   "summary": "Days after shipping its closed Muse Wonder, Meta released open weights for a coding and agent model that it calls the most capable US open-weight model. It runs on two linked M5 Ultra Mac Studios and launched on Together, Fireworks, Groq, Baseten and others. The custom license requires a \"Built with Muse Spark Open\" label, and any model-serving business over $20M in revenue needs a separate deal with Meta. By Meta's own numbers it still trails Kimi K3 on Terminal-Bench 2.1 (76.4 vs. 85.0), and its reported AA Index score of 39 is below GLM-5.3 and Kimi K3.",
+   "why": "Meta now runs two tiers: a closed frontier model and an open one a step behind it. The open-weight lead still belongs to Chinese labs.",
+   "source": "Meta AI Research · Trending Topics (license, benchmarks) · NVIDIA",
+   "layer": "models",
+   "importance": 4
+  },
+  {
+   "url": "https://huggingface.co/blog/reflection-beam",
+   "title": "Reflection AI ships Beam, its first model: 501B / 23B active under Apache 2.0, at 81.6% on SWE-bench Verified",
+   "summary": "The heavily funded US open-weight lab released a coding and agent MoE with a 1M context window. Its 4-bit NVFP4 checkpoint (~280 GB) fits on four B300s and scores within about 1 point of BF16 on most benchmarks. Reflection reports 80.1% on Terminal-Bench 2.1, which beats Muse Spark Open's 76.4. vLLM supported Beam on day 0, and coding agents wrote kernels that cut batch-1 decode latency 2.71×.",
+   "why": "On self-reported numbers, a startup's truly open-licensed model beats Meta's restricted one at coding, so the license itself is becoming a way to compete.",
+   "source": "Hugging Face Blog · vLLM Blog",
+   "layer": "models",
+   "importance": 4
+  },
+  {
+   "url": "https://finance.yahoo.com/technology/ai/articles/microsoft-ai-unveils-2-8-165617565.html",
+   "title": "Microsoft finishes pre-training MAI-Base-2: 2.8T params, 16K GB200s, 38 days",
+   "summary": "Microsoft AI's new base model is a 2.8T-parameter MoE with 80B active, trained on about 50T tokens (18% images). Microsoft claims its recipe is 4.2–12.3× more compute-efficient than DeepSeek-V4-Pro-Base, an estimate extrapolated from scaling laws, not measured head-to-head. Mustafa Suleyman reportedly told staff it beats the model behind GPT-5.6 on about a quarter of the compute. It is still in post-training and will be licensed to partners through Foundry.",
+   "why": "Microsoft is building real independence from OpenAI at the frontier base-model scale, though none of these claims have been checked externally yet.",
+   "source": "Reuters via Yahoo Finance · 24/7 Wall St. (Suleyman remarks)",
+   "layer": "models",
+   "importance": 4
+  },
+  {
+   "url": "https://newsletter.semianalysis.com/p/asml-is-building-a-hybrid-bonding",
+   "title": "SemiAnalysis: ASML is quietly building a hybrid bonding tool",
+   "summary": "ASML hasn't announced it, but SemiAnalysis points to 27 bonding patent families, a report on design work with Prodrive and VDL, and ASML's own roadmap. The likely product is a die-to-wafer bonder for stacking chips in advanced packaging. SemiAnalysis expects logic (TSMC SoIC, AMD V-Cache) to adopt it first, and doesn't expect HBM to move to hybrid bonding before 2029.",
+   "why": "Packaging is now an AI chip bottleneck alongside lithography. ASML entering it is bad news for Besi, today's only volume supplier.",
+   "source": "SemiAnalysis (analysis; partly paywalled)",
+   "layer": "compute",
+   "importance": 4
+  },
+  {
+   "url": "https://finance.yahoo.com/markets/article/nvidia-ceo-jensen-huang-addresses-coreweave-stock-plunge-im-optimistic-161504419.html",
+   "title": "Update: CoreWeave falls ~15% on debt fears, and Jensen Huang says its \"cost of capital is actually decreasing\"",
+   "summary": "The AI-debt worries from yesterday's chip-index slide hit neoclouds hardest on Wednesday. CoreWeave fell about 15%, Nebius 11% and Oracle 9%, and DigitalOcean, IREN, TeraWulf and Cipher each dropped more than 10%. Speaking in Stockholm Thursday, Huang said he's \"optimistic\" and that CoreWeave is getting stronger every day. Nvidia owns about 10% of CoreWeave.",
+   "why": "Neoclouds borrow against GPUs to finance the build-out. If that debt reprices, the 25→70 GW plan slows from the bottom of the stack up.",
+   "source": "Yahoo Finance · SiliconANGLE",
+   "layer": "compute",
+   "importance": 4
+  }
+ ]
+}

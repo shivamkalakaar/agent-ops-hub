@@ -1,0 +1,35 @@
+{
+  "_comment": "Tier 1 = Mihail Eric's recommended list (TLDR AI.docx). Tier 2 = extra depth per stack layer. 'web_only' sources have no RSS feed; the agent checks them with WebFetch.",
+  "feeds": [
+    {"name": "TLDR AI", "tier": 1, "layer": "mixed", "url": "https://tldr.tech/api/rss/ai"},
+    {"name": "AI News (smol.ai)", "tier": 1, "layer": "mixed", "url": "https://news.smol.ai/rss.xml"},
+    {"name": "Latent Space", "tier": 1, "layer": "applications", "url": "https://www.latent.space/feed"},
+    {"name": "Tomasz Tunguz", "tier": 1, "layer": "business", "url": "https://tomtunguz.com/index.xml"},
+    {"name": "OpenAI News", "tier": 1, "layer": "models", "url": "https://openai.com/news/rss.xml"},
+    {"name": "Cursor Changelog", "tier": 1, "layer": "applications", "url": "https://cursor.com/changelog/rss.xml"},
+    {"name": "Ramp Engineering", "tier": 1, "layer": "applications", "url": "https://engineering.ramp.com/rss.xml"},
+    {"name": "Sierra", "tier": 1, "layer": "applications", "url": "https://sierra.ai/rss.xml"},
+    {"name": "Lenny's Newsletter", "tier": 1, "layer": "business", "url": "https://www.lennysnewsletter.com/feed"},
+
+    {"name": "SemiAnalysis", "tier": 2, "layer": "compute", "url": "https://newsletter.semianalysis.com/feed"},
+    {"name": "NVIDIA Technical Blog", "tier": 2, "layer": "compute", "url": "https://developer.nvidia.com/blog/feed/"},
+    {"name": "Import AI (Jack Clark)", "tier": 2, "layer": "models", "url": "https://importai.substack.com/feed"},
+    {"name": "Interconnects (Nathan Lambert)", "tier": 2, "layer": "post-training", "url": "https://www.interconnects.ai/feed"},
+    {"name": "Hugging Face Blog", "tier": 2, "layer": "models", "url": "https://huggingface.co/blog/feed.xml"},
+    {"name": "vLLM Blog", "tier": 2, "layer": "inference", "url": "https://vllm.ai/blog/rss.xml"},
+    {"name": "Together AI Blog", "tier": 2, "layer": "inference", "url": "https://www.together.ai/blog/rss.xml"},
+    {"name": "Google DeepMind", "tier": 2, "layer": "models", "url": "https://deepmind.google/blog/rss.xml"},
+    {"name": "Google AI Blog", "tier": 2, "layer": "models", "url": "https://blog.google/technology/ai/rss/"},
+    {"name": "Simon Willison", "tier": 2, "layer": "applications", "url": "https://simonwillison.net/atom/everything/"},
+    {"name": "The Batch (DeepLearning.AI)", "tier": 2, "layer": "mixed", "url": "https://charonhub.deeplearning.ai/rss/"}
+  ],
+  "web_only": [
+    {"name": "Anthropic News", "tier": 1, "url": "https://www.anthropic.com/news"},
+    {"name": "Cursor Blog", "tier": 1, "url": "https://cursor.com/blog"},
+    {"name": "Decagon Blog", "tier": 1, "url": "https://decagon.ai/blog"},
+    {"name": "The Modern Software Developer (Mihail Eric)", "tier": 1, "url": "https://themodernsoftware.dev/"},
+    {"name": "Meta AI Blog", "tier": 2, "url": "https://ai.meta.com/blog/"},
+    {"name": "LMSYS / SGLang Blog", "tier": 2, "url": "https://lmsys.org/blog/"},
+    {"name": "Hugging Face Daily Papers", "tier": 2, "url": "https://huggingface.co/papers"}
+  ]
+}

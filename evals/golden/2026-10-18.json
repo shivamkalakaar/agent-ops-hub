@@ -1,0 +1,103 @@
+{
+ "items": [
+  {
+   "url": "https://techcrunch.com/2026/10/17/replit-is-no-longer-working-with-anthropic-ceo-says/",
+   "title": "Replit makes OpenAI the default for Replit Agent, ending Anthropic's top spot",
+   "summary": "On stage at Disrupt, Amjad Masad said Replit is \"no longer working with Anthropic.\" He later clarified that Claude is still selectable but OpenAI is now the default, citing \"cost, partnership, and performance\" on internal and public benchmarks for building apps from scratch. Replit had been a top-five Anthropic customer until recently. Anonymous insiders told TechCrunch the partnership is still in place, and Anthropic gave no comment.",
+   "why": "Most users never change the default model, so at the application layer the default is what decides which lab's tokens a platform buys.",
+   "source": "TechCrunch",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://forkast.news/schwab-and-jpmorgan-block-unauthorized-ai-agents-from-moving-money-as-private-ordering-reaches-financial-core/",
+   "title": "Big banks lock outside AI agents out of moving money",
+   "summary": "Schwab CEO Rick Wurster told Bloomberg that a weekly report shows Schwab blocking \"tens and twenties\" of attempts by agents such as Meta Muse, and that outside LLMs get read-only MCP servers that can't move funds. Jamie Dimon has banned outside agents from JPMorgan accounts (\"you don't want rogue agents\"), and the FT reports that Citi and Bank of America are also restricting them. Banks cite liability, and coverage notes their worry that agents could move idle deposits to higher-yield accounts.",
+   "why": "Consumer agents that handle money depend on access that incumbents control, and \"read-only via MCP\" is becoming the default deal banks offer them.",
+   "source": "Forkast (Bloomberg interview) · Crypto Briefing (FT on Citi)",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://www.engadget.com/2285040/openai-humanoid-robot-sam-altman-statement-real-challenge/",
+   "title": "Altman confirms OpenAI will build a humanoid, with \"a cool demo in 2027\"",
+   "summary": "Asked on the Sources podcast whether OpenAI will build a humanoid robot, Altman said \"We will,\" because \"the world is very much designed for people.\" He told Fortune that a demo should come in 2027, with robots on city streets a few years after that. OpenAI's careers page lists 27 robotics roles.",
+   "why": "The biggest consumer lab is now openly in robotics, so vision-language-action models are becoming a frontier-lab race and not just a startup niche.",
+   "source": "Engadget",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://www.nytimes.com/2026/10/17/business/ai-debt-coreweave-oracle-softbank.html",
+   "title": "Update: AI debt fears spread, with CoreWeave bond yields above 15% and Oracle-linked debt at 80–90 cents",
+   "summary": "Following the CoreWeave sell-off we covered on Friday, the NYT reports that CoreWeave's bond yield has passed 15%, some Oracle-linked debt trades at 80–90 cents on the dollar, and insuring SoftBank's debt costs more. A Jefferies note circulated Oct 17 projects earnings growth for AI-related stocks falling from nearly 100% in 2026 to about 30% in 2027.",
+   "why": "Neoclouds borrow to buy GPUs against customer contracts, so their cost of debt quickly becomes the cost of compute for everyone above them.",
+   "source": "The New York Times (via Techmeme) · IANS (Jefferies)",
+   "layer": "business",
+   "importance": 4
+  },
+  {
+   "url": "https://finance.yahoo.com/economy/articles/anthropics-clark-says-ais-impact-091449774.html",
+   "title": "Jack Clark tells the IMF that AI could take US GDP to about $44T by 2030",
+   "summary": "In the Per Jacobsson Lecture at the IMF-World Bank meetings in Bangkok, Anthropic's co-founder cited an internal scenario in which US output rises by almost half by 2030. He called the figure \"outlandish\" himself, and said it depends on AI continuing to improve. It is the most aggressive of three scenarios in Anthropic's Economic Scenario Explorer ($34.1T, $36.3T and $44.4T), which Anthropic says are not forecasts.",
+   "why": "Lab leaders are pitching macro-scale upside to policymakers in the same week credit markets are questioning whether the AI build-out can repay its debt.",
+   "source": "Reuters via Yahoo Finance · CNBC",
+   "layer": "business",
+   "importance": 4
+  },
+  {
+   "url": "https://www.bloomberg.com/news/newsletters/2026-10-17/disney-offers-soft-landing-to-staff-at-troubled-character-ai",
+   "title": "Disney will pay about $180M over three years for 60+ staff from bankrupt Character.AI",
+   "summary": "Filings in Character.AI's Chapter 11 case show Disney paying about $60M a year for the hires, plus a $30M retention pool (reports differ on whether the pool is part of the $180M). Separately, Disney made a $20M stalking-horse bid for a non-exclusive license to some of Character.AI's IP. Rival bids are due Nov 20.",
+   "why": "This is an acqui-hire run through bankruptcy court: the consumer chatbot failed, but its AI team still sells for roughly $1M per person per year.",
+   "source": "Bloomberg · Traders Union (filing details)",
+   "layer": "business",
+   "importance": 4
+  },
+  {
+   "url": "https://vllm.ai/blog/2026-10-16-kimi-k3-megakernel",
+   "title": "vLLM fuses Kimi K3's decode path for 1.6–1.9× faster tokens on GB300",
+   "summary": "vLLM replaced almost every Kimi K3 decode operation (attention, MoE routing, communication) with custom CuTe DSL kernels. One layer drops from 23 kernels and 130 µs to 13 kernels and 69 µs, and on 16 GB300s decode runs 1.62–1.88× faster than stock vLLM. The post also lays out rules for merging agent-written optimizations that arrive faster than humans can review them: isolate them, limit their scope, and validate with end-to-end evals.",
+   "why": "Speedups like this come from software on existing chips, which makes them the cheapest way to lower cost per token (see Concept of the day).",
+   "source": "vLLM Blog",
+   "layer": "inference",
+   "importance": 4
+  },
+  {
+   "url": "https://startupfortune.com/opencode-breach-exposes-stored-openai-and-anthropic-keys-prompts-urgent-key-rotation/",
+   "title": "OpenCode breach exposes users' OpenAI, Anthropic and Google keys in what it calls a \"distillation attack\"",
+   "summary": "Anomaly Innovations, maker of the OpenCode coding agent, says attackers got into a legacy system it was decommissioning, and that about 1.4% of Console users may have had stored provider keys exposed. It is working with all three labs and has told users to revoke their keys. It hasn't explained the \"distillation\" label, but the likely reading is stolen keys being used to query frontier models at scale and harvest outputs for training.",
+   "why": "Frontier outputs are valuable enough as training data to steal, so labs' crackdowns on distillers now also have to cover the coding agents that store customers' keys.",
+   "source": "Startup Fortune · OfficeChai",
+   "layer": "training",
+   "importance": 4
+  },
+  {
+   "url": "https://www.nbcnews.com/tech/innovation/anthropic-wants-input-claudes-values-gets-final-say-rcna603440",
+   "title": "Anthropic asks outsiders how Claude should behave, but keeps the final say",
+   "summary": "NBC reports that Anthropic brought law professors and democracy experts to its San Francisco campus to discuss who should shape Claude's values. Separately, the FT reports that Anthropic is asking law firms about norms for agents that negotiate for users, such as how often to check in and whether users should sign a document defining the agent's brief.",
+   "why": "The values a model learns during alignment are becoming a product policy question, and agents that negotiate make the stakes concrete.",
+   "source": "NBC News · The Decoder (FT report)",
+   "layer": "training",
+   "importance": 4
+  },
+  {
+   "url": "https://thenextweb.com/news/microsoft-pulls-out-nscale-loughton-data-centre-ipo",
+   "title": "Microsoft reportedly quits as anchor tenant of Nscale's Essex data center, weeks before its IPO",
+   "summary": "The Telegraph reports that Microsoft ended its deal to rent about 23,000 Nvidia chips at Nscale's Loughton site, after grid officials said not to expect power until the 2030s. Microsoft and Anthropic make up about 85% of Nscale's contract value, per its IPO filing, and Nscale says it is \"exploring alternative power sources.\" Microsoft gave no reason and didn't comment, and its Norway project with Nscale is reportedly unaffected.",
+   "why": "A neocloud's contract backlog is only as good as its power connection, and hyperscalers can walk away when the grid slips.",
+   "source": "The Next Web · Bloomberg",
+   "layer": "compute",
+   "importance": 4
+  },
+  {
+   "url": "https://www.ft.com/content/9ea5a37d-15c9-4d5b-94d6-719048c9cd3c",
+   "title": "FT: 47+ large US data center projects stalled this year, and Bernstein says only ~35% of the pipeline is credible",
+   "summary": "RegLayer counts at least 47 large US projects delayed, withdrawn or blocked in 2026, and calls that number conservative. Bernstein says only about 35% of the planned US pipeline is credible, citing grid-connection timelines, transformer shortages and liquid-cooling bottlenecks. Its September data showed a record 51.7 GW of delayed capacity, about 11% of a 456 GW pipeline.",
+   "why": "The 25→70 GW build-out depends on power and equipment, and the Nscale exit is that problem at the level of a single site.",
+   "source": "Financial Times (via Techmeme) · Bernstein pipeline data",
+   "layer": "compute",
+   "importance": 4
+  }
+ ]
+}

@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --bg: #f6f5f2;
+  --card: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #8a8780;
+  --line: #e6e4df;
+  --accent: #c2410c;
+  --series-1: #2a78d6;
+  --series-1-track: #d6e5f7;
+  --good: #008300;
+  --warn: #b07400;
+  --bad: #c93a39;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121211;
+    --card: #1a1a19;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --muted: #8f8d85;
+    --line: #2e2d2a;
+    --accent: #fb923c;
+    --series-1: #3987e5;
+    --series-1-track: #1f3550;
+    --good: #3fae3f;
+    --warn: #d9a030;
+    --bad: #e66767;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121211; --card: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #8f8d85; --line: #2e2d2a;
+  --accent: #fb923c; --series-1: #3987e5; --series-1-track: #1f3550; --good: #3fae3f; --warn: #d9a030; --bad: #e66767;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-series: var(--series-1);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+  --font-sans: ui-sans-serif, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); }
+.num { font-variant-numeric: tabular-nums; }

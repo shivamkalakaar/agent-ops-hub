@@ -1,0 +1,16 @@
+# Model tiers, routed through OpenRouter. If the primary model fails or is rate
+# limited, OpenRouter tries the fallbacks in order (its `models` array).
+# Prices are $/M tokens (prompt/completion) from openrouter.ai/api/v1/models, 2026-10-19.
+tiers:
+  cheap:   # bulk work: scoring ~100 items/day
+    primary: google/gemma-4-31b-it:free                 # $0
+    fallbacks: [deepseek/deepseek-v4.1-flash, qwen/qwen3.7-flash]   # $0.035/$0.011, $0.03/$0.13
+    temperature: 0.1
+  writer:  # the one call a human reads: the LinkedIn post + one-pager
+    primary: anthropic/claude-haiku-5.5                 # $0.10/$0.50
+    fallbacks: [deepseek/deepseek-v4-flash, openai/gpt-6-luna]
+    temperature: 0.7
+  judge:   # critic + evals. Different model family from the writer to limit self-preference.
+    primary: deepseek/deepseek-v4.1-flash
+    fallbacks: [qwen/qwen3.7-flash]
+    temperature: 0.0

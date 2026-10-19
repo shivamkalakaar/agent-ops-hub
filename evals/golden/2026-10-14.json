@@ -1,0 +1,103 @@
+{
+ "items": [
+  {
+   "url": "https://www.anthropic.com/engineering/redesigning-source-control",
+   "title": "Anthropic replaced git with its own source control after merges jumped 12x in four months",
+   "summary": "Anthropic went from ~2,500 merged code changes a day in May 2026 to more than 30,000 a day in September, which works out to ~25M CI checkouts a day. Fetching that naively with git would mean 600+ PB of traffic daily. A seven-person team built Scion, an always-online, server-heavy system with on-demand virtual checkouts, plus a review tool called Antique, and moved the monorepo over in five months. Anthropic says Scion uses 200x less CPU and memory than its old git mirrors and makes checkouts about 100x faster. Scion has no offline mode, by design, because Claude is its heaviest user and is alw",
+   "why": "This is the first real test of whether EU rules reach frontier labs during development and not just at product launch, which would add compliance cost to every agentic eval.",
+   "source": "Euronews",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://tomtunguz.com/ai-in-practice-survey-2026/",
+   "title": "Theory's survey of 455 AI builders: security is now the #1 pain point, and 45% route queries across models",
+   "summary": "43% of respondents rank security and governance as their top pain point, up from sixth place a year ago, yet only 10% say security tooling delivers the most value today. 45% route queries across models with their own trained router (23.7%) or a vendor's (21.5%). Among the 259 teams whose agents execute code, 62% host their sandboxes on Cloudflare, about 3x the next provider (Vercel, 16.6%).",
+   "why": "Model routing makes models interchangeable for many teams, and buyers are now looking for security tooling and agent sandboxes.",
+   "source": "Tomasz Tunguz / Theory Ventures",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://modal.com/blog/1-billion-annualized-run-rate-series-d",
+   "title": "Modal raises $750M at $15.75B after crossing a $1B annualized run-rate",
+   "summary": "Accel led the Series D, Kleiner Perkins joined, and all existing investors participated. Five months ago Modal raised at $4.65B, so the valuation has more than tripled. Modal says usage has tripled since then and revenue grew more than 15x year over year, and its Sandboxes product alone runs at ~$300M a year. That product has spun up close to 3B sandboxes for background agents, RL and vibe-coding apps. The new money goes toward RL and post-training products, multi-node training, and VM-based sandboxes.",
+   "why": "Running agent code and RL rollouts is becoming a revenue line about as big as serving tokens, and that pushes inference clouds into training.",
+   "source": "Modal Blog (company-reported run-rate) · TechCrunch (earlier report)",
+   "layer": "inference",
+   "importance": 4
+  },
+  {
+   "url": "https://developer.nvidia.com/blog/nvidia-runai-is-now-open-source-as-part-of-nvidia-dsx-ai-factory-platform/",
+   "title": "Nvidia open-sources all of Run:ai, its GPU scheduling and orchestration platform",
+   "summary": "Nvidia bought Run:ai to schedule and split GPUs across training and inference jobs on Kubernetes. It is now releasing the whole platform as open source under its DSX AI Factory initiative, including its scheduler (KAI, now a CNCF Sandbox project), GPU fractioning and quota management. Neoclouds and platforms including Nebius, Crusoe, Mirantis and Rafay are building it into their own products. The companion Model Streamer loads model weights 3–6x faster on Azure H100 VMs.",
+   "why": "Nvidia is giving away the software that runs its GPUs, so neoclouds standardize on Nvidia's stack and the software layer stops being a reason to choose AMD or custom silicon.",
+   "source": "NVIDIA Technical Blog",
+   "layer": "inference",
+   "importance": 4
+  },
+  {
+   "url": "https://huggingface.co/papers/2610.16794",
+   "title": "TPPO: a smarter critic adds 7–8 points to RL-trained math reasoning",
+   "summary": "Researchers from Zhejiang, Westlake, Shanghai AI Lab and others built a new value model (the \"critic\" that predicts how likely a partial answer is to end up right) for PPO-based reinforcement learning with verifiable rewards. It is trained only on whether the final answer was correct and needs no extra rollouts or step-by-step labels. In the authors' tests, it beats standard PPO on aggregate math scores by 7.0 points on Qwen3-4B-Base and 8.4 points on Qwen3-8B-Base.",
+   "why": "Reasoning RL is limited by how well models are credited for each step, and a better critic that costs no extra compute makes each RL GPU-hour more productive.",
+   "source": "Hugging Face Daily Papers (69 upvotes)",
+   "layer": "training",
+   "importance": 4
+  },
+  {
+   "url": "https://huggingface.co/papers/2610.17953",
+   "title": "Agent-Reflex trains agents to recover from broken tools and user corrections",
+   "summary": "Renmin University and NUS researchers deliberately inject tool failures into executable environments and mine \"reflection skills\" from agents' successes and failures. Those skills are then taught to Qwen3-8B through fine-tuning and RL. The model scores 58.6 overall across five long-horizon tool-use benchmarks and 29.1 on AgentNoiseBench, which the authors say beats environment-scaling baselines.",
+   "why": "Real tools fail and users interrupt, so agentic RL environments that inject noise on purpose produce agents that hold up in production.",
+   "source": "Hugging Face Daily Papers (#3 today, 141 upvotes)",
+   "layer": "training",
+   "importance": 4
+  },
+  {
+   "url": "https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-argon/",
+   "title": "Gemini 4 Argon goes GA, with launch pricing at half the list price",
+   "summary": "Google's frontier model is now in the Gemini API, AI Pro/Ultra, AI Mode in Search and Antigravity. API pricing is $2/$10 per million input/output tokens with 95% off cached input until November 30, then $4/$20. Google claims #1 on the Vals Index, a 1M-token combined input-output limit, and a 0.7% attack success rate on Gray Swan's prompt-injection benchmark. Independent tests mostly agree: Artificial Analysis finds Argon matches GPT-6 Astra on its Intelligence Index for ~60% of the cost per task, and Cursor reports 52.8% on CursorBench. One critic, Theo, reported a false-claim rate above 50% o",
+   "why": "With Muse Wonder launched yesterday and Argon today, the frontier is crowded enough that labs are competing on price and cost per task, which is good news for app-layer margins.",
+   "source": "Google Blog · Latent Space AINews (independent evals) · Simon Willison",
+   "layer": "models",
+   "importance": 4
+  },
+  {
+   "url": "https://huggingface.co/blog/LiquidAI/lfm25-24b-a2b",
+   "title": "Liquid AI's LFM2.5-24B-A2B: an open-weight agent model with only 2B active parameters, for laptops",
+   "summary": "The 24B-parameter MoE uses only 2B parameters per token, supports 131K-token context, and was pretrained on ~33T tokens before a five-stage post-training pipeline that ends in agentic RL. It leads larger rivals such as Qwen3.6-35B-A3B on tool-use and instruction-following benchmarks (BFCLv4 65.0, IFBench 74.7) but trails them on knowledge and coding (SWE-bench Verified 51.0 vs 66.2). Liquid AI reports 184 tok/s on an Apple M5 Max.",
+   "why": "Small open models are being tuned to call tools well, not to know everything, so private agents that run locally and call tools for knowledge can compete with frontier APIs on routine workflows.",
+   "source": "Hugging Face Blog (Liquid AI; vendor benchmarks)",
+   "layer": "models",
+   "importance": 4
+  },
+  {
+   "url": "https://investor.asml.com/news-releases/news-release-details/asml-reports-eu11.7-billion-total-net-sales-and-eu5.0-billion-net-income-q3-2026",
+   "title": "ASML: record €11.7B quarter, and planned supply won't meet demand in 2027 or 2028",
+   "summary": "The sole maker of EUV lithography tools earned €5.0B in Q3 on a 57.5% gross margin, with €4.1B of EUV system sales including one High-NA machine. It guided Q4 to €14.2–15.2B and 2026 to €44–45B. ASML said some customers want to place orders for 2029 and even 2030, and that it is looking at expanding 2028 capacity beyond the 30% increase it had already announced.",
+   "why": "The shortage now runs all the way back to the machines that make the chips, so AI compute supply is effectively set years ahead, which supports high GPU and memory prices.",
+   "source": "ASML Investor Relations · Reuters",
+   "layer": "compute",
+   "importance": 4
+  },
+  {
+   "url": "https://www.prnewswire.com/news-releases/aep-advances-innovative-energy-solution-for-google-with-702mw-of-bloom-fuel-cells-302907658.html",
+   "title": "Google signs a 20-year deal for 702 MW of Bloom fuel cells in Wyoming, a ~$4B AEP build",
+   "summary": "AEP will build the Cheyenne plant with Bloom Energy's solid-oxide fuel cells, which make electricity from natural gas without burning it. The plant includes plans for carbon capture. Construction starts in 2026, and AEP expects full operation by the end of 2028.",
+   "why": "Hyperscalers increasingly fund on-site gas power for their datacenters because grid hookups take too long, which turns power into a capex line on par with chips.",
+   "source": "AEP via PR Newswire · DCD",
+   "layer": "compute",
+   "importance": 4
+  },
+  {
+   "url": "https://www.ft.com/content/4ffa1853-0e2c-424f-b941-88c6bcac5765",
+   "title": "CoreWeave wants insurers to finance its GPU-backed debt, per the FT",
+   "summary": "Co-founder Brannin McBee reportedly calls insurers' capital effectively \"unlimited\", but insurers mostly buy investment-grade debt. So far the only chip-backed loan rated investment grade is CoreWeave's $8.5B loan backed by its Meta contract, and McBee admitted that loans backed by contracts with lower-rated AI-lab customers don't yet qualify. CoreWeave has raised more than $35B this year and carried ~$52B of debt and lease obligations at the end of June.",
+   "why": "Neoclouds' cost of capital depends on how creditworthy their customers are, so a contract with Meta is worth much more to them as loan collateral than a contract with an AI startup.",
+   "source": "Financial Times (paywalled) · Runtime Wire",
+   "layer": "compute",
+   "importance": 4
+  }
+ ]
+}

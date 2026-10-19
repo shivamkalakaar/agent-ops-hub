@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+.env
+*.db
+web/node_modules/
+web/.next/
+web/.env.local
+config/style/examples.md
+evals/results/

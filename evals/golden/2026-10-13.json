@@ -1,0 +1,76 @@
+{
+ "items": [
+  {
+   "url": "https://www.cnbc.com/2026/10/13/apple-homeview-smart-home-siri-ai.html",
+   "title": "Apple and Alibaba launch AI assistant hardware on the same day: a $299 HomeView display and $450 Qwen glasses",
+   "summary": "Apple unveiled HomeView, a 7-inch smart display built around Siri AI that ships November 13 for $299, along with a new Apple TV 4K and the HomePod mini 2. HomeView won't be sold in the EU because Siri AI isn't available on iOS there. In Hangzhou, Alibaba began selling its Qwen Glasses N1 at 2,999 yuan (about $450), plus an N1 Pro with eye tracking and iris payments at 3,499 yuan.",
+   "why": "Consumer assistants are turning into a hardware fight: the company that owns the device in the room or on your face owns the user relationship with the assistant.",
+   "source": "CNBC · MacRumors (EU) · Bloomberg (Qwen Glasses)",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://www.cnbc.com/2026/10/13/character-ai-chapter-11-disney-bid.html",
+   "title": "Character.AI files for Chapter 11, with Disney as the $20M stalking-horse bidder",
+   "summary": "Character Technologies filed in Delaware on October 12, listing $50M–$100M each in assets and liabilities. It blamed high costs, possible litigation liabilities and regulatory engagement. Disney bid $20M for a non-exclusive perpetual license to some of the company's IP and legal claims, with transition services performed by former Character.AI staff Disney has since hired (its CEO joined Disney as CTO in September). The app stays online, and the sale should close by late November or early December.",
+   "why": "Character.AI was a billion-dollar consumer chatbot company, and it failed on inference costs and liability risk without owning a model or a distribution channel.",
+   "source": "CNBC · Forbes",
+   "layer": "business",
+   "importance": 4
+  },
+  {
+   "url": "https://www.anthropic.com/research/self-replicating-ai",
+   "title": "Anthropic's red team: small AI models may be \"months away\" from self-replicating on smart-home devices",
+   "summary": "Anthropic's researchers tested whether open-weight models could spread by getting themselves running on cheap hardware. A 9B model got inference running on 8 of 9 device types, and GLM-5.2 spread across 8/8 nodes of a test network in 4 of 5 trials. They warn the exploit step was kept deliberately trivial, so these results are an upper bound. They estimate a botnet of ~2M infected TVs would add up to only about 40 H100s of compute, and they ask ISPs and device makers to start monitoring for multi-GB model transfers now.",
+   "why": "AI security policy has mostly assumed datacenters are the chokepoint, and this report argues that small open-weight models on edge hardware also need defending.",
+   "source": "Anthropic Frontier Red Team · SecurityWeek",
+   "layer": "business",
+   "importance": 4
+  },
+  {
+   "url": "https://github.com/prabanta-dev/janas",
+   "title": "Janas runs a 48 GB, 80B-parameter MoE model on a 32 GB laptop by streaming experts from the SSD",
+   "summary": "Janas is an experimental inference engine in pure C that trended on Hacker News. It keeps Qwen3-Next-80B-A3B's weights on disk, loads only the experts each token needs, and caches the frequently used ones in RAM. Its author reports 24 tok/s decode (37 with speculative drafts) against 2.8 for llama.cpp on one Intel laptop. An independent tester on different hardware measured ~25 tok/s and found the two engines roughly tied on that model.",
+   "why": "Because MoE models activate only a small slice of their weights per token, memory stops being the hard limit, and large open models become usable on consumer hardware.",
+   "source": "GitHub · independent test report",
+   "layer": "inference",
+   "importance": 4
+  },
+  {
+   "url": "https://huggingface.co/papers/2610.13166",
+   "title": "TerminalHorizon: 2,852 synthetic trajectories add 14 points on Terminal-Bench 2.0",
+   "summary": "Researchers from USTC and Alibaba's AMAP built an engine that generates terminal tasks, has a separate agent attempt them, and then extends each goal with new requirements that build on earlier steps. That produced 1,535 environments and 2,852 filtered trajectories averaging 52.8 turns, with DeepSeek-V4-Pro as the teacher. Fine-tuning Qwen3.5-27B on the data raised Terminal-Bench 2.0 from 41.6 to 55.8, and the authors say it beats a rival 27B model while using under a tenth as much data.",
+   "why": "In agent training, a few thousand well-built long-horizon examples now count for more than sheer volume, which shifts value toward whoever builds the environments.",
+   "source": "Hugging Face Daily Papers (#4 today, 132 upvotes)",
+   "layer": "training",
+   "importance": 4
+  },
+  {
+   "url": "https://huggingface.co/papers/2610.11765",
+   "title": "\"Thinking Inertia\": reasoning models keep thinking even when told not to",
+   "summary": "The study tested six models, including Qwen3, DeepSeek-V4-Flash, GPT-5.4 and Gemini-3-Flash. With thinking turned off, they still wrote out visible reasoning, and DeepSeek-V4-Flash did so on 99.9% of open-ended answers. The strictest \"answer only\" prompt cut that to 62% on open-ended tasks, but it also lowered accuracy by about 15 points.",
+   "why": "A \"no-think\" switch doesn't reliably cut the token bill, so knowing when to stop reasoning has to be trained into the model during post-training.",
+   "source": "Hugging Face Daily Papers (#3 today, 176 upvotes)",
+   "layer": "training",
+   "importance": 4
+  },
+  {
+   "url": "https://research.meta.ai/blog/muse-wonder",
+   "title": "Meta releases Muse Wonder and Wonder Full, its first frontier-tier models, and they're paid and closed",
+   "summary": "Meta Superintelligence Labs pitches two agent features: \"Active Memory,\" which carries context about you across conversations, and \"Active Focus,\" which keeps the model working on hard goals. The models were trained at the gigawatt-scale Prometheus datacenter. On Artificial Analysis, Wonder Full scores 56 and ties Claude Code on Sonnet 5.5 on the coding-agent index (68). It still trails Opus 5.5 on factual knowledge (30 vs 46). Wonder costs $4/$20 per million tokens through the Meta Model API, while Wonder Full is available only inside the $50/$200-a-month Muse Code plans.",
+   "why": "Meta was the biggest backer of open weights, and it is now selling its best model as a closed subscription and API, which leaves the open frontier to Chinese labs, Mistral and Reflection.",
+   "source": "Meta AI Research · TechCrunch · The Decoder (benchmarks)",
+   "layer": "models",
+   "importance": 4
+  },
+  {
+   "url": "https://finance.yahoo.com/technology/ai/articles/chinese-tech-firms-bought-1-055720200.html",
+   "title": "FT: Chinese firms bought 1M+ Nvidia gaming and workstation GPUs this year and still can't close the gap",
+   "summary": "The buyers reportedly turned to export-compliant RTX Pro 6000D and RTX Pro 5000 cards. These are weaker than Huawei's Ascend 910C, but good enough for simpler jobs such as the prefill stage of inference. Industry insiders estimate China's AI chip supply at ~3.5M units this year against demand above 5M, so a gap remains even with the Nvidia cards, while capex at Alibaba, ByteDance and Tencent could roughly double to ~$104B. ✏️ China's 2026 AI chip math (millions of units) Demand5+ Domestic supply~3.5 + Nvidia RTX cards~4.5 even with 1M+ gaming GPUs, there's a gap of 0.5M+ chips industry estimat",
+   "why": "With power and grid stability now the binding constraints, Nvidia is making its rack design the industry standard, so its lock-in now runs through the whole datacenter and not just the chip.",
+   "source": "NVIDIA Blog",
+   "layer": "compute",
+   "importance": 4
+  }
+ ]
+}

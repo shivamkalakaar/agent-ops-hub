@@ -1,0 +1,85 @@
+{
+ "items": [
+  {
+   "url": "https://charonhub.deeplearning.ai/issue-374/",
+   "title": "Andrew Ng: agents will need far more data centers than people expect",
+   "summary": "In this week's Batch letter, Ng argues that agentic workflows already drive inference demand. Agents also use computers the way people do: one of his runs thousands of web searches a day. So they will need much more compute, storage and networking, and faster tool calls as well as faster tokens. He also criticizes the anti-data-center movement for slowing new capacity. Local friction is real: Finland just ordered Google to halt land work at two sites in its €13B buildout, after ~530 hectares were cleared before environmental reviews were done (per CNBC).",
+   "why": "The demand case for the 25→70 GW build-out is moving from training to always-on agents, while permits, power and local politics set how fast capacity actually comes online.",
+   "source": "The Batch (DeepLearning.AI) · AI Weekly, citing CNBC",
+   "layer": "compute",
+   "importance": 4
+  },
+  {
+   "url": "https://epoch.ai/publications/can-ai-automate-epoch",
+   "title": "Epoch tests whether six frontier models can do its own research jobs: not yet",
+   "summary": "Epoch ran 11 real internal tasks, from graphic design to data-center research, on GPT-6 Astra, Claude Fable 5.1, Grok 4.6, Gemini 3.8 Flash, Kimi K3 and Qwen 3.8 Max. Fable 5.1 and Astra tied at the top and handled well-defined coding and analysis reliably. Models still couldn't pick up Epoch's implicit standards, designed weak experiments and presented flawed results as key findings. Open-weight models lagged further. Kimi K3 built a whole analysis on a filtering error, even though its capability-index score ties Grok 4.6.",
+   "why": "Benchmark parity between open and closed models overstates real-world parity on open-ended work. Still, Epoch now largely automates one graphic-design step after Fable 5.1 matched its quality.",
+   "source": "Epoch AI (single runs, one human grader per task)",
+   "layer": "models",
+   "importance": 4
+  },
+  {
+   "url": "https://huggingface.co/papers/2610.11959",
+   "title": "MiMo-V2.6 report: RL as \"the central training paradigm,\" scaled three ways",
+   "summary": "Xiaomi's MiMo team scaled RL by batch size, by environment diversity and by grading compute. Asynchronous training consumes 1,568 samples and 2.7–3.7B tokens per step, with contexts up to 1M tokens. Environments span code, general, visual and cyber tasks under mixed agent harnesses. Groupwise \"agentic grading\" scores long-horizon tasks and rewards shorter solutions. For stability, the MoE router is frozen and several layers of defenses guard against reward hacking. The team says it will open-source its RL environments and framework.",
+   "why": "The frontier recipe's center of gravity is now agentic RL, and open-sourcing the environments, not just the weights, would give everyone else the hardest-to-build piece.",
+   "source": "Hugging Face Daily Papers (#6 today; abstract reports no benchmark scores)",
+   "layer": "training",
+   "importance": 4
+  },
+  {
+   "url": "https://allenai.org/blog/bolmo-nature",
+   "title": "Ai2's \"byteification\" lands in Nature, now with byte-level Qwen and Llama",
+   "summary": "The method converts a trained subword LLM into one that reads raw bytes. It uses about 49B tokens of extra training, under 1% of a typical pretraining budget, by first freezing the backbone and training new byte encoder and decoder layers around it. Alongside the paper, Ai2 released byteified Qwen 3 8B (Bwen) and Llama 3 8B (Blama). Bolmo 7B beats the BLT 7B byte-level baseline by 16.5 points on STEM, and the byte models beat their parents on character-level tasks.",
+   "why": "Tokenizers hide characters, which hurts on code and biological sequences. Retrofitting skips a full pretraining run, though it is shown only up to 8B and inference engines are still built around BPE t",
+   "source": "Ai2 · Nature",
+   "layer": "training",
+   "importance": 4
+  },
+  {
+   "url": "https://huggingface.co/papers/2610.12242",
+   "title": "TokenRouter: a serving system that lets different models write different tokens",
+   "summary": "Tsinghua researchers target \"token-level routing,\" where a small and a large model take turns generating within a single response. Standard engines assume one model, so they stall when models fall out of sync. TokenRouter runs a subserver per model with a delayed-batching scheduler tuned from a throughput model, and reports 2–64× higher decoding throughput than existing systems.",
+   "why": "Routing is moving from per-request (cheap model vs. expensive model) down to per-token. That makes \"how much of this answer needs the big model\" a serving-cost lever, the same logic behind today's con",
+   "source": "Hugging Face Daily Papers (#3 today)",
+   "layer": "inference",
+   "importance": 4
+  },
+  {
+   "url": "https://cloud.google.com/blog/products/ai-machine-learning/welcome-to-gemini-at-work-2026",
+   "title": "Google unveils one \"universal\" Gemini agent for work, orchestrating Claude too",
+   "summary": "At Gemini at Work, Thomas Kurian showed a single prompt box that plans, uses skills and tools, writes and runs code, makes media and works inline across Gmail, Docs, Sheets and the rest of Workspace. It includes \"coworker agents\" with their own @agents.company.com identities. Governance features include per-agent identity, audit trails, an Agent Sandbox and an \"AI network firewall,\" plus Smart Routing and per-project spend caps. It runs on Gemini Argon/Flash/Omni/Gemma and already orchestrates Anthropic's Claude. Finance and legal versions are in preview, and Google gave no GA date or list pri",
+   "why": "A hyperscaler is selling the harness plus governance plus multi-model routing as the product, which competes directly with vertical agent startups and treats models, even a rival's, as interchangeable",
+   "source": "Google Cloud Blog (customer figures vendor-reported)",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://github.com/pingdotgg/ts-rust",
+   "title": "Claude Opus 5.5 ports the TypeScript compiler to Rust in two weeks for ~$24K",
+   "summary": "Theo Browne's tsc-rs is a Rust port of Microsoft's Go-based TypeScript 7 compiler, type checker and language server. Per the README, all 181,711 ported Go tests pass, and it type-checks real apps ~1.6× faster than tsc 7 (geometric mean, on the author's own M4 Pro). An earlier attempt with OpenAI models cost over $400K and stalled at ~84% compatibility. Claude Opus 5.5 started from scratch and got there in two weeks. The author admits to \"never read a line of this code,\" and known bugs remain in monorepos. ✏️ Agent spend on the same port (API $) OpenAI models$400K+ · ~84% Opus 5.5~$24K · done s",
+   "why": "\"Who's bigger\" headlines now depend on whether cloud resale counts as revenue. Before an IPO, gross vs. net reporting of marketplace sales (Bedrock, Vertex, Azure) will be one of the first things to r",
+   "source": "TechCrunch, citing the Financial Times (reported)",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://runtimewire.com/article/hone-60m-seed-ai-business-agents-moritz-stephan",
+   "title": "Hone raises a $60M seed for agents assigned to business outcomes, not tasks",
+   "summary": "Benchmark and Index led the round at a reported $285M valuation. CEO Moritz Stephan was previously Scott Wu's chief of staff at Cognition. Hone's \"Engines\" are pointed at a business metric, connect to company systems and run for weeks or months, with simulated decisions and human sign-off for sensitive actions. Early customers are Cognition (go-to-market agents) and Modal. No revenue or outcome data has been disclosed.",
+   "why": "It is a clean bet on the seat → usage → outcome shift: if an agent owns a KPI, it can be priced against that KPI rather than per seat or per token.",
+   "source": "RuntimeWire, citing Bloomberg",
+   "layer": "applications",
+   "importance": 4
+  },
+  {
+   "url": "https://www.anthropic.com/news/anthropic-cyber-mission",
+   "title": "Anthropic launches a Cyber Mission and commits $150M to DOE's Genesis Mission",
+   "summary": "The Critical Infrastructure Defense Program gives grid, water and transport security providers frontier Claude models, on-site engineers and threat research. Founding partners include CrowdStrike, Palo Alto Networks, Dragos, Accenture and Rockwell. A free, opt-in OSS Scanner, modeled on OSS-Fuzz, sends open-source projects model-found bugs with proofs of concept, at an expected 90%+ true-positive rate. Separately, Anthropic pledged $150M over three years of Claude access and credits to 15+ federal science agencies.",
+   "why": "Following Tuesday's Cyber Verification Program, Anthropic is positioning dual-use cyber capability as a public-good offering to defenders and government, which shapes how regulators treat frontier-mod",
+   "source": "Anthropic",
+   "layer": "applications",
+   "importance": 4
+  }
+ ]
+}

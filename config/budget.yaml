@@ -1,0 +1,6 @@
+# Checked before every LLM call. On breach the run stops and is marked budget_exceeded.
+# Also set a matching credit limit on the OpenRouter key itself (openrouter.ai/settings/keys).
+daily_cap_usd: 0.25
+monthly_cap_usd: 3.00
+# Used when the provider does not report cost, so the guard errs on the side of caution.
+fallback_cost_per_1k_tokens_usd: 0.001
