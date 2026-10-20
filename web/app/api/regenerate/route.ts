@@ -8,11 +8,14 @@ export async function POST(req: Request) {
   const { data } = await sb.auth.getUser(token);
   if (!data.user || data.user.email !== process.env.OWNER_EMAIL) return Response.json({ error: "forbidden" }, { status: 403 });
 
+  if (!process.env.GITHUB_TOKEN || !process.env.GITHUB_REPO)
+    return Response.json({ error: "GITHUB_TOKEN or GITHUB_REPO isn't set in Vercel's environment variables" }, { status: 500 });
+
   const res = await fetch(`https://api.github.com/repos/${process.env.GITHUB_REPO}/actions/workflows/weekly.yml/dispatches`, {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}`, Accept: "application/vnd.github+json" },
     body: JSON.stringify({ ref: "main" }),
   });
-  if (!res.ok) return Response.json({ error: `GitHub ${res.status}` }, { status: 502 });
+  if (!res.ok) return Response.json({ error: `GitHub ${res.status}: ${(await res.text()).slice(0, 200)}` }, { status: 502 });
   return Response.json({ ok: true });
 }
