@@ -120,3 +120,23 @@ def test_evals_offline(monkeypatch, tmp_path):
     monkeypatch.setattr("core.humanizer.invented_facts", lambda sources, post: [])
     monkeypatch.setattr("sys.argv", ["run_evals", "--cases", "2"])
     assert run_evals.main() == 0
+
+
+def test_keeps_more_human_version_when_rewrite_is_worse():
+    ai = ("Open models aren't a side project anymore. They're the default.\n\n"
+          "An open-weight model scores 88 on X at $0.20 per million tokens, and that changes the math. " * 2
+          + "\n\nMy take: switch now.")
+    llm.FAKE_RESPONSES["revise"] = lambda m: ai  # the rewrite reintroduces AI patterns
+    assert cli.run("collect") == 0 and cli.run("draft") == 0
+    from core.db import connect
+    with connect() as db:
+        d = db.one("select * from drafts")
+        assert d["post_md"] == GOOD_POST            # first version kept: no violations, higher weighted score
+        assert d["judge_scores"]["overall"] == graph.overall_score(
+            {k: v for k, v in d["judge_scores"].items() if k in ("hook", "focus", "brevity", "concreteness", "voice", "grounding")},
+            d["judge_scores"]["humanizer"])
+
+
+def test_overall_weights_humanizer_40_percent():
+    assert graph.overall_score({"hook": 5, "voice": 5}, 1) == 0.4 * 1 + 0.6 * 5
+    assert graph.overall_score({"hook": 3, "voice": 3}, 5) == 0.4 * 5 + 0.6 * 3

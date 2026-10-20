@@ -27,7 +27,8 @@ def run_case(ctx, name: str, items: list[dict]) -> dict:
         {"items": items, "week": name, "recent_angles": []}, config={"configurable": {"ctx": ctx}, "callbacks": ctx.callbacks,
                                                 "run_name": f"eval.{name}"})
     scores = state["scores"]
-    return {"case": name, "mean": round(mean(scores.values()), 2) if scores else 0.0, "scores": scores,
+    return {"case": name, "mean": state["overall"], "critic_mean": round(mean(scores.values()), 2) if scores else 0.0,
+            "scores": scores,
             "violations": state["violations"], "revisions": state["revisions"], "chars": len(state["post"]),
             "humanizer": humanizer.scan(state["post"])["score"],
             "post": state["post"]}

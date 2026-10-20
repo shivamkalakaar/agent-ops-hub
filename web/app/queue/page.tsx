@@ -88,7 +88,9 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries }:
   const pending = draft.status === "pending";
   const words = text.trim().split(/\s+/).filter(Boolean).length;
   // "accent" is the old 0-100 humanizer score on early drafts; "humanizer" is the same check on the 1-5 scale.
-  const scores = Object.entries(draft.judge_scores ?? {}).filter(([k, v]) => typeof v === "number" && k !== "accent") as [string, number][];
+  const scores = (Object.entries(draft.judge_scores ?? {}).filter(([k, v]) => typeof v === "number" && !["accent", "overall"].includes(k)) as [string, number][])
+    .sort(([a], [b]) => (a === "humanizer" ? -1 : b === "humanizer" ? 1 : 0));
+  const overall = typeof draft.judge_scores?.overall === "number" ? (draft.judge_scores.overall as number) : null;
   const violations = (draft.judge_scores?.violations as string[] | undefined) ?? [];
   const onepagerUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${draft.week}` : "";
 
@@ -173,6 +175,13 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries }:
 
         <aside className="space-y-4 text-sm">
           <div>
+            {overall !== null && (
+              <div className="mb-3">
+                <div className="text-ink-2">Overall</div>
+                <div className={`num text-2xl font-semibold ${overall < 4 ? "text-warn" : ""}`}>{overall.toFixed(1)}/5</div>
+                <div className="text-xs text-muted">humanizer 40% · other scores share 60%</div>
+              </div>
+            )}
             <div className="mb-1 text-ink-2">Scores <span className="text-muted">(1–5, 5 is best)</span></div>
             {scores.map(([k, v]) => (
               <div key={k} className="flex items-center justify-between border-t border-line py-1">

@@ -33,6 +33,9 @@ def run(kind: str) -> int:
             stats = summarize(kind, state)
             for name, value in state.get("scores", {}).items():
                 t.score(f"critic.{name}", value)
+            if state.get("overall") is not None:
+                t.score("overall", state["overall"])
+                t.score("humanizer", state["accent"]["score"])
             t.output(stats)
             db.finish_run(run_id, "succeeded", trace_url=t.url, stats=stats)
             print(f"[{run_id}] {kind} succeeded: {stats}" + (f"\ntrace: {t.url}" if t.url else ""))
@@ -46,7 +49,8 @@ def summarize(kind: str, state: dict) -> dict:
                 "from_brief": len(state.get("pending", [])),
                 "scored": sum(1 for i in scored if i.get("importance")), "feed_errors": len(state.get("feed_errors", []))}
     return {"draft_id": state.get("draft_id"), "week": state.get("week"), "revisions": state.get("revisions"),
-            "chars": len(state.get("post", "")), "scores": state.get("scores"), "violations": state.get("violations")}
+            "chars": len(state.get("post", "")), "overall": state.get("overall"),
+            "humanizer": (state.get("accent") or {}).get("score"), "scores": state.get("scores"), "violations": state.get("violations")}
 
 
 def build_style_guide() -> int:

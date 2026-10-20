@@ -27,6 +27,7 @@ MAX_REVISIONS = 2
 MIN_SCORE = 4
 MAX_CHARS = 1300
 MAX_LIST_ITEMS = 8
+HUMANIZER_WEIGHT = 0.4  # the humanizer counts 40%; the critic's dimensions share the other 60% equally
 WORDS = (60, 200)  # guardrail band; the prompt targets 80–180
 BANNED = ["i'm excited", "i am excited", "game-changer", "game changer", "revolutioniz", "delve",
           "in today's", "fast-paced", "landscape", "thrilled to", "follow for more"]
@@ -141,6 +142,8 @@ class DraftState(TypedDict, total=False):
     onepager: dict
     accent: dict
     unsupported: list[str]
+    overall: float
+    best: dict
     draft_id: str
 
 
@@ -243,24 +246,48 @@ def guardrail_violations(post: str, source_urls: set[str], sources_text: str | N
     return v
 
 
+def overall_score(scores: dict, human: int) -> float:
+    """Weighted 1-5 score: humanizer 40%, critic dimensions 60% split equally."""
+    if not scores:
+        return round(HUMANIZER_WEIGHT * human, 2)
+    return round(HUMANIZER_WEIGHT * human + (1 - HUMANIZER_WEIGHT) * sum(scores.values()) / len(scores), 2)
+
+
 def guardrails(state: DraftState) -> DraftState:
+    """Deterministic checks, then the weighted score. Keeps the best version seen so far: a rewrite can
+    make a post worse, and the more human version wins (fewest violations, then overall, then humanizer)."""
     sources_text = _sources_block(state["sources"])
-    return {"violations": guardrail_violations(state["post"], {s["url"] for s in state["sources"]}, sources_text),
-            "accent": humanizer.scan(state["post"])}
+    violations = guardrail_violations(state["post"], {s["url"] for s in state["sources"]}, sources_text)
+    accent = humanizer.scan(state["post"])
+    overall = overall_score(state["scores"], accent["score"])
+    current = {"post": state["post"], "scores": state["scores"], "critique": state.get("critique", ""),
+               "unsupported": state.get("unsupported", []), "violations": violations, "accent": accent, "overall": overall}
+    rank = lambda v: (-len(v["violations"]), v["overall"], v["accent"]["score"])
+    best = state.get("best")
+    return {"violations": violations, "accent": accent, "overall": overall,
+            "best": current if not best or rank(current) > rank(best) else best}
 
 
-def weak_scores(scores: dict) -> bool:
-    """A real weakness (any dimension below 3, grounding below 4, or a weak average), not every 3/5:
-    each rewrite costs a writer and a critic call."""
+def weak_scores(scores: dict, human: int = 5) -> bool:
+    """A real weakness (any critic dimension below 3, grounding below 4, or a weighted overall below 4),
+    not every 3/5: each rewrite costs a writer and a critic call."""
     s = list(scores.values())
-    return not s or min(s) < 3 or scores.get("grounding", 5) < MIN_SCORE or sum(s) / len(s) < MIN_SCORE
+    return (not s or min(s) < 3 or scores.get("grounding", 5) < MIN_SCORE
+            or overall_score(scores, human) < MIN_SCORE)
 
 
 def needs_revision(state: DraftState) -> str:
-    weak = weak_scores(state["scores"])
+    weak = weak_scores(state["scores"], state["accent"]["score"])
     if (weak or state["violations"]) and state["revisions"] < MAX_REVISIONS:
         return "revise"
-    return "onepager"
+    return "use_best"
+
+
+def use_best(state: DraftState) -> DraftState:
+    """Publish the best-ranked version, not necessarily the last rewrite."""
+    b = state["best"]
+    return {"post": b["post"], "scores": b["scores"], "critique": b["critique"], "unsupported": b["unsupported"],
+            "violations": b["violations"], "accent": b["accent"], "overall": b["overall"]}
 
 
 def revise(state: DraftState, config: RunnableConfig) -> DraftState:
@@ -287,7 +314,8 @@ def save(state: DraftState, config: RunnableConfig) -> DraftState:
         "sources": sources, "revisions": state["revisions"],
         "judge_scores": {**state["scores"], "violations": state["violations"], "humanizer": state["accent"]["score"],
                          "critique": state.get("critique", ""), "unsupported_claims": state.get("unsupported", []),
-                         "passed_review": not state["violations"] and not weak_scores(state["scores"])},
+                         "overall": state["overall"],
+                         "passed_review": not state["violations"] and not weak_scores(state["scores"], state["accent"]["score"])},
     }, ctx.run_id)
     return {"draft_id": draft_id}
 
@@ -295,7 +323,7 @@ def save(state: DraftState, config: RunnableConfig) -> DraftState:
 def build_draft(persist: bool = True):
     g = StateGraph(DraftState)
     nodes = [("load_items", load_items), ("pick_angle", pick_angle), ("read_sources", read_sources), ("write_post", write_post), ("critic", critic),
-             ("guardrails", guardrails), ("revise", revise), ("onepager", onepager)]
+             ("guardrails", guardrails), ("revise", revise), ("use_best", use_best), ("onepager", onepager)]
     if persist:
         nodes.append(("save", save))
     for name, fn in nodes:
@@ -306,7 +334,8 @@ def build_draft(persist: bool = True):
     g.add_edge("read_sources", "write_post")
     g.add_edge("write_post", "critic")
     g.add_edge("critic", "guardrails")
-    g.add_conditional_edges("guardrails", needs_revision, {"revise": "revise", "onepager": "onepager"})
+    g.add_conditional_edges("guardrails", needs_revision, {"revise": "revise", "use_best": "use_best"})
+    g.add_edge("use_best", "onepager")
     g.add_edge("revise", "critic")
     if persist:
         g.add_edge("onepager", "save")
