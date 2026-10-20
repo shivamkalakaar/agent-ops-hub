@@ -10,3 +10,5 @@ Cover, with short bullets:
 - What they never do
 
 Keep the guide under 350 words. Reply with ONLY the guide in Markdown.
+
+Examples are labeled. From [LONG-FORM ESSAY] examples take only tone, stance, and how the author uses specifics and frameworks. Take hooks, length, and line rhythm only from [SHORT POST] examples; the target output is always a short post of 80–180 words.

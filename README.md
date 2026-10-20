@@ -27,7 +27,7 @@ weekly  load top items → pick ONE angle → write post → critic → guardrai
 - **Budget guard** (`core/budget.py`): checked before *every* LLM call against daily and monthly caps (`config/budget.yaml`). If a cap is hit, the run stops cleanly with status `budget_exceeded`. A matching credit limit on the OpenRouter key backs this up.
 - **Cost accounting**: each call's real cost, as reported by OpenRouter, goes into `llm_calls`. The dashboard shows spend per day, per tier and per draft.
 - **Model fallbacks**: OpenRouter's `models` array lets a rate-limited free model fall through to a cheap paid one. The dashboard shows which models actually served calls.
-- **Guardrails** (deterministic, `guardrail_violations`): ≤1,300 characters, 80–180 words, banned hype phrases, ≤2 hashtags, ≤3 bullets, no links that don't come from the sources.
+- **Guardrails** (deterministic, `guardrail_violations`): ≤1,300 characters, 80–180 words, banned hype phrases, ≤2 hashtags, ≤8 list items, no links that don't come from the sources.
 - **LLM critic**: scores hook, focus, brevity, concreteness, voice and grounding from 1–5. Any score below 4 triggers a revision.
 - **Safe rendering**: the model returns JSON and the HTML is built server-side with everything escaped. The dashboard also shows the result in a script-less sandboxed iframe.
 - **Human in the loop**: drafts are created as `pending`. The owner edits, then approves or rejects. Approved posts, including the owner's edits, become few-shot examples for the next week.

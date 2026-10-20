@@ -49,15 +49,18 @@ def summarize(kind: str, state: dict) -> dict:
 
 
 def build_style_guide() -> int:
-    examples = graph.style_examples(n=50)
-    if len(examples) < 5:
-        print("Paste at least 5 posts into config/style/examples.md (separated by ---) first.", file=sys.stderr)
+    examples = graph.style_examples(n=50, short_only=False)
+    if len(examples) < 3:
+        print("Paste at least 3 posts into config/style/examples.md (separated by ---) first.", file=sys.stderr)
         return 1
+    limit = graph.SHORT_POST_WORDS
+    labeled = [f"[SHORT POST]\n{e}" if len(e.split()) <= limit
+               else f"[LONG-FORM ESSAY, first 400 words]\n{' '.join(e.split()[:400])}" for e in examples]
     with connect() as db:
         run_id = db.start_run(AGENT, "style_guide", git_sha())
         try:
             guide = llm.call(llm.RunContext(db=db, run_id=run_id), "writer", "style_guide",
-                             graph.prompt("style_guide"), "\n\n---\n\n".join(examples))
+                             graph.prompt("style_guide"), "\n\n---\n\n".join(labeled))
         except Exception as ex:
             db.finish_run(run_id, "failed", error=str(ex))
             raise

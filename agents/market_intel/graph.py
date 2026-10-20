@@ -24,6 +24,7 @@ SCORE_BATCH = 20
 MAX_REVISIONS = 2
 MIN_SCORE = 4
 MAX_CHARS = 1300
+MAX_LIST_ITEMS = 8
 WORDS = (60, 200)  # guardrail band; the prompt targets 80–180
 BANNED = ["i'm excited", "i am excited", "game-changer", "game changer", "revolutioniz", "delve",
           "in today's", "fast-paced", "landscape", "thrilled to", "follow for more"]
@@ -44,12 +45,18 @@ def style_guide() -> str:
     return (CONFIG / "style" / "guide.md").read_text()
 
 
-def style_examples(n: int = 3) -> list[str]:
+SHORT_POST_WORDS = 250  # only posts this short serve as few-shot; longer ones are essays, used for tone only
+
+
+def style_examples(n: int = 3, short_only: bool = True) -> list[str]:
     path = CONFIG / "style" / "examples.md"
     if not path.exists():
         return []
     body = re.sub(r"<!--.*?-->", "", path.read_text(), flags=re.S)
-    return [p.strip() for p in re.split(r"^---\s*$", body, flags=re.M) if p.strip()][:n]
+    posts = [p.strip() for p in re.split(r"^---\s*$", body, flags=re.M) if p.strip()]
+    if short_only:
+        posts = [p for p in posts if len(p.split()) <= SHORT_POST_WORDS]
+    return posts[:n]
 
 
 # --------------------------------------------------------------------------- collect
@@ -192,8 +199,8 @@ def guardrail_violations(post: str, source_urls: set[str]) -> list[str]:
     v += [f'banned phrase "{b}"' for b in BANNED if b in lower]
     if len(re.findall(r"(?<!\w)#\w+", post)) > 2:
         v.append("more than 2 hashtags")
-    if len(re.findall(r"^\s*(?:[-•*]|\d+[.)])\s", post, flags=re.M)) > 3:
-        v.append("more than 3 bullet points")
+    if len(re.findall(r"^\s*(?:[-•*]|\d+[.)])\s", post, flags=re.M)) > MAX_LIST_ITEMS:
+        v.append(f"more than {MAX_LIST_ITEMS} list items")
     for url in re.findall(r"https?://\S+", post):
         v.append("link in the post body (links go in the first comment)" if url.rstrip(").,") in source_urls
                  else f"link not from the sources: {url}")
