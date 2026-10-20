@@ -5,6 +5,7 @@ import { supabase, configured } from "@/lib/supabase";
 import type { Draft } from "@/lib/types";
 import { when } from "@/lib/format";
 import { Card, NotConfigured, Status } from "@/components/ui";
+import { SERIES } from "@/lib/linkedin";
 
 const MAX_CHARS = 1300;
 
@@ -72,12 +73,14 @@ export default function Queue() {
       )}
       {msg && <p className="text-sm text-ink-2">{msg}</p>}
       {drafts.length === 0 && <Card><p className="text-ink-2">No drafts yet. The weekly run creates one every Friday.</p></Card>}
-      {drafts.map((d) => <DraftCard key={d.id} draft={d} onChange={load} token={session.access_token} canPublish={!!li?.connected} />)}
+      {drafts.map((d) => <DraftCard key={d.id} draft={d} onChange={load} token={session.access_token} canPublish={!!li?.connected}
+        nextSeries={Math.max(0, ...drafts.map((x) => x.series_no ?? 0)) + 1} />)}
     </div>
   );
 }
 
-function DraftCard({ draft, onChange, token, canPublish }: { draft: Draft; onChange: () => void; token: string; canPublish: boolean }) {
+function DraftCard({ draft, onChange, token, canPublish, nextSeries }:
+  { draft: Draft; onChange: () => void; token: string; canPublish: boolean; nextSeries: number }) {
   const [pubMsg, setPubMsg] = useState("");
   const [text, setText] = useState(draft.edited_post_md ?? draft.post_md);
   const [preview, setPreview] = useState(false);
@@ -109,7 +112,7 @@ function DraftCard({ draft, onChange, token, canPublish }: { draft: Draft; onCha
     });
     const body = await res.json();
     setBusy(false);
-    setPubMsg(res.ok ? `Published. First comment ${body.comment}.` : `Failed: ${body.error}`);
+    setPubMsg(res.ok ? `Published as ${SERIES} #${body.seriesNo}. First comment ${body.comment}.` : `Failed: ${body.error}`);
     onChange();
   };
 
@@ -135,6 +138,8 @@ function DraftCard({ draft, onChange, token, canPublish }: { draft: Draft; onCha
             className="w-full rounded-lg border border-line bg-bg p-3 text-[15px] leading-relaxed outline-none focus:border-accent" />
           <div className={`mt-1 text-xs num ${text.length > MAX_CHARS ? "text-bad" : "text-muted"}`}>
             {text.length} / {MAX_CHARS} characters · {words} words
+            {draft.series_no ? ` · published as ${SERIES} #${draft.series_no}`
+              : draft.status !== "rejected" && ` · publishes as ${SERIES} #${nextSeries} (added as the last line)`}
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {pending ? (
@@ -148,7 +153,7 @@ function DraftCard({ draft, onChange, token, canPublish }: { draft: Draft; onCha
               <>
                 {draft.linkedin_url ? (
                   <a href={draft.linkedin_url} target="_blank" rel="noopener" className="rounded-lg bg-good px-4 py-2 text-sm font-medium text-white">
-                    ✓ Live on LinkedIn · view post
+                    ✓ {draft.series_no ? `${SERIES} #${draft.series_no}` : "Live"} on LinkedIn · view post
                   </a>
                 ) : (
                   <button disabled={busy || !canPublish} onClick={publish} title={canPublish ? "" : "Connect LinkedIn first"}

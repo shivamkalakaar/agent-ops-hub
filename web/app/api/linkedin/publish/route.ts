@@ -1,5 +1,5 @@
 import { bearer, ownerClient } from "@/lib/owner";
-import { liFetch, littleText } from "@/lib/linkedin";
+import { liFetch, littleText, withSeries } from "@/lib/linkedin";
 
 /** Owner-only: publish an APPROVED draft to the owner's LinkedIn profile, then add the one-pager link as the first comment. */
 export async function POST(req: Request) {
@@ -15,7 +15,10 @@ export async function POST(req: Request) {
   const { data: li } = await owner.sb.from("linkedin_auth").select("*").maybeSingle();
   if (!li || new Date(li.expires_at) < new Date()) return Response.json({ error: "connect LinkedIn first" }, { status: 412 });
 
-  const text: string = d.edited_post_md ?? d.post_md;
+  const { data: last } = await owner.sb.from("drafts").select("series_no").not("series_no", "is", null)
+    .order("series_no", { ascending: false }).limit(1).maybeSingle();
+  const seriesNo = (last?.series_no ?? 0) + 1;
+  const text = withSeries(d.edited_post_md ?? d.post_md, seriesNo);
   const res = await liFetch("/rest/posts", li.access_token, {
     method: "POST",
     body: JSON.stringify({
@@ -29,12 +32,12 @@ export async function POST(req: Request) {
 
   const url = `https://www.linkedin.com/feed/update/${urn}/`;
   // Save first: the post is live even if the comment below fails.
-  await owner.sb.from("drafts").update({ published_at: new Date().toISOString(), linkedin_url: url }).eq("id", d.id);
+  await owner.sb.from("drafts").update({ published_at: new Date().toISOString(), linkedin_url: url, series_no: seriesNo }).eq("id", d.id);
 
   const onepager = `${new URL(req.url).origin}/p/${d.week}`;
   const c = await liFetch(`/rest/socialActions/${encodeURIComponent(urn)}/comments`, li.access_token, {
     method: "POST",
     body: JSON.stringify({ actor: li.person_urn, object: urn, message: { text: `Sources and the full breakdown: ${onepager}` } }),
   });
-  return Response.json({ url, comment: c.ok ? "added" : `failed (${c.status}); add it by hand` });
+  return Response.json({ url, seriesNo, comment: c.ok ? "added" : `failed (${c.status}); add it by hand` });
 }

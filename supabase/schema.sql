@@ -75,3 +75,4 @@ create table if not exists linkedin_auth (
   expires_at   timestamptz not null,
   updated_at   timestamptz not null
 );
+alter table drafts add column if not exists series_no integer;   -- "AI Musing #N", assigned at publish time
