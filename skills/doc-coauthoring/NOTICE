@@ -1,0 +1,20 @@
+doc-coauthoring
+Modified by How to AI by Ruben Hassid, 2026-09-29.
+
+This skill is derived from the "doc-coauthoring" skill in Anthropic's skills repository
+(https://github.com/anthropics/skills/tree/main/skills/doc-coauthoring), which is licensed under the
+Apache License, Version 2.0. The original work is credited to Anthropic; its attribution notices are kept
+(see SOURCE.md).
+
+Changes made by How to AI:
+- SKILL.md rewritten and compressed. The three-stage workflow (context gathering, section-by-section
+  drafting, reader testing) and its behaviors are kept; the skill now covers business documents as well as
+  technical ones and calls the scripts below.
+- Added assets/doctypes.json: 14 original document blueprints.
+- Added scripts/doc_check.py: document types, blueprints, a mechanical draft check, and a cold-reader test kit.
+- Added scripts/export.py: Markdown to .docx and print-ready .html.
+- Added tests and evaluation cases under .evals/ (not shipped).
+
+You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0. Unless required by
+applicable law or agreed to in writing, this work is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied.

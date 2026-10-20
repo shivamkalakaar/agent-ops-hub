@@ -55,7 +55,8 @@ function DraftCard({ draft, onChange }: { draft: Draft; onChange: () => void }) 
   const [busy, setBusy] = useState(false);
   const pending = draft.status === "pending";
   const words = text.trim().split(/\s+/).filter(Boolean).length;
-  const scores = Object.entries(draft.judge_scores ?? {}).filter(([, v]) => typeof v === "number") as [string, number][];
+  const scores = Object.entries(draft.judge_scores ?? {}).filter(([k, v]) => typeof v === "number" && k !== "accent") as [string, number][];
+  const accent = typeof draft.judge_scores?.accent === "number" ? (draft.judge_scores.accent as number) : null;
   const violations = (draft.judge_scores?.violations as string[] | undefined) ?? [];
   const onepagerUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${draft.week}` : "";
 
@@ -78,6 +79,12 @@ function DraftCard({ draft, onChange }: { draft: Draft; onChange: () => void }) 
         <a href={`/runs/${draft.run_id}`} className="ml-auto text-sm text-accent hover:underline">run details</a>
       </div>
       {draft.angle?.angle && <p className="mt-2 text-sm text-ink-2"><b>Angle:</b> {draft.angle.angle}</p>}
+      {draft.judge_scores?.passed_review === false && (
+        <p className="mt-2 text-sm text-warn"><b>! Didn&apos;t pass review</b> after {draft.revisions} rewrites. Edit it, reject it, or generate a new one.</p>
+      )}
+      {typeof draft.judge_scores?.critique === "string" && draft.judge_scores.critique && (
+        <p className="mt-2 text-sm text-ink-2"><b>Critic:</b> {draft.judge_scores.critique}</p>
+      )}
 
       <div className="mt-4 grid gap-6 md:grid-cols-[1fr_220px]">
         <div>
@@ -109,6 +116,12 @@ function DraftCard({ draft, onChange }: { draft: Draft; onChange: () => void }) 
 
         <aside className="space-y-4 text-sm">
           <div>
+            {accent !== null && (
+              <div className="mb-3">
+                <div className="mb-1 text-ink-2">AI-accent score <span className="text-muted">(humanizer, lower is better)</span></div>
+                <div className={`num text-lg font-semibold ${accent > 20 ? "text-warn" : ""}`}>{accent}/100</div>
+              </div>
+            )}
             <div className="mb-1 text-ink-2">Critic scores</div>
             {scores.map(([k, v]) => (
               <div key={k} className="flex items-center justify-between border-t border-line py-1">

@@ -13,7 +13,7 @@ from typing import TypedDict
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 
-from core import llm
+from core import humanizer, llm
 from core.config import CONFIG, load_json
 from core.feeds import fetch_all
 from agents.market_intel.render import render_onepager
@@ -123,6 +123,7 @@ class DraftState(TypedDict, total=False):
     week: str
     items: list[dict]
     recent_posts: list[str]
+    recent_angles: list[str]
     angle: dict
     sources: list[dict]
     post: str
@@ -131,6 +132,8 @@ class DraftState(TypedDict, total=False):
     violations: list[str]
     revisions: int
     onepager: dict
+    accent: dict
+    unsupported: list[str]
     draft_id: str
 
 
@@ -141,7 +144,8 @@ def load_items(state: DraftState, config: RunnableConfig) -> DraftState:
     if not items:
         raise RuntimeError("no scored items in the last 7 days; run collect first")
     week = state.get("week") or "{}-W{:02d}".format(*datetime.now(timezone.utc).isocalendar()[:2])
-    return {"items": items, "week": week, "recent_posts": db.approved_posts(3), "revisions": 0}
+    return {"items": items, "week": week, "recent_posts": db.approved_posts(3),
+            "recent_angles": state["recent_angles"] if "recent_angles" in state else db.recent_angles(5), "revisions": 0}
 
 
 def _listing(items: list[dict]) -> str:
@@ -155,7 +159,7 @@ def _sources_block(sources: list[dict]) -> str:
 
 
 def pick_angle(state: DraftState, config: RunnableConfig) -> DraftState:
-    recent = "\n---\n".join(state["recent_posts"]) or "(none yet)"
+    recent = "\n".join(f"- {a}" for a in state["recent_angles"]) or "(none yet)"
     angle = llm.call_json(ctx_of(config), "writer", "pick_angle", prompt("pick_angle", AUTHOR=AUTHOR, RECENT=recent),
                           _listing(state["items"]))
     ids = [i for i in angle.get("item_ids", []) if isinstance(i, int) and 0 <= i < len(state["items"])][:3] or [0]
@@ -164,7 +168,7 @@ def pick_angle(state: DraftState, config: RunnableConfig) -> DraftState:
 
 def _post_system() -> str:
     examples = style_examples()
-    return prompt("write_post", AUTHOR=AUTHOR, STYLE_GUIDE=style_guide(),
+    return prompt("write_post", AUTHOR=AUTHOR, STYLE_GUIDE=style_guide(), HUMANIZER=humanizer.rules(),
                   EXAMPLES="\n\n---\n\n".join(examples) or "(no examples yet; follow the style guide)")
 
 
@@ -174,7 +178,7 @@ def write_post(state: DraftState, config: RunnableConfig) -> DraftState:
             f"Why now: {state['angle'].get('why_now')}\n\n# Source items\n{_sources_block(state['sources'])}")
     if recent:
         user += f"\n\n# {AUTHOR}'s recent approved posts (match this voice; they include the author's own edits)\n{recent}"
-    return {"post": _clean_post(llm.call(ctx_of(config), "writer", "write_post", _post_system(), user))}
+    return {"post": _clean_post(llm.call(ctx_of(config), "voice", "write_post", _post_system(), user))}
 
 
 def _clean_post(text: str) -> str:
@@ -186,12 +190,22 @@ def critic(state: DraftState, config: RunnableConfig) -> DraftState:
     user = f"# Source items\n{_sources_block(state['sources'])}\n\n# Post\n{state['post']}"
     review = llm.call_json(ctx_of(config), "judge", "critic", prompt("critic", STYLE_GUIDE=style_guide()), user)
     scores = {k: int(v) for k, v in (review.get("scores") or {}).items() if str(v).isdigit()}
-    return {"scores": scores, "critique": review.get("critique", "")}
+    return {"scores": scores, "critique": review.get("critique", ""),
+            "unsupported": [c for c in review.get("unsupported_claims", []) if isinstance(c, str)]}
 
 
-def guardrail_violations(post: str, source_urls: set[str]) -> list[str]:
-    """Deterministic checks that run on every draft, independent of the LLM critic."""
+def guardrail_violations(post: str, source_urls: set[str], sources_text: str | None = None) -> list[str]:
+    """Deterministic checks that run on every draft, independent of the LLM critic.
+    Includes the humanizer skill's accent scanner and, when sources are given, its fact guard."""
     v, lower, words = [], post.lower(), len(post.split())
+    accent = humanizer.scan(post)
+    if accent["score"] > humanizer.MAX_ACCENT:
+        v.append(f"sounds like AI: accent score {accent['score']} ({accent['band']}), keep it at or under "
+                 f"{humanizer.MAX_ACCENT}. Fix: " + "; ".join(accent["hits"][:5] or accent["contributors"]))
+    v += [f"sounds like AI: {t}" for t in accent["structural"]]
+    if sources_text is not None:
+        v += [f"{f} is not in the sources; remove it or use the sourced figure" for f in humanizer.invented_facts(sources_text, post)
+              if not f.startswith("link")]
     if len(post) > MAX_CHARS:
         v.append(f"{len(post)} characters; the cap is {MAX_CHARS}")
     if not WORDS[0] <= words <= WORDS[1]:
@@ -208,7 +222,9 @@ def guardrail_violations(post: str, source_urls: set[str]) -> list[str]:
 
 
 def guardrails(state: DraftState) -> DraftState:
-    return {"violations": guardrail_violations(state["post"], {s["url"] for s in state["sources"]})}
+    sources_text = _sources_block(state["sources"])
+    return {"violations": guardrail_violations(state["post"], {s["url"] for s in state["sources"]}, sources_text),
+            "accent": humanizer.scan(state["post"])}
 
 
 def needs_revision(state: DraftState) -> str:
@@ -223,7 +239,7 @@ def revise(state: DraftState, config: RunnableConfig) -> DraftState:
     user = (f"# Source items\n{_sources_block(state['sources'])}\n\n# Current post\n{state['post']}\n\n"
             f"# Editor scores\n{json.dumps(state['scores'])}\n\n# Editor notes\n{state['critique']}\n\n"
             f"# Rule violations (must fix)\n{issues}")
-    text = llm.call(ctx_of(config), "writer", "revise", _post_system() + "\n\n" + prompt("revise"), user)
+    text = llm.call(ctx_of(config), "voice", "revise", _post_system() + "\n\n" + prompt("revise"), user)
     return {"post": _clean_post(text), "revisions": state["revisions"] + 1}
 
 
@@ -239,7 +255,9 @@ def save(state: DraftState, config: RunnableConfig) -> DraftState:
         "week": state["week"], "angle": state["angle"], "post_md": state["post"],
         "onepager_html": render_onepager(state["onepager"], sources, state["week"], AUTHOR),
         "sources": sources, "revisions": state["revisions"],
-        "judge_scores": {**state["scores"], "violations": state["violations"]},
+        "judge_scores": {**state["scores"], "violations": state["violations"], "accent": state["accent"]["score"],
+                         "critique": state.get("critique", ""), "unsupported_claims": state.get("unsupported", []),
+                         "passed_review": not state["violations"] and all(v >= MIN_SCORE for v in state["scores"].values())},
     }, ctx.run_id)
     return {"draft_id": draft_id}
 

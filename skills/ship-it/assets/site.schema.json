@@ -1,0 +1,1547 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Business or site name. Used in the menu, page titles, footer and structured data."
+    },
+    "tagline": {
+      "type": "string",
+      "description": "One line after the name in the home page title, e.g. 'Halden & Co: operations for small teams'."
+    },
+    "url": {
+      "type": "string",
+      "pattern": "^https://",
+      "description": "Final address, e.g. https://halden.co.uk. Turns on canonical links, sitemap and share tags. Leave it out until the address is known, then rebuild."
+    },
+    "lang": {
+      "type": "string",
+      "description": "Language code (en, fr, nl, de...). Non-English sites should also set ui."
+    },
+    "description": {
+      "type": "string",
+      "description": "Default search and share description."
+    },
+    "preset": {
+      "type": "string",
+      "description": "Design preset name. Run: python3 scripts/build_site.py presets"
+    },
+    "tokens": {
+      "type": "object",
+      "description": "Overrides on the preset: colors {accent, bg, ...}, radius {sm, md, lg}, fonts {heading, body}, style {...}, container, space_unit. Run: python3 scripts/build_site.py tokens PRESET"
+    },
+    "fonts": {
+      "enum": [
+        "google",
+        "system"
+      ],
+      "description": "google loads the preset fonts from Google Fonts; system uses only fonts already on the visitor's device (no external requests, faster, more private)."
+    },
+    "dark_mode": {
+      "type": "boolean",
+      "description": "Follow the visitor's dark mode when the preset has a dark palette."
+    },
+    "nav": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "href": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "href"
+        ]
+      },
+      "maxItems": 7,
+      "description": "Menu links. Leave out to build the menu from blocks and pages that have nav_label. '#id' links point at the home page from any page."
+    },
+    "nav_cta": {
+      "type": "object",
+      "required": [
+        "label",
+        "href"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "href": {
+          "type": "string"
+        }
+      },
+      "description": "One highlighted button at the end of the menu."
+    },
+    "nav_sticky": {
+      "type": "boolean",
+      "description": "Keep the menu at the top while scrolling."
+    },
+    "logo": {
+      "type": "object",
+      "required": [
+        "src",
+        "alt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "src": {
+          "type": "string"
+        },
+        "alt": {
+          "type": "string"
+        },
+        "width": {
+          "type": "integer"
+        },
+        "height": {
+          "type": "integer"
+        }
+      },
+      "description": "Logo image used instead of the text name in the menu. alt should be the business name."
+    },
+    "footer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Short line under the name."
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "links": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "href": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "href"
+                  ]
+                },
+                "minItems": 1,
+                "maxItems": 8
+              }
+            },
+            "required": [
+              "title",
+              "links"
+            ]
+          },
+          "maxItems": 3
+        },
+        "social": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "href": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "label",
+              "href"
+            ]
+          },
+          "maxItems": 6,
+          "description": "Text links to social profiles."
+        },
+        "legal": {
+          "type": "string",
+          "description": "Small print such as a company number."
+        }
+      },
+      "required": [],
+      "description": "Footer content."
+    },
+    "business": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Organization, LocalBusiness or a schema.org subtype such as Restaurant, Dentist, LegalService, ProfessionalService."
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "address": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "street": {
+              "type": "string"
+            },
+            "city": {
+              "type": "string"
+            },
+            "region": {
+              "type": "string"
+            },
+            "postal": {
+              "type": "string"
+            },
+            "country": {
+              "type": "string",
+              "description": "Two letter code such as GB or BE."
+            }
+          },
+          "required": []
+        },
+        "opening_hours": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "schema.org format, e.g. 'Mo-Fr 09:00-17:00'."
+        },
+        "price_range": {
+          "type": "string"
+        },
+        "same_as": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^https://"
+          },
+          "description": "Profile URLs (LinkedIn, Instagram...)."
+        }
+      },
+      "required": [],
+      "description": "Facts for search engines (structured data). Only what is true."
+    },
+    "og_image": {
+      "type": "string",
+      "description": "Share image: a file inside public/ (1200x630 works best) or an https URL."
+    },
+    "public": {
+      "type": "string",
+      "description": "Folder of images and files copied as-is into the site. Default: public/ next to site.json."
+    },
+    "custom_css": {
+      "type": "string",
+      "description": "Path to a .css file, or CSS text, appended after the base styles. Use var(--accent) style variables, never raw colors."
+    },
+    "noindex": {
+      "type": "boolean",
+      "description": "Ask search engines to skip the site (drafts). Remove before launch."
+    },
+    "year": {
+      "type": "number",
+      "description": "Year in the footer copyright. Default: the current year."
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "skip": {
+          "type": "string"
+        },
+        "menu": {
+          "type": "string"
+        },
+        "main_nav": {
+          "type": "string"
+        },
+        "popular": {
+          "type": "string"
+        },
+        "send": {
+          "type": "string"
+        },
+        "email_us": {
+          "type": "string"
+        },
+        "call_us": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        },
+        "hours": {
+          "type": "string"
+        },
+        "nf_title": {
+          "type": "string"
+        },
+        "nf_text": {
+          "type": "string"
+        },
+        "nf_button": {
+          "type": "string"
+        }
+      },
+      "description": "Text the builder adds itself (skip link, menu label, form labels, 404 page). Set these for any language other than English."
+    },
+    "csp": {
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "description": "false turns off the Content-Security-Policy header. An object adds sources, e.g. {\"frame-src\": [\"https://www.youtube.com\"]}."
+    },
+    "not_found": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "button": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "description": "Text of the 404 page."
+    },
+    "pages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "'/' for the home page, '/about' for another page."
+          },
+          "title": {
+            "type": "string",
+            "description": "Browser and search title. Default: built from the hero headline and site name."
+          },
+          "description": {
+            "type": "string"
+          },
+          "nav_label": {
+            "type": "string",
+            "description": "Puts the page in the automatic menu."
+          },
+          "blocks": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/hero"
+                },
+                {
+                  "$ref": "#/$defs/proof-bar"
+                },
+                {
+                  "$ref": "#/$defs/features"
+                },
+                {
+                  "$ref": "#/$defs/split"
+                },
+                {
+                  "$ref": "#/$defs/steps"
+                },
+                {
+                  "$ref": "#/$defs/testimonials"
+                },
+                {
+                  "$ref": "#/$defs/pricing"
+                },
+                {
+                  "$ref": "#/$defs/faq"
+                },
+                {
+                  "$ref": "#/$defs/stats"
+                },
+                {
+                  "$ref": "#/$defs/cta"
+                },
+                {
+                  "$ref": "#/$defs/contact"
+                },
+                {
+                  "$ref": "#/$defs/text"
+                }
+              ]
+            },
+            "description": "Sections in order. The first must be a hero."
+          }
+        },
+        "required": [
+          "path",
+          "blocks"
+        ]
+      },
+      "maxItems": 12,
+      "description": "The pages. Or give blocks directly for a one page site."
+    },
+    "blocks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/hero"
+          },
+          {
+            "$ref": "#/$defs/proof-bar"
+          },
+          {
+            "$ref": "#/$defs/features"
+          },
+          {
+            "$ref": "#/$defs/split"
+          },
+          {
+            "$ref": "#/$defs/steps"
+          },
+          {
+            "$ref": "#/$defs/testimonials"
+          },
+          {
+            "$ref": "#/$defs/pricing"
+          },
+          {
+            "$ref": "#/$defs/faq"
+          },
+          {
+            "$ref": "#/$defs/stats"
+          },
+          {
+            "$ref": "#/$defs/cta"
+          },
+          {
+            "$ref": "#/$defs/contact"
+          },
+          {
+            "$ref": "#/$defs/text"
+          }
+        ]
+      },
+      "description": "Shortcut for a one page site: the sections of the home page."
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "site.schema.json",
+  "title": "ship-it site.json",
+  "description": "Input for scripts/build_site.py. Generated by: python3 scripts/build_site.py schema. Needs blocks (one page) or pages.",
+  "anyOf": [
+    {
+      "required": [
+        "pages"
+      ]
+    },
+    {
+      "required": [
+        "blocks"
+      ]
+    }
+  ],
+  "$defs": {
+    "hero": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "hero"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Anchor for links, like #pricing. Defaults to the block type."
+        },
+        "nav_label": {
+          "type": "string",
+          "description": "Puts this section in the automatic top menu under this label."
+        },
+        "tone": {
+          "enum": [
+            "auto",
+            "default",
+            "surface",
+            "accent"
+          ],
+          "description": "Background band. auto alternates plain and tinted bands down the page."
+        },
+        "headline": {
+          "type": "string",
+          "description": "The h1. What you do and for whom, in plain words."
+        },
+        "eyebrow": {
+          "type": "string",
+          "description": "Small label above the headline."
+        },
+        "subhead": {
+          "type": "string",
+          "description": "One or two sentences that finish the thought."
+        },
+        "cta": {
+          "type": "object",
+          "required": [
+            "label",
+            "href"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string"
+            },
+            "href": {
+              "type": "string"
+            }
+          },
+          "description": "The single action you want (book, buy, sign up)."
+        },
+        "cta_secondary": {
+          "type": "object",
+          "required": [
+            "label",
+            "href"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string"
+            },
+            "href": {
+              "type": "string"
+            }
+          },
+          "description": "Quieter second option. Needs cta."
+        },
+        "note": {
+          "type": "string",
+          "description": "Reassurance under the buttons, e.g. 'Free to try. No card.'"
+        },
+        "image": {
+          "type": "object",
+          "required": [
+            "src",
+            "alt"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "src": {
+              "type": "string"
+            },
+            "alt": {
+              "type": "string"
+            },
+            "width": {
+              "type": "integer"
+            },
+            "height": {
+              "type": "integer"
+            }
+          },
+          "description": "Turns on the split layout. Use only a real photo or illustration the owner supplied."
+        },
+        "compact": {
+          "type": "boolean",
+          "description": "Slim page header for inner pages."
+        },
+        "align": {
+          "enum": [
+            "left",
+            "center"
+          ],
+          "description": "Text alignment. Default comes from the preset."
+        }
+      },
+      "required": [
+        "type",
+        "headline"
+      ],
+      "description": "Opening screen with the page's only h1. Text only, or split with an image when image is set. compact:true makes a slim page header for inner pages."
+    },
+    "proof-bar": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "proof-bar"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Anchor for links, like #pricing. Defaults to the block type."
+        },
+        "nav_label": {
+          "type": "string",
+          "description": "Puts this section in the automatic top menu under this label."
+        },
+        "tone": {
+          "enum": [
+            "auto",
+            "default",
+            "surface",
+            "accent"
+          ],
+          "description": "Background band. auto alternates plain and tinted bands down the page."
+        },
+        "label": {
+          "type": "string",
+          "description": "e.g. 'Trusted by' or 'As seen in'."
+        },
+        "logos": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "image": {
+                "type": "object",
+                "required": [
+                  "src",
+                  "alt"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "src": {
+                    "type": "string"
+                  },
+                  "alt": {
+                    "type": "string"
+                  },
+                  "width": {
+                    "type": "integer"
+                  },
+                  "height": {
+                    "type": "integer"
+                  }
+                },
+                "description": "Optional logo file. Without it the name is set as a wordmark."
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          "minItems": 2,
+          "maxItems": 8
+        },
+        "stats": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "value",
+              "label"
+            ]
+          },
+          "minItems": 2,
+          "maxItems": 4
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "description": "Slim strip of proof: client names as text (or small logos), or two to four short facts. Only real ones."
+    },
+    "features": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "features"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Anchor for links, like #pricing. Defaults to the block type."
+        },
+        "nav_label": {
+          "type": "string",
+          "description": "Puts this section in the automatic top menu under this label."
+        },
+        "tone": {
+          "enum": [
+            "auto",
+            "default",
+            "surface",
+            "accent"
+          ],
+          "description": "Background band. auto alternates plain and tinted bands down the page."
+        },
+        "title": {
+          "type": "string"
+        },
+        "eyebrow": {
+          "type": "string"
+        },
+        "intro": {
+          "type": "string"
+        },
+        "variant": {
+          "enum": [
+            "cards",
+            "rows",
+            "plain"
+          ]
+        },
+        "columns": {
+          "enum": [
+            2,
+            3,
+            4
+          ],
+          "description": "Cards and plain only. Default depends on the item count."
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "icon": {
+                "enum": [
+                  "arrow-right",
+                  "calendar",
+                  "check",
+                  "external",
+                  "link",
+                  "mail",
+                  "map-pin",
+                  "menu",
+                  "phone",
+                  "quote",
+                  "star",
+                  "x"
+                ],
+                "description": "Optional. One of the sprite icons; skip it unless it means something."
+              }
+            },
+            "required": [
+              "title",
+              "text"
+            ]
+          },
+          "minItems": 2,
+          "maxItems": 9
+        }
+      },
+      "required": [
+        "type",
+        "title",
+        "items"
+      ],
+      "description": "Two to nine things you offer or reasons to choose you. variant rows reads like a contents list (best for 3 to 5 longer items), cards suits 4 to 9 short ones, plain is the quietest."
+    },
+    "split": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "split"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Anchor for links, like #pricing. Defaults to the block type."
+        },
+        "nav_label": {
+          "type": "string",
+          "description": "Puts this section in the automatic top menu under this label."
+        },
+        "tone": {
+          "enum": [
+            "auto",
+            "default",
+            "surface",
+            "accent"
+          ],
+          "description": "Background band. auto alternates plain and tinted bands down the page."
+        },
+        "title": {
+          "type": "string"
+        },
+        "body": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ],
+          "description": "Paragraphs. Blank line between them; '- ' for a list; '### ' for a small heading."
+        },
+        "eyebrow": {
+          "type": "string"
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 6,
+          "description": "Short ticked lines under the text."
+        },
+        "cta": {
+          "type": "object",
+          "required": [
+            "label",
+            "href"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string"
+            },
+            "href": {
+              "type": "string"
+            }
+          }
+        },
+        "image": {
+          "type": "object",
+          "required": [
+            "src",
+            "alt"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "src": {
+              "type": "string"
+            },
+            "alt": {
+              "type": "string"
+            },
+            "width": {
+              "type": "integer"
+            },
+            "height": {
+              "type": "integer"
+            }
+          },
+          "description": "Photo or illustration the owner supplied."
+        },
+        "panel": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "value",
+            "label"
+          ],
+          "description": "A big fact shown instead of an image."
+        },
+        "reverse": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type",
+        "title",
+        "body"
+      ],
+      "description": "Text beside an image, a fact panel, or alone. For a story, an approach or a single strong argument. reverse:true swaps the sides."
+    },
+    "steps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "steps"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Anchor for links, like #pricing. Defaults to the block type."
+        },
+        "nav_label": {
+          "type": "string",
+          "description": "Puts this section in the automatic top menu under this label."
+        },
+        "tone": {
+          "enum": [
+            "auto",
+            "default",
+            "surface",
+            "accent"
+          ],
+          "description": "Background band. auto alternates plain and tinted bands down the page."
+        },
+        "title": {
+          "type": "string"
+        },
+        "eyebrow": {
+          "type": "string"
+        },
+        "intro": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "title",
+              "text"
+            ]
+          },
+          "minItems": 2,
+          "maxItems": 6
+        },
+        "cta": {
+          "type": "object",
+          "required": [
+            "label",
+            "href"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string"
+            },
+            "href": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "required": [
+        "type",
+        "title",
+        "items"
+      ],
+      "description": "A numbered process of two to six steps."
+    },
+    "testimonials": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "testimonials"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Anchor for links, like #pricing. Defaults to the block type."
+        },
+        "nav_label": {
+          "type": "string",
+          "description": "Puts this section in the automatic top menu under this label."
+        },
+        "tone": {
+          "enum": [
+            "auto",
+            "default",
+            "surface",
+            "accent"
+          ],
+          "description": "Background band. auto alternates plain and tinted bands down the page."
+        },
+        "title": {
+          "type": "string"
+        },
+        "eyebrow": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "quote": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string"
+              },
+              "image": {
+                "type": "object",
+                "required": [
+                  "src",
+                  "alt"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "src": {
+                    "type": "string"
+                  },
+                  "alt": {
+                    "type": "string"
+                  },
+                  "width": {
+                    "type": "integer"
+                  },
+                  "height": {
+                    "type": "integer"
+                  }
+                },
+                "description": "Optional portrait. Without it initials are shown."
+              }
+            },
+            "required": [
+              "quote",
+              "name"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 6
+        }
+      },
+      "required": [
+        "type",
+        "title",
+        "items"
+      ],
+      "description": "Real quotes from real customers. One quote is set large; two to six become a grid. Never invent them: skip the block when there are none."
+    },
+    "pricing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "pricing"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Anchor for links, like #pricing. Defaults to the block type."
+        },
+        "nav_label": {
+          "type": "string",
+          "description": "Puts this section in the automatic top menu under this label."
+        },
+        "tone": {
+          "enum": [
+            "auto",
+            "default",
+            "surface",
+            "accent"
+          ],
+          "description": "Background band. auto alternates plain and tinted bands down the page."
+        },
+        "title": {
+          "type": "string"
+        },
+        "eyebrow": {
+          "type": "string"
+        },
+        "intro": {
+          "type": "string"
+        },
+        "plans": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "price": {
+                "type": "string",
+                "description": "As written: '$49', 'From 120', 'Free'."
+              },
+              "period": {
+                "type": "string",
+                "description": "e.g. '/ month'."
+              },
+              "description": {
+                "type": "string"
+              },
+              "features": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "maxItems": 10
+              },
+              "cta": {
+                "type": "object",
+                "required": [
+                  "label",
+                  "href"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  },
+                  "href": {
+                    "type": "string"
+                  }
+                }
+              },
+              "featured": {
+                "type": "boolean"
+              },
+              "badge": {
+                "type": "string",
+                "description": "Label on the featured plan. Default: ui.popular."
+              }
+            },
+            "required": [
+              "name",
+              "price",
+              "features",
+              "cta"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 3
+        },
+        "note": {
+          "type": "string",
+          "description": "Small print under the plans (taxes, terms)."
+        }
+      },
+      "required": [
+        "type",
+        "title",
+        "plans"
+      ],
+      "description": "One to three plans. Use only prices the owner confirmed. featured:true highlights one plan."
+    },
+    "faq": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "faq"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Anchor for links, like #pricing. Defaults to the block type."
+        },
+        "nav_label": {
+          "type": "string",
+          "description": "Puts this section in the automatic top menu under this label."
+        },
+        "tone": {
+          "enum": [
+            "auto",
+            "default",
+            "surface",
+            "accent"
+          ],
+          "description": "Background band. auto alternates plain and tinted bands down the page."
+        },
+        "title": {
+          "type": "string"
+        },
+        "eyebrow": {
+          "type": "string"
+        },
+        "intro": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "q": {
+                "type": "string"
+              },
+              "a": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              }
+            },
+            "required": [
+              "q",
+              "a"
+            ]
+          },
+          "minItems": 2,
+          "maxItems": 12
+        },
+        "open_first": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type",
+        "title",
+        "items"
+      ],
+      "description": "Two to twelve questions that stop people buying. Answers can hold links and short lists."
+    },
+    "stats": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "stats"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Anchor for links, like #pricing. Defaults to the block type."
+        },
+        "nav_label": {
+          "type": "string",
+          "description": "Puts this section in the automatic top menu under this label."
+        },
+        "tone": {
+          "enum": [
+            "auto",
+            "default",
+            "surface",
+            "accent"
+          ],
+          "description": "Background band. auto alternates plain and tinted bands down the page."
+        },
+        "title": {
+          "type": "string"
+        },
+        "eyebrow": {
+          "type": "string"
+        },
+        "intro": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "note": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "value",
+              "label"
+            ]
+          },
+          "minItems": 2,
+          "maxItems": 4
+        }
+      },
+      "required": [
+        "type",
+        "items"
+      ],
+      "description": "Two to four big numbers with labels. Only true, checkable numbers the owner gave you."
+    },
+    "cta": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "cta"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Anchor for links, like #pricing. Defaults to the block type."
+        },
+        "nav_label": {
+          "type": "string",
+          "description": "Puts this section in the automatic top menu under this label."
+        },
+        "tone": {
+          "enum": [
+            "auto",
+            "default",
+            "surface",
+            "accent"
+          ],
+          "description": "Background band. auto alternates plain and tinted bands down the page."
+        },
+        "title": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "cta": {
+          "type": "object",
+          "required": [
+            "label",
+            "href"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string"
+            },
+            "href": {
+              "type": "string"
+            }
+          }
+        },
+        "cta_secondary": {
+          "type": "object",
+          "required": [
+            "label",
+            "href"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string"
+            },
+            "href": {
+              "type": "string"
+            }
+          }
+        },
+        "align": {
+          "enum": [
+            "left",
+            "center"
+          ],
+          "description": "Default comes from the preset."
+        }
+      },
+      "required": [
+        "type",
+        "title",
+        "cta"
+      ],
+      "description": "Full-width closing call to action in the accent color. One button, maybe a quieter second."
+    },
+    "contact": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "contact"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Anchor for links, like #pricing. Defaults to the block type."
+        },
+        "nav_label": {
+          "type": "string",
+          "description": "Puts this section in the automatic top menu under this label."
+        },
+        "tone": {
+          "enum": [
+            "auto",
+            "default",
+            "surface",
+            "accent"
+          ],
+          "description": "Background band. auto alternates plain and tinted bands down the page."
+        },
+        "title": {
+          "type": "string"
+        },
+        "eyebrow": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Shown and used for the mail button."
+        },
+        "phone": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string",
+          "description": "Use \\n for line breaks."
+        },
+        "hours": {
+          "type": "string"
+        },
+        "button": {
+          "type": "string",
+          "description": "Button label. Default: ui.send or ui.email_us."
+        },
+        "subject": {
+          "type": "string",
+          "description": "Subject line for the mail button."
+        },
+        "form_action": {
+          "type": "string",
+          "pattern": "^https://",
+          "description": "https:// endpoint of a form service. Public, not a secret."
+        }
+      },
+      "required": [
+        "type",
+        "title"
+      ],
+      "description": "How to reach you. Without form_action it shows an email button (a static site cannot receive forms by itself). With form_action (a form service the owner signs up to, such as Formspree) it shows a real form."
+    },
+    "text": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "text"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Anchor for links, like #pricing. Defaults to the block type."
+        },
+        "nav_label": {
+          "type": "string",
+          "description": "Puts this section in the automatic top menu under this label."
+        },
+        "tone": {
+          "enum": [
+            "auto",
+            "default",
+            "surface",
+            "accent"
+          ],
+          "description": "Background band. auto alternates plain and tinted bands down the page."
+        },
+        "body": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "eyebrow": {
+          "type": "string"
+        },
+        "align": {
+          "enum": [
+            "left",
+            "center"
+          ]
+        },
+        "width": {
+          "enum": [
+            "narrow",
+            "wide"
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "body"
+      ],
+      "description": "Plain reading page section: about text, policies, long explanations. width narrow keeps lines readable."
+    }
+  }
+}

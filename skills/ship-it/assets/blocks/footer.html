@@ -1,0 +1,34 @@
+<footer class="site-footer{{#if plain}} is-plain{{/if}}">
+  <div class="container">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <p class="brand">{{name}}</p>
+        {{#if text}}<p class="footer-text">{{{text}}}</p>{{/if}}
+        {{#if contact}}
+        <ul class="footer-contact">
+          {{#each contact}}<li><a href="{{href}}">{{label}}</a></li>
+          {{/each}}
+        </ul>
+        {{/if}}
+      </div>
+      {{#each columns}}
+      <nav class="footer-col" aria-label="{{title}}">
+        <h2 class="footer-title">{{title}}</h2>
+        <ul>
+          {{#each links}}<li><a href="{{href}}">{{label}}</a></li>
+          {{/each}}
+        </ul>
+      </nav>
+      {{/each}}
+    </div>
+    <div class="footer-base">
+      <p>&copy; {{year}} {{name}}{{#if legal}}. {{legal}}{{/if}}</p>
+      {{#if social}}
+      <ul class="social">
+        {{#each social}}<li><a href="{{href}}">{{label}}</a></li>
+        {{/each}}
+      </ul>
+      {{/if}}
+    </div>
+  </div>
+</footer>

@@ -1,0 +1,20 @@
+<section class="block block-stats tone-{{tone}}" id="{{id}}"{{#if title}} aria-labelledby="{{id}}-title"{{/if}}>
+  <div class="container">
+    {{#if title}}
+    <header class="block-head">
+      {{#if eyebrow}}<p class="eyebrow">{{eyebrow}}</p>{{/if}}
+      <h2 id="{{id}}-title">{{{title}}}</h2>
+      {{#if intro}}<p class="lead">{{{intro}}}</p>{{/if}}
+    </header>
+    {{/if}}
+    <dl class="stat-list cols-{{count}}">
+      {{#each items}}
+      <div class="stat">
+        <dt class="stat-label">{{label}}</dt>
+        <dd class="stat-value">{{value}}</dd>
+        {{#if note}}<dd class="stat-note">{{note}}</dd>{{/if}}
+      </div>
+      {{/each}}
+    </dl>
+  </div>
+</section>

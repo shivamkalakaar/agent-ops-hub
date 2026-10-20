@@ -10,6 +10,10 @@ tiers:
     primary: anthropic/claude-haiku-5.5                 # $0.10/$0.50
     fallbacks: [deepseek/deepseek-v4-flash, openai/gpt-6-luna]
     temperature: 0.7
+  voice:   # write_post + revise only: the text a human reads under their own name. ~5 calls/week, ~$0.05/draft.
+    primary: anthropic/claude-sonnet-5.5                # $2/$10
+    fallbacks: [anthropic/claude-haiku-5.5]
+    temperature: 0.8
   judge:   # critic + evals. Different model family from the writer to limit self-preference.
     primary: deepseek/deepseek-v4.1-flash
     fallbacks: [qwen/qwen3.7-flash]

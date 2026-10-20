@@ -1,0 +1,510 @@
+{
+  "_meta": {
+    "version": "1.0.0",
+    "updated": "2026-09-29",
+    "notes": "Definitions and sanity checks for standard business metrics. Consult BEFORE defining a metric in an analysis, and state the definition you used. The ranges in 'sanity' are rough plausibility bands to catch calculation errors (a churn of 90% a month, a gross margin of 140%); they are not benchmarks to quote, and they vary by industry, size and stage. If the user's own definition differs, use theirs and say so. Lookup: python3 scripts/stats.py define NAME"
+  },
+  "metrics": {
+    "churn_rate": {
+      "name": "Customer (logo) churn rate",
+      "aliases": ["churn", "logo churn", "cancellation rate", "attrition"],
+      "formula": "customers who left during the period / customers at the START of the period",
+      "denominator": "customers active at the start of the period; new customers won during the period are NOT in the denominator",
+      "unit": "percent per period (say which period)",
+      "mistakes": [
+        "Dividing by the average or the end count, or including customers who joined and left inside the period",
+        "Multiplying monthly churn by 12 for annual churn; use 1 - (1 - m)^12 instead",
+        "Comparing monthly and annual churn, or a new-customer cohort with the whole base",
+        "Counting paused, downgraded or failed-payment accounts as churned without saying so"
+      ],
+      "sanity": "Monthly: enterprise B2B under 1%, SMB software 1-5%, consumer subscriptions 4-10%. Above 15% a month means either a trial-heavy product or a calculation error."
+    },
+    "revenue_churn": {
+      "name": "Gross revenue churn",
+      "aliases": ["mrr churn", "dollar churn", "revenue attrition"],
+      "formula": "(recurring revenue lost to cancellations + downgrades in the period) / recurring revenue at the START of the period",
+      "denominator": "recurring revenue at the start of the period",
+      "unit": "percent per period",
+      "mistakes": [
+        "Netting expansion against losses; that is net revenue retention, not churn",
+        "Including one-off or usage revenue that was never recurring",
+        "Mixing currencies or annual contracts not converted to a monthly amount"
+      ],
+      "sanity": "Between 0% and 100% by definition. Above 100% is impossible; a monthly value above 10% for a mature product deserves a second look."
+    },
+    "retention_rate": {
+      "name": "Customer retention rate",
+      "aliases": ["retention", "logo retention"],
+      "formula": "(customers at end of period - new customers acquired in the period) / customers at start of period",
+      "denominator": "customers at the start of the period",
+      "unit": "percent over the period",
+      "mistakes": [
+        "Leaving new customers in the numerator, which can push retention above 100%",
+        "Reporting it as 1 - churn without checking both used the same start-of-period base",
+        "Quoting a period-end snapshot as if it were a cohort curve"
+      ],
+      "sanity": "0-100%. Annual B2B logo retention is commonly 80-95%; below 50% a year is a serious problem or a consumer product."
+    },
+    "cohort_retention": {
+      "name": "Cohort retention curve (day N or month N)",
+      "aliases": ["n-day retention", "day 30 retention", "cohort analysis"],
+      "formula": "users from a signup cohort who were active in period N / users in that cohort",
+      "denominator": "the cohort size at signup (fixed for every N)",
+      "unit": "percent of the original cohort",
+      "mistakes": [
+        "Defining 'active' differently across periods, or counting any login as retained when the product needs a key action",
+        "Averaging cohorts of very different sizes without weighting",
+        "Reading incomplete recent cohorts (not yet N days old) as poor retention",
+        "Using rolling 'active in day N or later' (unbounded) for some cohorts and exact-day for others"
+      ],
+      "sanity": "Should fall or flatten, never rise sharply. Consumer apps: day 1 about 20-40%, day 30 about 3-10%. B2B: month 12 logo retention 80-95%."
+    },
+    "nrr": {
+      "name": "Net revenue retention",
+      "aliases": ["net dollar retention", "ndr", "nrr"],
+      "formula": "(starting recurring revenue + expansion - contraction - churn) from the SAME customers / starting recurring revenue",
+      "denominator": "recurring revenue at the start from the customers who existed then",
+      "unit": "percent, usually measured over 12 months",
+      "mistakes": [
+        "Including revenue from customers acquired after the start date",
+        "Mixing a monthly figure with the annual benchmark",
+        "Ignoring that a few large accounts can drive the whole number"
+      ],
+      "sanity": "Can exceed 100%. Typical software 90-115%; above 130% is exceptional; above 200% is usually a tiny base or an error."
+    },
+    "grr": {
+      "name": "Gross revenue retention",
+      "aliases": ["gross dollar retention", "gdr"],
+      "formula": "(starting recurring revenue - contraction - churn) from the same customers / starting recurring revenue",
+      "denominator": "recurring revenue at the start",
+      "unit": "percent, usually over 12 months",
+      "mistakes": [
+        "Letting expansion revenue in (then it is NRR)",
+        "Not capping each customer at their starting amount"
+      ],
+      "sanity": "Cannot exceed 100%. Typical 80-95%; below 70% signals a leaky product."
+    },
+    "cac": {
+      "name": "Customer acquisition cost",
+      "aliases": ["cost to acquire", "blended cac", "paid cac"],
+      "formula": "sales and marketing cost in the period / NEW customers acquired in the period",
+      "denominator": "new customers only (not total customers, not leads)",
+      "unit": "currency per customer",
+      "mistakes": [
+        "Counting only ad spend and leaving out salaries, tools and agency fees (say which you used)",
+        "Mixing blended CAC (all new customers) with paid CAC (only ad-driven customers)",
+        "Ignoring the lag between spend and the sale for long sales cycles",
+        "Dividing by leads or trials instead of paying customers"
+      ],
+      "sanity": "Compare with first-year gross profit per customer. CAC above the gross profit a customer brings in 12-18 months is a warning; consumer CAC of a few dollars to tens of dollars, enterprise CAC in the tens of thousands, are both normal."
+    },
+    "ltv": {
+      "name": "Customer lifetime value",
+      "aliases": ["clv", "lifetime value", "ltv"],
+      "formula": "average revenue per customer per period x gross margin % / churn rate per period",
+      "denominator": "churn rate for the same period as the revenue figure (monthly with monthly)",
+      "unit": "currency per customer",
+      "mistakes": [
+        "Using revenue instead of gross profit",
+        "Tiny churn producing an absurd lifetime of decades; cap the lifetime at 3-5 years",
+        "Using blended churn for a segment with very different churn",
+        "Treating a projection as an observed number; state that it is modelled"
+      ],
+      "sanity": "Implied lifetime = 1 / churn. A lifetime above 5 years needs evidence; LTV below CAC means the business loses money on each customer."
+    },
+    "ltv_cac": {
+      "name": "LTV to CAC ratio",
+      "aliases": ["ltv:cac", "ltv/cac"],
+      "formula": "customer lifetime value / customer acquisition cost",
+      "denominator": "CAC",
+      "unit": "ratio, like 3.2x",
+      "mistakes": [
+        "Using LTV built on revenue rather than gross profit",
+        "Comparing an LTV over 5 years to a CAC that ignores half the costs",
+        "Reading it without payback time: 3x that takes 6 years to earn back can still starve cash"
+      ],
+      "sanity": "Around 3x is a common target. Below 1x loses money; above 5x may mean under-investing in growth, or an inflated LTV."
+    },
+    "cac_payback": {
+      "name": "CAC payback period",
+      "aliases": ["payback", "months to recover cac"],
+      "formula": "CAC / (average monthly revenue per customer x gross margin %)",
+      "denominator": "monthly gross profit per customer",
+      "unit": "months",
+      "mistakes": [
+        "Using revenue rather than gross profit",
+        "Using annual revenue with monthly CAC or the reverse",
+        "Ignoring churn during the payback window"
+      ],
+      "sanity": "SMB software 6-18 months; enterprise 18-30 months. Under 3 months is rare and worth double-checking; over 36 months is dangerous."
+    },
+    "arpu": {
+      "name": "Average revenue per user (or account)",
+      "aliases": ["arpa", "arppu", "revenue per user"],
+      "formula": "revenue in the period / average number of ACTIVE users (or accounts) in the period",
+      "denominator": "active users on the same basis as the revenue (paying only for ARPPU)",
+      "unit": "currency per user per period",
+      "mistakes": [
+        "Including free users without saying so; ARPPU divides by paying users only",
+        "Using end-of-period users when the base grew fast",
+        "Mixing one-off and recurring revenue"
+      ],
+      "sanity": "Should sit near your price points. An ARPU above your highest plan means multi-seat accounts or an error."
+    },
+    "mrr_arr": {
+      "name": "Monthly and annual recurring revenue",
+      "aliases": ["mrr", "arr", "recurring revenue"],
+      "formula": "MRR = sum of monthly-normalised subscription fees of active customers; ARR = 12 x MRR",
+      "denominator": "not a ratio",
+      "unit": "currency",
+      "mistakes": [
+        "Including one-off fees, services, or usage spikes in ARR",
+        "Counting a signed contract that has not started, or one that has ended",
+        "Annualising a single strong month of non-recurring revenue",
+        "Not normalising annual or quarterly plans to months"
+      ],
+      "sanity": "ARR should be within a few percent of 12 x the latest MRR. Month-to-month MRR jumps above 30% need a named cause."
+    },
+    "conversion_rate": {
+      "name": "Conversion rate",
+      "aliases": ["cvr", "conversion", "signup rate"],
+      "formula": "conversions / visitors (or sessions, or leads: name the denominator)",
+      "denominator": "the unit that could have converted, on the same time window as the conversions",
+      "unit": "percent",
+      "mistakes": [
+        "Mixing users in the numerator with sessions in the denominator",
+        "Counting a repeat visitor as a new chance to convert without saying so",
+        "Comparing conversion rates whose traffic mix differs; check rate versus mix (drivers.py --ratio)",
+        "Averaging daily rates instead of dividing total conversions by total visitors"
+      ],
+      "sanity": "E-commerce site-wide 1-4%; landing pages 2-10%; paid social on cold traffic under 2%. Above 20% is only plausible for high-intent flows (a checkout, a demo request from a customer)."
+    },
+    "funnel_conversion": {
+      "name": "Funnel step and overall conversion",
+      "aliases": ["funnel", "step conversion", "drop-off"],
+      "formula": "step conversion = users reaching step n / users reaching step n-1; overall = users reaching the last step / users at the first step",
+      "denominator": "the previous step, on the same cohort of users",
+      "unit": "percent per step",
+      "mistakes": [
+        "Counting events instead of distinct users at each step",
+        "Different time windows per step, so late converters are missing at the bottom",
+        "Steps that can be skipped, so a later step exceeds an earlier one",
+        "Multiplying rates from different cohorts"
+      ],
+      "sanity": "Counts must not increase down the funnel for a strict funnel. Overall conversion is the product of the step rates; check that it matches."
+    },
+    "aov": {
+      "name": "Average order value",
+      "aliases": ["basket size", "average basket", "order value"],
+      "formula": "revenue / number of orders",
+      "denominator": "orders (not customers, not units)",
+      "unit": "currency per order",
+      "mistakes": [
+        "Dividing by customers or sessions (that is a different metric)",
+        "Letting a few very large orders drive the mean; look at the median as well",
+        "Mixing gross and net of refunds or discounts between periods"
+      ],
+      "sanity": "Near the range of your prices times a typical basket. If AOV moves, split it into price, units per order and mix (drivers.py --ratio revenue,count)."
+    },
+    "gross_margin": {
+      "name": "Gross margin",
+      "aliases": ["gm", "gross profit margin"],
+      "formula": "(revenue - cost of goods sold) / revenue",
+      "denominator": "revenue",
+      "unit": "percent",
+      "mistakes": [
+        "Dividing by cost (that is markup)",
+        "Leaving out shipping, payment fees or hosting that belong in cost of goods",
+        "Using operating costs (rent, marketing) as if they were cost of goods"
+      ],
+      "sanity": "Cannot exceed 100%. Software 70-90%, retail 25-50%, services 30-60%, marketplaces (net revenue) 60-90%. Negative means selling below cost."
+    },
+    "margin_vs_markup": {
+      "name": "Margin versus markup",
+      "aliases": ["markup", "margin"],
+      "formula": "margin = (price - cost) / price; markup = (price - cost) / cost; margin = markup / (1 + markup); markup = margin / (1 - margin)",
+      "denominator": "price for margin, cost for markup",
+      "unit": "percent",
+      "mistakes": [
+        "Treating a 50% markup as a 50% margin; it is a 33.3% margin",
+        "Pricing at cost x (1 + target margin), which gives less margin than intended"
+      ],
+      "sanity": "Markup is always larger than margin. A 100% markup is a 50% margin; a margin can never reach 100%."
+    },
+    "cagr": {
+      "name": "Compound annual growth rate",
+      "aliases": ["cagr", "annualised growth"],
+      "formula": "(ending value / starting value)^(1 / years) - 1",
+      "denominator": "starting value; years = time BETWEEN the first and last observation",
+      "unit": "percent per year",
+      "mistakes": [
+        "Using the number of data points as the number of years (5 yearly values span 4 years)",
+        "Using it when the start value is zero or negative",
+        "Reading it as a smooth path when the series is volatile or has a one-off peak at the end",
+        "Comparing CAGRs computed over different windows"
+      ],
+      "sanity": "Sustained CAGR above 100% is rare beyond small bases. Always show start, end and years next to it."
+    },
+    "growth_vs_points": {
+      "name": "Percent growth versus percentage points",
+      "aliases": ["growth rate", "percentage points", "pp change", "relative change", "percent change"],
+      "formula": "growth % = (new - old) / old; for a rate, change in points = new rate - old rate",
+      "denominator": "the old value",
+      "unit": "percent, or percentage points for rates",
+      "mistakes": [
+        "Saying a rate rose 50% when it went from 2% to 3% (that is +1 point, +50% relative; say which)",
+        "Averaging monthly growth rates arithmetically; use the compound rate",
+        "Starting from a tiny base, which makes any change look huge",
+        "A fall of 50% then a rise of 50% does not return to the start"
+      ],
+      "sanity": "Growth cannot go below -100%. Recompute from the two values before quoting it."
+    },
+    "moving_average": {
+      "name": "Moving average",
+      "aliases": ["rolling average", "smoothing", "trailing average"],
+      "formula": "mean of the last N observations (trailing) or N centred on the point",
+      "denominator": "N (complete windows only)",
+      "unit": "same as the series",
+      "mistakes": [
+        "Choosing a window that hides the pattern; use 7 for daily data with weekday effects, 4 or 13 for weekly",
+        "Reporting the first N-1 points as if complete windows existed",
+        "Averaging rates without weighting by their denominators",
+        "Reading a trailing average as a forecast"
+      ],
+      "sanity": "The smoothed series must lie within the range of the raw data and lag it. If it does not, the window or the alignment is wrong."
+    },
+    "dau_mau": {
+      "name": "DAU/MAU stickiness",
+      "aliases": ["stickiness", "dau/mau", "dau to mau ratio"],
+      "formula": "average daily active users over a 30-day window / monthly active users for the same window",
+      "denominator": "MAU for the same 30 days",
+      "unit": "ratio between 0 and 1 (often shown as percent)",
+      "mistakes": [
+        "Dividing one day's DAU by a different month's MAU",
+        "Using different definitions of 'active' for the two counts",
+        "Counting logins from bots or background sync"
+      ],
+      "sanity": "Between 0 and 100%. Typical products 10-25%; social and messaging 40-60%; above 60% is exceptional. It can never exceed 100%."
+    },
+    "nps": {
+      "name": "Net Promoter Score",
+      "aliases": ["nps", "promoter score"],
+      "formula": "% promoters (scores 9-10) - % detractors (scores 0-6); scores 7-8 count only in the total",
+      "denominator": "all valid responses",
+      "unit": "points from -100 to +100 (not a percent)",
+      "mistakes": [
+        "Averaging the 0-10 scores instead",
+        "Ignoring the response count and response bias (unhappy or delighted customers answer more)",
+        "Treating 7s and 8s as promoters",
+        "Comparing scores across industries"
+      ],
+      "sanity": "Between -100 and +100. Often 0-50 in software; above 70 is rare. Under 100 responses the score moves by more than 10 points from noise."
+    },
+    "roas": {
+      "name": "Return on ad spend",
+      "aliases": ["roas", "ad return"],
+      "formula": "revenue attributed to ads / ad spend",
+      "denominator": "ad spend",
+      "unit": "ratio, like 3.5x (not a percent)",
+      "mistakes": [
+        "Ignoring margin: break-even ROAS is 1 / gross margin (a 40% margin needs 2.5x)",
+        "Attributing revenue to ads that would have happened anyway",
+        "Comparing platform-reported ROAS (self-attributed, often overlapping) with your own totals"
+      ],
+      "sanity": "Break-even is above 1x. Platform ROAS 2-6x is common; above 15x usually means brand searchers or double counting."
+    },
+    "roi": {
+      "name": "Return on investment",
+      "aliases": ["roi", "return on investment"],
+      "formula": "(gain - cost) / cost",
+      "denominator": "cost of the investment",
+      "unit": "percent",
+      "mistakes": [
+        "Leaving out staff time, tools or opportunity cost",
+        "Ignoring how long the return took (10% in a month versus 10% in ten years)",
+        "Counting revenue as gain instead of profit"
+      ],
+      "sanity": "Cannot go below -100%. ROI above 1000% deserves a check of the cost side."
+    },
+    "ctr": {
+      "name": "Click-through rate",
+      "aliases": ["ctr", "click rate"],
+      "formula": "clicks / impressions (or emails delivered)",
+      "denominator": "impressions or delivered messages, not sends that bounced",
+      "unit": "percent",
+      "mistakes": [
+        "Mixing unique and total clicks",
+        "Using opens as the denominator for email without saying so (click-to-open is a different metric)",
+        "Comparing across channels"
+      ],
+      "sanity": "Display ads 0.05-0.5%, paid search 2-6%, email 1-5% of delivered. Above 30% suggests bots or a counting error."
+    },
+    "ad_unit_costs": {
+      "name": "CPM, CPC and CPA",
+      "aliases": ["cpm", "cpc", "cpa", "cost per click", "cost per acquisition", "cost per thousand"],
+      "formula": "CPM = cost / impressions x 1000; CPC = cost / clicks; CPA = cost / conversions; CPA = CPC / conversion rate",
+      "denominator": "impressions (per thousand), clicks, or conversions",
+      "unit": "currency per unit",
+      "mistakes": [
+        "Forgetting the x1000 in CPM",
+        "Comparing CPA across campaigns with different conversion definitions",
+        "Optimising CPC alone when the conversion rate falls"
+      ],
+      "sanity": "The identity CPA = CPC / conversion rate must hold; if it does not, one of the three inputs is on a different basis."
+    },
+    "repeat_purchase_rate": {
+      "name": "Repeat purchase rate",
+      "aliases": ["repeat rate", "reorder rate", "returning customer rate"],
+      "formula": "customers with 2 or more orders in the window / customers with at least 1 order in the window",
+      "denominator": "customers who bought at least once in the window",
+      "unit": "percent (say the window, like 12 months)",
+      "mistakes": [
+        "Not stating the window; a longer window always gives a higher rate",
+        "Counting split shipments or one order with several lines as repeats",
+        "Judging recent customers who have not had time to repurchase"
+      ],
+      "sanity": "Consumer e-commerce 15-40% over 12 months; consumables can be much higher. Above 80% needs a subscription explanation."
+    },
+    "refund_rate": {
+      "name": "Refund or return rate",
+      "aliases": ["return rate", "chargeback rate"],
+      "formula": "refunded orders (or units, or amount) / orders (or units, or amount) sold in the same cohort",
+      "denominator": "the same unit and the same sale cohort as the numerator",
+      "unit": "percent",
+      "mistakes": [
+        "Dividing refunds issued this month by sales this month (refunds lag the sale)",
+        "Mixing order count in one and revenue in the other",
+        "Reading the most recent months as low when refunds have not arrived yet"
+      ],
+      "sanity": "Software 1-5%, general e-commerce 5-15%, apparel 20-30% or more. Above 40% points to a product or a data problem."
+    },
+    "inventory_turnover": {
+      "name": "Inventory turnover",
+      "aliases": ["stock turn", "days of inventory", "dio"],
+      "formula": "cost of goods sold / average inventory value; days of inventory = 365 / turnover",
+      "denominator": "average inventory at cost over the period",
+      "unit": "times per year (or days)",
+      "mistakes": [
+        "Using sales instead of cost of goods, or year-end inventory instead of the average",
+        "Ignoring seasonality when comparing a peak-season snapshot"
+      ],
+      "sanity": "Grocery 10-20 a year, apparel 3-6, furniture 2-4. Under 1 means slow stock or an error in the inventory value."
+    },
+    "burn_runway": {
+      "name": "Burn rate and runway",
+      "aliases": ["burn", "net burn", "runway", "cash runway"],
+      "formula": "net burn = cash out - cash in per month; runway (months) = cash balance / net burn",
+      "denominator": "current monthly net burn (use the recent 3-month average)",
+      "unit": "currency per month; months",
+      "mistakes": [
+        "Using gross burn (spending only) when revenue offsets it",
+        "Dividing by a best-month burn; use a recent average",
+        "Forgetting known future costs or that hiring raises burn"
+      ],
+      "sanity": "Runway under 6 months means fundraising or cutting now; over 24 months is comfortable. Net burn cannot be negative unless the company is cash positive."
+    },
+    "quick_ratio": {
+      "name": "SaaS quick ratio",
+      "aliases": ["quick ratio", "growth efficiency"],
+      "formula": "(new MRR + expansion MRR) / (churned MRR + contraction MRR)",
+      "denominator": "MRR lost in the same period",
+      "unit": "ratio",
+      "mistakes": [
+        "Mixing periods for the numerator and denominator",
+        "Dividing by zero in a month with no losses; the ratio is then undefined"
+      ],
+      "sanity": "Above 1 means growing. Around 4 is considered strong; under 1 means shrinking."
+    },
+    "rule_of_40": {
+      "name": "Rule of 40",
+      "aliases": ["rule of forty"],
+      "formula": "revenue growth % + profit margin % (state the margin: EBITDA, operating or free cash flow)",
+      "denominator": "not a ratio; a sum of two percentages",
+      "unit": "percent points",
+      "mistakes": [
+        "Mixing a year-over-year growth with a quarterly margin",
+        "Switching the margin definition between years"
+      ],
+      "sanity": "40 or more is the usual bar. A value above 100 means a very small or unusual company."
+    },
+    "win_rate": {
+      "name": "Sales win rate",
+      "aliases": ["close rate", "win rate"],
+      "formula": "deals won / (deals won + deals lost) among deals CLOSED in the period",
+      "denominator": "closed deals (won plus lost); open deals are excluded",
+      "unit": "percent by count or by value (say which)",
+      "mistakes": [
+        "Counting open deals as losses",
+        "Mixing deals created in the period with deals closed in it",
+        "Ignoring deals that went silent and were never marked lost"
+      ],
+      "sanity": "B2B 15-30% is typical; 5% for cold outbound; above 60% suggests deals are qualified too late or losses are not recorded."
+    },
+    "pipeline_coverage": {
+      "name": "Pipeline coverage",
+      "aliases": ["coverage ratio", "pipeline to quota"],
+      "formula": "open pipeline value for the period / remaining quota (or target) for the period",
+      "denominator": "quota still to be booked",
+      "unit": "ratio, like 3x",
+      "mistakes": [
+        "Counting the whole pipeline regardless of expected close date",
+        "Using coverage without the historical win rate; 3x only works with a win rate near 33%"
+      ],
+      "sanity": "Roughly 1 / win rate is needed: about 3-4x for a 25-33% win rate. Below 2x is thin."
+    },
+    "average_of_rates": {
+      "name": "Averaging rates and averages",
+      "aliases": ["average of averages", "simpson", "weighted average", "average percentage"],
+      "formula": "combined rate = total numerators / total denominators (not the mean of the group rates)",
+      "denominator": "the summed denominators of all groups",
+      "unit": "as the underlying rate",
+      "mistakes": [
+        "Averaging percentages from groups of different size (a 50% of 10 and a 10% of 1000 is about 10.4%, not 30%)",
+        "Averaging daily averages instead of total / total",
+        "Simpson's paradox: a rate can rise in every segment and fall overall when the mix shifts; use drivers.py --ratio to separate rate from mix"
+      ],
+      "sanity": "The combined rate always lies between the smallest and largest group rate and sits closer to the big groups."
+    },
+    "active_users": {
+      "name": "Active users (DAU, WAU, MAU)",
+      "aliases": ["active users", "mau", "wau", "dau", "unique users"],
+      "formula": "distinct users who performed a qualifying action in the window",
+      "denominator": "not a ratio; state the action and the window",
+      "unit": "users",
+      "mistakes": [
+        "Counting events or sessions instead of distinct users",
+        "Letting 'active' mean any page view for one number and a key action for another",
+        "Counting the same person twice across devices, or bots",
+        "Comparing calendar-month MAU with a rolling 30-day MAU"
+      ],
+      "sanity": "DAU <= WAU <= MAU always. MAU larger than the total registered users means anonymous visitors are included."
+    },
+    "median_vs_mean": {
+      "name": "Median versus mean",
+      "aliases": ["median", "mean", "average", "typical value"],
+      "formula": "mean = sum / count; median = the middle value once sorted",
+      "denominator": "count of non-empty values",
+      "unit": "as the underlying metric",
+      "mistakes": [
+        "Reporting the mean of skewed data (revenue per customer, time to resolve, order value) as 'typical'",
+        "Averaging in zeros or blanks by accident",
+        "Comparing a mean to a median"
+      ],
+      "sanity": "If the mean is more than 20% away from the median, the data are skewed: report the median, or both, and say why."
+    },
+    "yoy_seasonality": {
+      "name": "Year-over-year versus month-over-month",
+      "aliases": ["yoy", "mom", "seasonality", "same period last year", "wow"],
+      "formula": "YoY = this period / same period last year - 1; MoM = this period / previous period - 1",
+      "denominator": "the comparison period's value",
+      "unit": "percent",
+      "mistakes": [
+        "Calling a seasonal December-to-January fall a decline; compare with the same month last year",
+        "Comparing periods of different length (28 vs 31 days, or different weekday counts)",
+        "Comparing a partial current month with a full previous month",
+        "Ignoring one-off events (a promotion, a holiday shift) in the base period"
+      ],
+      "sanity": "If MoM swings repeat the same way every year, the pattern is seasonal. Check at least two full years before calling anything a trend."
+    }
+  }
+}

@@ -1,0 +1,373 @@
+{
+ "_note": "Working list, not the official ASD dictionary (copyright ASD). Verify certified work against the official specification.",
+ "entries": [
+  {
+   "avoid": [
+    "utilize",
+    "utilise",
+    "use up"
+   ],
+   "use": "use",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "commence",
+    "initiate"
+   ],
+   "use": "start",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "terminate",
+    "cease"
+   ],
+   "use": "stop",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "perform",
+    "carry out",
+    "conduct"
+   ],
+   "use": "do",
+   "note": "or use the specific verb"
+  },
+  {
+   "avoid": [
+    "assist"
+   ],
+   "use": "help",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "require"
+   ],
+   "use": "need",
+   "note": "when the subject needs something; 'must' for a rule"
+  },
+  {
+   "avoid": [
+    "ensure"
+   ],
+   "use": "make sure that",
+   "note": "keep 'that'"
+  },
+  {
+   "avoid": [
+    "prior to"
+   ],
+   "use": "before",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "subsequent to"
+   ],
+   "use": "after",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "in order to"
+   ],
+   "use": "to",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "however"
+   ],
+   "use": "but",
+   "note": "or write two sentences"
+  },
+  {
+   "avoid": [
+    "therefore",
+    "thus",
+    "hence"
+   ],
+   "use": "so",
+   "note": "or write two sentences"
+  },
+  {
+   "avoid": [
+    "additionally",
+    "furthermore",
+    "moreover"
+   ],
+   "use": "also",
+   "note": "or start a new sentence"
+  },
+  {
+   "avoid": [
+    "in addition"
+   ],
+   "use": "also",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "obtain"
+   ],
+   "use": "get",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "provide"
+   ],
+   "use": "give",
+   "note": "or 'supply'"
+  },
+  {
+   "avoid": [
+    "indicate"
+   ],
+   "use": "show",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "attempt"
+   ],
+   "use": "try",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "modify",
+    "alter"
+   ],
+   "use": "change",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "locate"
+   ],
+   "use": "find",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "insert"
+   ],
+   "use": "install",
+   "note": "for a part; 'put' is not approved for parts"
+  },
+  {
+   "avoid": [
+    "set up"
+   ],
+   "use": "install",
+   "note": "or 'prepare'"
+  },
+  {
+   "avoid": [
+    "go down"
+   ],
+   "use": "decrease",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "go up"
+   ],
+   "use": "increase",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "turn on"
+   ],
+   "use": "start",
+   "note": "or 'energize' for power"
+  },
+  {
+   "avoid": [
+    "turn off"
+   ],
+   "use": "stop",
+   "note": "or 'de-energize' for power"
+  },
+  {
+   "avoid": [
+    "check out"
+   ],
+   "use": "examine",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "carry on"
+   ],
+   "use": "continue",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "find out"
+   ],
+   "use": "learn",
+   "note": "or 'find'"
+  },
+  {
+   "avoid": [
+    "look at"
+   ],
+   "use": "examine",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "look for"
+   ],
+   "use": "find",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "very",
+    "quite",
+    "rather",
+    "really"
+   ],
+   "use": "(delete)",
+   "note": "give a number or a fact"
+  },
+  {
+   "avoid": [
+    "just",
+    "simply",
+    "easily"
+   ],
+   "use": "(delete)",
+   "note": "filler"
+  },
+  {
+   "avoid": [
+    "a lot of",
+    "lots of"
+   ],
+   "use": "many",
+   "note": "or 'much'"
+  },
+  {
+   "avoid": [
+    "enough"
+   ],
+   "use": "sufficient",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "fix"
+   ],
+   "use": "repair",
+   "note": "or 'correct' for a fault or a value"
+  },
+  {
+   "avoid": [
+    "start over"
+   ],
+   "use": "start again",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "shut down"
+   ],
+   "use": "stop",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "bring",
+    "take"
+   ],
+   "use": "move",
+   "note": "or the specific verb; one meaning per word"
+  },
+  {
+   "avoid": [
+    "get"
+   ],
+   "use": "(specific verb)",
+   "note": "'get' has many meanings: use 'receive', 'become' or 'obtain' as fits"
+  },
+  {
+   "avoid": [
+    "issue",
+    "problem"
+   ],
+   "use": "fault",
+   "note": "or 'error' for software; pick one"
+  },
+  {
+   "avoid": [
+    "thing",
+    "stuff"
+   ],
+   "use": "(name it)",
+   "note": "use the exact noun"
+  },
+  {
+   "avoid": [
+    "via",
+    "through"
+   ],
+   "use": "by",
+   "note": "or 'through' for a path"
+  },
+  {
+   "avoid": [
+    "whether or not"
+   ],
+   "use": "if",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "in the event that",
+    "in case of"
+   ],
+   "use": "if",
+   "note": ""
+  },
+  {
+   "avoid": [
+    "at this time",
+    "currently",
+    "presently"
+   ],
+   "use": "now",
+   "note": "or delete"
+  },
+  {
+   "avoid": [
+    "a number of",
+    "several"
+   ],
+   "use": "some",
+   "note": "or give the number"
+  },
+  {
+   "avoid": [
+    "appropriate"
+   ],
+   "use": "correct",
+   "note": "or the exact spec"
+  },
+  {
+   "avoid": [
+    "upon"
+   ],
+   "use": "when",
+   "note": ""
+  }
+ ]
+}

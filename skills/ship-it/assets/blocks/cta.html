@@ -1,0 +1,12 @@
+<section class="block block-cta tone-{{tone}}{{#if center}} is-center{{/if}}" id="{{id}}" aria-labelledby="{{id}}-title">
+  <div class="container cta">
+    <div class="cta-copy">
+      <h2 id="{{id}}-title">{{{title}}}</h2>
+      {{#if text}}<p class="lead">{{{text}}}</p>{{/if}}
+    </div>
+    <div class="actions">
+      <a class="btn {{#if tone=accent}}btn--inverse{{else}}btn--primary{{/if}}" href="{{cta.href}}">{{cta.label}}{{{arrow}}}</a>
+      {{#if cta_secondary}}<a class="btn btn--secondary" href="{{cta_secondary.href}}">{{cta_secondary.label}}</a>{{/if}}
+    </div>
+  </div>
+</section>

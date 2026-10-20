@@ -1,0 +1,245 @@
+{
+  "_meta": {
+    "version": "1",
+    "updated": "2026-09-29",
+    "notes": "Slot contracts for build_site.py. Types: text (plain), inline (**bold**, *italic*, [label](url)), rich (paragraphs, - lists, ### subheads, > quotes), link {label, href}, image {src, alt}, enum, bool, icon, id, email, url, number, list, object. required=true stops the build with a message naming the block and slot. max is a soft character limit that only warns. Run: python3 scripts/build_site.py blocks [NAME]"
+  },
+  "common": {
+    "id": {"type": "id", "desc": "Anchor for links, like #pricing. Defaults to the block type."},
+    "nav_label": {"type": "text", "max": 22, "desc": "Puts this section in the automatic top menu under this label."},
+    "tone": {"type": "enum", "values": ["auto", "default", "surface", "accent"], "default": "auto", "desc": "Background band. auto alternates plain and tinted bands down the page."}
+  },
+  "site": {
+    "desc": "Top level of site.json. Only name and one page of blocks are required.",
+    "slots": {
+      "name": {"type": "text", "required": true, "max": 60, "desc": "Business or site name. Used in the menu, page titles, footer and structured data."},
+      "tagline": {"type": "text", "max": 90, "desc": "One line after the name in the home page title, e.g. 'Halden & Co: operations for small teams'."},
+      "url": {"type": "url", "desc": "Final address, e.g. https://halden.co.uk. Turns on canonical links, sitemap and share tags. Leave it out until the address is known, then rebuild."},
+      "lang": {"type": "text", "default": "en", "desc": "Language code (en, fr, nl, de...). Non-English sites should also set ui."},
+      "description": {"type": "text", "max": 160, "desc": "Default search and share description."},
+      "preset": {"type": "text", "default": "editorial", "desc": "Design preset name. Run: python3 scripts/build_site.py presets"},
+      "tokens": {"type": "tokens", "desc": "Overrides on the preset: colors {accent, bg, ...}, radius {sm, md, lg}, fonts {heading, body}, style {...}, container, space_unit. Run: python3 scripts/build_site.py tokens PRESET"},
+      "fonts": {"type": "enum", "values": ["google", "system"], "default": "google", "desc": "google loads the preset fonts from Google Fonts; system uses only fonts already on the visitor's device (no external requests, faster, more private)."},
+      "dark_mode": {"type": "bool", "default": true, "desc": "Follow the visitor's dark mode when the preset has a dark palette."},
+      "nav": {"type": "list", "max_items": 7, "of": {"label": {"type": "text", "required": true, "max": 22}, "href": {"type": "text", "required": true}}, "desc": "Menu links. Leave out to build the menu from blocks and pages that have nav_label. '#id' links point at the home page from any page."},
+      "nav_cta": {"type": "link", "desc": "One highlighted button at the end of the menu."},
+      "nav_sticky": {"type": "bool", "default": false, "desc": "Keep the menu at the top while scrolling."},
+      "logo": {"type": "image", "desc": "Logo image used instead of the text name in the menu. alt should be the business name."},
+      "footer": {"type": "object", "desc": "Footer content.", "of": {
+        "text": {"type": "inline", "max": 160, "desc": "Short line under the name."},
+        "columns": {"type": "list", "max_items": 3, "of": {"title": {"type": "text", "required": true, "max": 24}, "links": {"type": "list", "required": true, "min_items": 1, "max_items": 8, "of": {"label": {"type": "text", "required": true, "max": 30}, "href": {"type": "text", "required": true}}}}},
+        "social": {"type": "list", "max_items": 6, "of": {"label": {"type": "text", "required": true, "max": 24}, "href": {"type": "text", "required": true}}, "desc": "Text links to social profiles."},
+        "legal": {"type": "text", "max": 160, "desc": "Small print such as a company number."}
+      }},
+      "business": {"type": "object", "desc": "Facts for search engines (structured data). Only what is true.", "of": {
+        "type": {"type": "text", "default": "Organization", "desc": "Organization, LocalBusiness or a schema.org subtype such as Restaurant, Dentist, LegalService, ProfessionalService."},
+        "email": {"type": "email"},
+        "phone": {"type": "text", "max": 30},
+        "address": {"type": "object", "of": {"street": {"type": "text"}, "city": {"type": "text"}, "region": {"type": "text"}, "postal": {"type": "text"}, "country": {"type": "text", "desc": "Two letter code such as GB or BE."}}},
+        "opening_hours": {"type": "list", "of": "text", "desc": "schema.org format, e.g. 'Mo-Fr 09:00-17:00'."},
+        "price_range": {"type": "text", "max": 8},
+        "same_as": {"type": "list", "of": "url", "desc": "Profile URLs (LinkedIn, Instagram...)."}
+      }},
+      "og_image": {"type": "text", "desc": "Share image: a file inside public/ (1200x630 works best) or an https URL."},
+      "public": {"type": "text", "desc": "Folder of images and files copied as-is into the site. Default: public/ next to site.json."},
+      "custom_css": {"type": "text", "desc": "Path to a .css file, or CSS text, appended after the base styles. Use var(--accent) style variables, never raw colors."},
+      "noindex": {"type": "bool", "default": false, "desc": "Ask search engines to skip the site (drafts). Remove before launch."},
+      "year": {"type": "number", "desc": "Year in the footer copyright. Default: the current year."},
+      "ui": {"type": "ui", "desc": "Text the builder adds itself (skip link, menu label, form labels, 404 page). Set these for any language other than English."},
+      "csp": {"type": "csp", "desc": "false turns off the Content-Security-Policy header. An object adds sources, e.g. {\"frame-src\": [\"https://www.youtube.com\"]}."},
+      "not_found": {"type": "object", "desc": "Text of the 404 page.", "of": {"title": {"type": "text", "max": 60}, "text": {"type": "inline", "max": 160}, "button": {"type": "text", "max": 30}}},
+      "pages": {"type": "list", "max_items": 12, "of": {
+        "path": {"type": "text", "required": true, "desc": "'/' for the home page, '/about' for another page."},
+        "title": {"type": "text", "max": 70, "desc": "Browser and search title. Default: built from the hero headline and site name."},
+        "description": {"type": "text", "max": 160},
+        "nav_label": {"type": "text", "max": 22, "desc": "Puts the page in the automatic menu."},
+        "blocks": {"type": "blocks", "required": true, "desc": "Sections in order. The first must be a hero."}
+      }, "desc": "The pages. Or give blocks directly for a one page site."},
+      "blocks": {"type": "blocks", "desc": "Shortcut for a one page site: the sections of the home page."}
+    }
+  },
+  "blocks": {
+    "nav": {
+      "auto": true,
+      "desc": "Menu bar with logo or name, links and one optional button. Built for you from site.nav, site.nav_cta, site.logo and site.nav_sticky.",
+      "slots": {}
+    },
+    "hero": {
+      "desc": "Opening screen with the page's only h1. Text only, or split with an image when image is set. compact:true makes a slim page header for inner pages.",
+      "tone": "default",
+      "slots": {
+        "headline": {"type": "inline", "required": true, "max": 80, "desc": "The h1. What you do and for whom, in plain words."},
+        "eyebrow": {"type": "text", "max": 40, "desc": "Small label above the headline."},
+        "subhead": {"type": "inline", "max": 200, "desc": "One or two sentences that finish the thought."},
+        "cta": {"type": "link", "desc": "The single action you want (book, buy, sign up)."},
+        "cta_secondary": {"type": "link", "desc": "Quieter second option. Needs cta."},
+        "note": {"type": "inline", "max": 90, "desc": "Reassurance under the buttons, e.g. 'Free to try. No card.'"},
+        "image": {"type": "image", "desc": "Turns on the split layout. Use only a real photo or illustration the owner supplied."},
+        "compact": {"type": "bool", "default": false, "desc": "Slim page header for inner pages."},
+        "align": {"type": "enum", "values": ["left", "center"], "desc": "Text alignment. Default comes from the preset."}
+      },
+      "example": {"type": "hero", "eyebrow": "Operations for small teams", "headline": "Your team is busy. Your systems should not be.", "subhead": "We set up scheduling, invoicing and handover, then run the first quarter with you.", "cta": {"label": "Book a free call", "href": "#contact"}, "cta_secondary": {"label": "How it works", "href": "#how"}, "note": "Replies within one working day."}
+    },
+    "proof-bar": {
+      "desc": "Slim strip of proof: client names as text (or small logos), or two to four short facts. Only real ones.",
+      "tone": "auto",
+      "slots": {
+        "label": {"type": "text", "max": 40, "desc": "e.g. 'Trusted by' or 'As seen in'."},
+        "logos": {"type": "list", "min_items": 2, "max_items": 8, "of": {"name": {"type": "text", "required": true, "max": 30}, "image": {"type": "image", "desc": "Optional logo file. Without it the name is set as a wordmark."}}},
+        "stats": {"type": "list", "min_items": 2, "max_items": 4, "of": {"value": {"type": "text", "required": true, "max": 12}, "label": {"type": "text", "required": true, "max": 40}}}
+      },
+      "needs_one_of": ["logos", "stats"],
+      "example": {"type": "proof-bar", "label": "Trusted by", "logos": [{"name": "Nine Elms Physio"}, {"name": "Kite & Co"}, {"name": "Harbor Coffee"}]}
+    },
+    "features": {
+      "desc": "Two to nine things you offer or reasons to choose you. variant rows reads like a contents list (best for 3 to 5 longer items), cards suits 4 to 9 short ones, plain is the quietest.",
+      "tone": "auto",
+      "slots": {
+        "title": {"type": "inline", "required": true, "max": 70},
+        "eyebrow": {"type": "text", "max": 40},
+        "intro": {"type": "inline", "max": 220},
+        "variant": {"type": "enum", "values": ["cards", "rows", "plain"], "default": "cards"},
+        "columns": {"type": "enum", "values": [2, 3, 4], "desc": "Cards and plain only. Default depends on the item count."},
+        "items": {"type": "list", "required": true, "min_items": 2, "max_items": 9, "of": {
+          "title": {"type": "text", "required": true, "max": 48},
+          "text": {"type": "inline", "required": true, "max": 200},
+          "icon": {"type": "icon", "desc": "Optional. One of the sprite icons; skip it unless it means something."}
+        }}
+      },
+      "example": {"type": "features", "id": "services", "nav_label": "Services", "title": "Three jobs we take off your desk", "variant": "rows", "items": [{"title": "Scheduling that holds", "text": "One shared calendar, clear rules for changes."}, {"title": "Invoicing that gets paid", "text": "Templates, reminders and a weekly check."}, {"title": "Handover that sticks", "text": "Written routines your team can follow without us."}]}
+    },
+    "split": {
+      "desc": "Text beside an image, a fact panel, or alone. For a story, an approach or a single strong argument. reverse:true swaps the sides.",
+      "tone": "auto",
+      "slots": {
+        "title": {"type": "inline", "required": true, "max": 70},
+        "body": {"type": "rich", "required": true, "desc": "Paragraphs. Blank line between them; '- ' for a list; '### ' for a small heading."},
+        "eyebrow": {"type": "text", "max": 40},
+        "points": {"type": "list", "max_items": 6, "of": "inline", "desc": "Short ticked lines under the text."},
+        "cta": {"type": "link"},
+        "image": {"type": "image", "desc": "Photo or illustration the owner supplied."},
+        "panel": {"type": "object", "desc": "A big fact shown instead of an image.", "of": {"value": {"type": "text", "required": true, "max": 14}, "label": {"type": "text", "required": true, "max": 90}}},
+        "reverse": {"type": "bool", "default": false}
+      },
+      "example": {"type": "split", "title": "We stay until it runs without us", "body": "Most advice ends with a document.\n\nOurs ends with a team that no longer needs us.", "points": ["Fixed scope, fixed price", "Your tools, not ours"], "panel": {"value": "90 days", "label": "From first call to handover."}}
+    },
+    "steps": {
+      "desc": "A numbered process of two to six steps.",
+      "tone": "auto",
+      "slots": {
+        "title": {"type": "inline", "required": true, "max": 70},
+        "eyebrow": {"type": "text", "max": 40},
+        "intro": {"type": "inline", "max": 220},
+        "items": {"type": "list", "required": true, "min_items": 2, "max_items": 6, "of": {"title": {"type": "text", "required": true, "max": 40}, "text": {"type": "inline", "required": true, "max": 200}}},
+        "cta": {"type": "link"}
+      },
+      "example": {"type": "steps", "id": "how", "nav_label": "How it works", "title": "How the first 90 days go", "items": [{"title": "Listen", "text": "A week of calls and a written diagnosis."}, {"title": "Build", "text": "We set up the routines that matter most."}, {"title": "Run", "text": "We run them with you and adjust."}]}
+    },
+    "testimonials": {
+      "desc": "Real quotes from real customers. One quote is set large; two to six become a grid. Never invent them: skip the block when there are none.",
+      "tone": "auto",
+      "slots": {
+        "title": {"type": "inline", "required": true, "max": 70},
+        "eyebrow": {"type": "text", "max": 40},
+        "items": {"type": "list", "required": true, "min_items": 1, "max_items": 6, "of": {
+          "quote": {"type": "inline", "required": true, "max": 320},
+          "name": {"type": "text", "required": true, "max": 40},
+          "role": {"type": "text", "max": 60},
+          "image": {"type": "image", "desc": "Optional portrait. Without it initials are shown."}
+        }}
+      },
+      "example": {"type": "testimonials", "title": "What clients say", "items": [{"quote": "They found two days a week we did not know we were losing.", "name": "Priya Nair", "role": "Owner, Kite & Co"}]}
+    },
+    "pricing": {
+      "desc": "One to three plans. Use only prices the owner confirmed. featured:true highlights one plan.",
+      "tone": "auto",
+      "slots": {
+        "title": {"type": "inline", "required": true, "max": 70},
+        "eyebrow": {"type": "text", "max": 40},
+        "intro": {"type": "inline", "max": 220},
+        "plans": {"type": "list", "required": true, "min_items": 1, "max_items": 3, "of": {
+          "name": {"type": "text", "required": true, "max": 30},
+          "price": {"type": "text", "required": true, "max": 16, "desc": "As written: '$49', 'From 120', 'Free'."},
+          "period": {"type": "text", "max": 20, "desc": "e.g. '/ month'."},
+          "description": {"type": "inline", "max": 120},
+          "features": {"type": "list", "required": true, "min_items": 1, "max_items": 10, "of": "inline"},
+          "cta": {"type": "link", "required": true},
+          "featured": {"type": "bool", "default": false},
+          "badge": {"type": "text", "max": 20, "desc": "Label on the featured plan. Default: ui.popular."}
+        }},
+        "note": {"type": "inline", "max": 160, "desc": "Small print under the plans (taxes, terms)."}
+      },
+      "example": {"type": "pricing", "id": "pricing", "nav_label": "Pricing", "title": "Simple, fixed prices", "plans": [{"name": "Starter", "price": "$900", "period": "one time", "features": ["One workflow", "Written handover"], "cta": {"label": "Choose Starter", "href": "#contact"}}]}
+    },
+    "faq": {
+      "desc": "Two to twelve questions that stop people buying. Answers can hold links and short lists.",
+      "tone": "auto",
+      "slots": {
+        "title": {"type": "inline", "required": true, "max": 70},
+        "eyebrow": {"type": "text", "max": 40},
+        "intro": {"type": "inline", "max": 220},
+        "items": {"type": "list", "required": true, "min_items": 2, "max_items": 12, "of": {"q": {"type": "text", "required": true, "max": 110}, "a": {"type": "rich", "required": true}}},
+        "open_first": {"type": "bool", "default": false}
+      },
+      "example": {"type": "faq", "title": "Questions we get", "items": [{"q": "Do you work with tiny teams?", "a": "Yes. Most clients have between two and twelve people."}, {"q": "How do we pay?", "a": "Half at the start, half at handover."}]}
+    },
+    "stats": {
+      "desc": "Two to four big numbers with labels. Only true, checkable numbers the owner gave you.",
+      "tone": "auto",
+      "slots": {
+        "title": {"type": "inline", "max": 70},
+        "eyebrow": {"type": "text", "max": 40},
+        "intro": {"type": "inline", "max": 220},
+        "items": {"type": "list", "required": true, "min_items": 2, "max_items": 4, "of": {"value": {"type": "text", "required": true, "max": 12}, "label": {"type": "text", "required": true, "max": 60}, "note": {"type": "text", "max": 80}}}
+      },
+      "example": {"type": "stats", "title": "Since 2019", "items": [{"value": "38", "label": "teams helped"}, {"value": "4", "label": "people, no layers"}]}
+    },
+    "cta": {
+      "desc": "Full-width closing call to action in the accent color. One button, maybe a quieter second.",
+      "tone": "accent",
+      "slots": {
+        "title": {"type": "inline", "required": true, "max": 70},
+        "text": {"type": "inline", "max": 200},
+        "cta": {"type": "link", "required": true},
+        "cta_secondary": {"type": "link"},
+        "align": {"type": "enum", "values": ["left", "center"], "desc": "Default comes from the preset."}
+      },
+      "example": {"type": "cta", "title": "Tell us what is slowing you down", "text": "A 30 minute call, no pitch.", "cta": {"label": "Book a free call", "href": "#contact"}}
+    },
+    "contact": {
+      "desc": "How to reach you. Without form_action it shows an email button (a static site cannot receive forms by itself). With form_action (a form service the owner signs up to, such as Formspree) it shows a real form.",
+      "tone": "auto",
+      "slots": {
+        "title": {"type": "inline", "required": true, "max": 70},
+        "eyebrow": {"type": "text", "max": 40},
+        "text": {"type": "inline", "max": 220},
+        "email": {"type": "email", "desc": "Shown and used for the mail button."},
+        "phone": {"type": "text", "max": 30},
+        "address": {"type": "text", "max": 160, "desc": "Use \\n for line breaks."},
+        "hours": {"type": "text", "max": 120},
+        "button": {"type": "text", "max": 30, "desc": "Button label. Default: ui.send or ui.email_us."},
+        "subject": {"type": "text", "max": 80, "desc": "Subject line for the mail button."},
+        "form_action": {"type": "url", "desc": "https:// endpoint of a form service. Public, not a secret."}
+      },
+      "needs_one_of": ["email", "phone", "form_action"],
+      "example": {"type": "contact", "id": "contact", "nav_label": "Contact", "title": "Talk to a person", "email": "hello@halden.test", "phone": "+44 20 7946 0123", "hours": "Mon to Fri, 9 to 5"}
+    },
+    "text": {
+      "desc": "Plain reading page section: about text, policies, long explanations. width narrow keeps lines readable.",
+      "tone": "auto",
+      "slots": {
+        "body": {"type": "rich", "required": true},
+        "title": {"type": "inline", "max": 70},
+        "eyebrow": {"type": "text", "max": 40},
+        "align": {"type": "enum", "values": ["left", "center"], "default": "left"},
+        "width": {"type": "enum", "values": ["narrow", "wide"], "default": "narrow"}
+      },
+      "example": {"type": "text", "title": "Our story", "body": "Halden & Co began in 2019.\n\nWe write things down."}
+    },
+    "footer": {
+      "auto": true,
+      "desc": "Footer with name, short text, optional link columns, social links and copyright. Built for you from site.footer and site.business.",
+      "slots": {}
+    }
+  }
+}

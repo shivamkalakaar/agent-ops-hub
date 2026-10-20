@@ -1,0 +1,33 @@
+{
+  "_meta": {"version": "1", "updated": "2026-09-29", "notes": "Serif, warm paper, ink, one terracotta accent. Hairline rules and a masthead double rule instead of boxes and shadows. Has a night variant."},
+  "name": "editorial",
+  "label": "Editorial",
+  "best_for": "Consultants, writers, coaches, newsletters and publications: calm authority for people who read.",
+  "mood": "Serif headings, warm paper, ink, one terracotta accent, hairline rules.",
+  "fonts": {
+    "heading": {"family": "Newsreader", "weights": [400, 500, 600], "fallback": "\"Iowan Old Style\", \"Palatino Linotype\", Palatino, Georgia, serif", "google": "Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..500"},
+    "body": {"family": "Newsreader", "weights": [400, 500, 600], "fallback": "\"Iowan Old Style\", \"Palatino Linotype\", Palatino, Georgia, serif", "google": "Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..500"}
+  },
+  "colors": {
+    "bg": "#F5EFE4", "surface": "#FBF7EE", "text": "#1E1A16", "muted": "#5C5348", "border": "#D9CFBE",
+    "accent": "#B0481D", "accent_ink": "#FFFFFF", "danger": "#A3281C"
+  },
+  "dark": {
+    "bg": "#161310", "surface": "#1F1B17", "text": "#EFE7DA", "muted": "#B3A797", "border": "#3A332B",
+    "accent": "#E58558", "accent_ink": "#1A1108", "danger": "#FF8F80"
+  },
+  "radius": {"sm": "2px", "md": "3px", "lg": "6px"},
+  "space_unit": "0.25rem",
+  "container": "68rem",
+  "shadow": "none",
+  "type_scale": {
+    "xs": [0.78, 0.84], "sm": [0.9, 0.96], "base": [1.0625, 1.1875], "lg": [1.28, 1.5], "xl": [1.4, 1.75],
+    "2xl": [1.95, 2.9], "3xl": [2.4, 3.9], "display": [2.75, 5.4]
+  },
+  "style": {
+    "heading_weight": "500", "heading_tracking": "-0.02em", "lh_heading": "1.06", "lh_body": "1.65",
+    "eyebrow_case": "uppercase", "eyebrow_tracking": "0.14em",
+    "btn_radius": "var(--radius-sm)", "btn_weight": "500", "btn_tracking": "0.01em",
+    "header_border": "3px double var(--text)", "measure": "60ch", "decor": "none", "hero_align": "left"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "_meta": {"version": "1", "updated": "2026-09-29", "notes": "Soft serif, cream, forest green, a clay second color used only for decoration. Large radii, pill buttons, warm shadows."},
+  "name": "warm-craft",
+  "label": "Warm craft",
+  "best_for": "Local businesses, food, wellness, studios and makers: friendly, handmade, welcoming.",
+  "mood": "Soft rounded shapes, cream paper, forest green, clay accents, big friendly type.",
+  "fonts": {
+    "heading": {"family": "Fraunces", "weights": [400, 500, 600, 700], "fallback": "\"Iowan Old Style\", Georgia, serif", "google": "Fraunces:ital,opsz,wght,SOFT@0,9..144,400..700,100;1,9..144,400..700,100"},
+    "body": {"family": "Nunito", "weights": [400, 500, 600, 700], "fallback": "ui-rounded, \"Avenir Next\", \"Segoe UI\", system-ui, sans-serif", "google": "Nunito:ital,wght@0,400..700;1,400..600"}
+  },
+  "colors": {
+    "bg": "#F8F1E3", "surface": "#FFFAEF", "text": "#23301F", "muted": "#59614F", "border": "#E3D7BD",
+    "accent": "#2F5E3E", "accent_ink": "#FFF8EA", "danger": "#AD3A2B", "accent_2": "#C4683F"
+  },
+  "radius": {"sm": "10px", "md": "18px", "lg": "30px"},
+  "space_unit": "0.25rem",
+  "container": "66rem",
+  "shadow": "0 2px 0 rgb(35 48 31 / 5%), 0 18px 32px -18px rgb(35 48 31 / 28%)",
+  "type_scale": {
+    "xs": [0.8, 0.86], "sm": [0.92, 0.98], "base": [1.03, 1.125], "lg": [1.22, 1.42], "xl": [1.38, 1.7],
+    "2xl": [1.85, 2.7], "3xl": [2.25, 3.5], "display": [2.5, 4.7]
+  },
+  "style": {
+    "heading_weight": "600",
+    "heading_tracking": "-0.015em",
+    "lh_heading": "1.1",
+    "lh_body": "1.65",
+    "eyebrow_case": "none",
+    "eyebrow_tracking": "0.01em",
+    "btn_radius": "999px",
+    "btn_weight": "700",
+    "btn_border": "2px",
+    "btn_hover_transform": "translateY(-2px)",
+    "card_border_w": "1px",
+    "measure": "58ch",
+    "decor": "blob",
+    "hero_align": "center",
+    "eyebrow_size": "var(--fs-sm)",
+    "hero_measure": "20ch"
+  }
+}

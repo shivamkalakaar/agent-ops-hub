@@ -1,0 +1,41 @@
+{
+  "_meta": {"version": "1", "updated": "2026-09-29", "notes": "Near-black, off-white text, one amber accent, grotesk headings with a display serif italic for emphasised words (write *word* inside a headline). Always dark."},
+  "name": "studio-dark",
+  "label": "Studio dark",
+  "best_for": "Portfolios, designers, photographers, agencies and film or music projects: confident, quiet, the work does the talking.",
+  "mood": "Near-black, off-white, one amber light, serif italic accents in the headlines.",
+  "fonts": {
+    "heading": {"family": "Schibsted Grotesk", "weights": [500, 600, 700], "fallback": "\"Helvetica Neue\", Arial, system-ui, sans-serif", "google": "Schibsted+Grotesk:ital,wght@0,400..800;1,400..800"},
+    "body": {"family": "Schibsted Grotesk", "weights": [400, 500, 600], "fallback": "\"Helvetica Neue\", Arial, system-ui, sans-serif", "google": "Schibsted+Grotesk:ital,wght@0,400..800;1,400..800"},
+    "accent": {"family": "Instrument Serif", "weights": [400], "fallback": "Georgia, \"Times New Roman\", serif", "google": "Instrument+Serif:ital@1"}
+  },
+  "colors": {
+    "bg": "#0D0D0F", "surface": "#17171A", "text": "#EEEBE5", "muted": "#A5A19A", "border": "#2C2C31",
+    "accent": "#FFB224", "accent_ink": "#0D0D0F", "danger": "#FF7A6B"
+  },
+  "radius": {"sm": "6px", "md": "12px", "lg": "20px"},
+  "space_unit": "0.25rem",
+  "container": "72rem",
+  "shadow": "0 24px 48px -28px rgb(0 0 0 / 80%)",
+  "type_scale": {
+    "xs": [0.78, 0.84], "sm": [0.9, 0.95], "base": [1, 1.0625], "lg": [1.2, 1.4], "xl": [1.35, 1.65],
+    "2xl": [1.95, 3.1], "3xl": [2.4, 4.3], "display": [2.8, 6.6]
+  },
+  "style": {
+    "heading_weight": "600",
+    "heading_tracking": "-0.03em",
+    "lh_heading": "1.04",
+    "lh_body": "1.6",
+    "eyebrow_case": "uppercase",
+    "eyebrow_tracking": "0.16em",
+    "btn_radius": "var(--radius-sm)",
+    "btn_weight": "600",
+    "btn_hover_transform": "translateY(-1px)",
+    "card_border_w": "1px",
+    "measure": "58ch",
+    "decor": "glow",
+    "hero_align": "left",
+    "hero_measure": "20ch",
+    "em_weight": "400"
+  }
+}

@@ -1,0 +1,17 @@
+<section class="block block-proof tone-{{tone}}" id="{{id}}"{{#if label}} aria-label="{{label}}"{{/if}}>
+  <div class="container proof">
+    {{#if label}}<p class="proof-label">{{label}}</p>{{/if}}
+    {{#if logos}}
+    <ul class="proof-list">
+      {{#each logos}}<li>{{#if image}}<img src="{{image.src}}" alt="{{name}}"{{{image.attrs}}}>{{else}}<span class="wordmark">{{name}}</span>{{/if}}</li>
+      {{/each}}
+    </ul>
+    {{/if}}
+    {{#if stats}}
+    <dl class="proof-stats">
+      {{#each stats}}<div><dt>{{label}}</dt><dd>{{value}}</dd></div>
+      {{/each}}
+    </dl>
+    {{/if}}
+  </div>
+</section>

@@ -1,0 +1,75 @@
+{
+  "_meta": {
+    "version": "1.0.0",
+    "updated": "2026-09-29",
+    "notes": "Input format for scripts/report.py. Required: title, headline, confidence (level + reason), and at least one caveat or data_quality note. Get a filled-in example with: python3 scripts/report.py --example. Validate with: python3 scripts/report.py REPORT.json --check. Text fields are plain text; **double stars** make bold; a blank line starts a new paragraph."
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "analyze report",
+  "type": "object",
+  "required": ["title", "headline", "confidence"],
+  "properties": {
+    "title": {"type": "string", "description": "Page title, plain words."},
+    "subtitle": {"type": "string", "description": "Data source and period, one line."},
+    "prepared_by": {"type": "string"},
+    "date": {"type": "string", "description": "Any readable date, like 2026-09-29."},
+    "headline": {"type": "string", "description": "The finding in one sentence with the key number. This is the first thing the reader sees."},
+    "confidence": {
+      "type": "object",
+      "required": ["level", "reason"],
+      "properties": {
+        "level": {"enum": ["high", "medium", "low"]},
+        "reason": {"type": "string", "description": "Why: sample size, data quality, agreement between methods, what is unverified."}
+      }
+    },
+    "answer": {"type": "string", "description": "Optional 1-3 sentence direct answer under the headline."},
+    "kpis": {
+      "type": "array",
+      "description": "Up to 6 cards. Each number must come from a script run.",
+      "items": {
+        "type": "object",
+        "required": ["label", "value"],
+        "properties": {
+          "label": {"type": "string"},
+          "value": {"type": "string", "description": "Formatted text, like $54.8K."},
+          "delta": {"type": "string", "description": "Like -17.3% vs Jul. Shown with an arrow, so colour is never the only signal."},
+          "direction": {"enum": ["up", "down", "flat"]},
+          "good": {"enum": ["up", "down"], "description": "Which direction is good news (default up). Use down for churn, cost, errors."},
+          "note": {"type": "string"}
+        }
+      }
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "heading": {"type": "string"},
+          "text": {"type": "string"},
+          "bullets": {"type": "array", "items": {"type": "string"}},
+          "chart": {
+            "type": "object",
+            "description": "One of svg_file (path relative to the JSON file, made by chart.py) or svg (inline markup).",
+            "properties": {"svg_file": {"type": "string"}, "svg": {"type": "string"}, "caption": {"type": "string"}, "alt": {"type": "string"}}
+          },
+          "table": {
+            "type": "object",
+            "required": ["columns", "rows"],
+            "properties": {
+              "caption": {"type": "string"},
+              "columns": {"type": "array", "items": {"type": "string"}},
+              "rows": {"type": "array", "items": {"type": "array"}, "description": "Each row has one cell per column."},
+              "align": {"type": "array", "items": {"enum": ["left", "right", "center"]}, "description": "Optional; numeric columns right-align automatically."},
+              "emphasis": {"type": "array", "items": {"type": "integer"}, "description": "Row indexes to highlight."}
+            }
+          }
+        }
+      }
+    },
+    "method": {"type": ["string", "array"], "description": "What was done and with which scripts, in plain words. Include row counts and exclusions."},
+    "caveats": {"type": "array", "items": {"type": "string"}, "description": "What could make the conclusion wrong."},
+    "data_quality": {"type": "array", "items": {"type": "string"}, "description": "Issues found by profile.py and how they were handled."},
+    "next_questions": {"type": "array", "items": {"type": "string"}},
+    "sources": {"type": "array", "items": {"type": "string"}}
+  }
+}

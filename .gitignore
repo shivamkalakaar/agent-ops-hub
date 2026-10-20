@@ -7,3 +7,4 @@ web/.next/
 web/.env.local
 config/style/examples.md
 evals/results/
+.DS_Store

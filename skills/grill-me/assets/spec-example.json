@@ -1,0 +1,23 @@
+{
+ "title": "Streak-forgiving habit tracker",
+ "type": ["app"],
+ "goal": "Give one person a daily checklist for six habits that keeps a streak alive through a missed day.",
+ "success": "For two weeks the owner checks off today's habits in under 10 seconds each morning, and one missed day does not reset a streak.",
+ "users": "One person (the requester), on a phone browser, opened once or twice a day.",
+ "must_have": [
+  {"item": "Today screen listing the six habits with one tap to check each off", "accept": "Open the page, tap a habit, and see it marked done; reload and it is still marked."},
+  {"item": "Streak per habit with one grace day per week", "accept": "Skip one day: the streak keeps its count. Skip two days in one week: the streak resets to zero."},
+  {"item": "Data survives closing the browser", "accept": "Check two habits, close the tab, reopen it: both are still checked."},
+  {"item": "Export all history to a CSV file", "accept": "Tap Export and open the file in a spreadsheet: one row per habit per day with a date and a done flag."}
+ ],
+ "nice_to_have": ["Weekly view of the last 7 days", "Dark mode"],
+ "out_of_scope": ["Accounts and sign-in", "Sharing with friends", "Push notifications", "Native mobile app"],
+ "constraints": ["Free to host, no server to maintain", "Works offline after the first visit", "Ready this weekend"],
+ "assumptions": [
+  {"text": "Habits are daily only, not weekly or x-times-per-week.", "from": "app-mvp", "risk": "med"},
+  {"text": "The grace rule is one free miss per calendar week.", "from": "inferred", "risk": "low"},
+  {"text": "Data stays in the browser on one device, with no sync between phone and laptop.", "from": "app-data", "risk": "low"}
+ ],
+ "reject_if": ["A missed day resets the streak on the first miss", "Reaching any habit takes more than one screen", "Reloading the page loses any check-off"],
+ "open_risks": ["Clearing browser data erases history unless the owner exports regularly"]
+}

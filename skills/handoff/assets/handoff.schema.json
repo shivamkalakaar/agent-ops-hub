@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Handoff",
+  "description": "State snapshot of a conversation: where things stand, what is ruled out, what is next. Write facts, not a story. A section with nothing in it is written as an empty list, never left out.",
+  "_meta": {
+    "version": "1.0",
+    "updated": "2026-09-29",
+    "notes": "Read by people and models; handoff.py validates with its own code (no third-party validator). Keys starting with an underscore are ignored."
+  },
+  "type": "object",
+  "required": ["title", "date", "recipient", "objective", "current_state", "decisions", "dead_ends", "artifacts", "verbatim", "preferences", "open_items"],
+  "properties": {
+    "_meta": {"type": "object"},
+    "title": {"type": "string", "description": "The topic, 3-8 words."},
+    "date": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "Date of the handoff, YYYY-MM-DD. Never 'today'."},
+    "recipient": {"enum": ["ai", "human", "self"], "description": "ai = new chat session, human = colleague, self = future you."},
+    "kind": {"enum": ["code", "writing", "research", "analysis", "design", "planning", "sales", "general"], "description": "Kind of work; see profiles.json for the extra fields each kind needs."},
+    "objective": {"type": "string", "description": "The goal in 1-2 sentences, with success criteria if any were set."},
+    "current_state": {"type": "string", "description": "Where things stand right now: the 'you are here' marker. Facts, not the order things happened."},
+    "decisions": {
+      "type": "array",
+      "description": "Settled choices. Only what the user decided or accepted; a suggestion nobody accepted is not a decision.",
+      "items": {"type": "object", "required": ["what", "why"], "properties": {
+        "what": {"type": "string"}, "why": {"type": "string", "description": "The reason, so the next session does not reopen it."}}}
+    },
+    "dead_ends": {
+      "type": "array",
+      "description": "Approaches tried or rejected. The most valuable and most omitted section.",
+      "items": {"type": "object", "required": ["what", "why"], "properties": {
+        "what": {"type": "string"}, "why": {"type": "string", "description": "Why it failed or was rejected; say if the reason is fixable."}}}
+    },
+    "artifacts": {
+      "type": "array",
+      "description": "Every file, draft or deliverable. Only the current version, plus what it superseded.",
+      "items": {"type": "object", "required": ["name", "location", "status"], "properties": {
+        "name": {"type": "string"}, "location": {"type": "string", "description": "Path or URL exactly as it exists."},
+        "status": {"type": "string", "description": "final, draft, or superseded by X."}}}
+    },
+    "verbatim": {
+      "type": "array",
+      "description": "Values that must survive character for character. Each value must occur literally in the thread; check proves it.",
+      "items": {"type": "object", "required": ["label", "value"], "properties": {
+        "label": {"type": "string"}, "value": {"type": "string"}}}
+    },
+    "preferences": {"type": "array", "items": {"type": "string"}, "description": "User corrections and style rules learned in the thread, each one a preference already paid for."},
+    "open_items": {
+      "type": "object",
+      "required": ["next"],
+      "properties": {
+        "next": {"type": "string", "description": "ONE concrete step, starting with a verb."},
+        "then": {"type": "array", "items": {"type": "string"}},
+        "blocked": {"type": "array", "items": {"type": "object", "required": ["item", "unblocks"], "properties": {
+          "item": {"type": "string"}, "unblocks": {"type": "string", "description": "What has to happen before it can move."}}}}
+      }
+    },
+    "unresolved": {"type": "array", "items": {"type": "string"}, "description": "Questions or contradictions the thread never settled. Do not pick a winner."},
+    "uncertain": {"type": "array", "items": {"type": "string"}, "description": "Things implied but never confirmed; the reader must not rely on them."}
+  }
+}

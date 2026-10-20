@@ -1,0 +1,135 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "updated": "2026-09-29",
+    "notes": "Worked example of a finished HANDOFF.json (kind: writing). Every verbatim value occurs literally in the thread it came from."
+  },
+  "title": "Fieldnote launch email sequence",
+  "date": "2026-09-29",
+  "recipient": "ai",
+  "kind": "writing",
+  "objective": "Ship a 3-email launch sequence for Fieldnote (a note-taking app) to freelance designers, in a professional tone, and get it to the agency contact for scheduling before the deadline.",
+  "current_state": "All three emails and the unsubscribe footer are drafted and merged into one HTML file for the email platform. The email 1 subject line is fixed and approved. Audience: freelance designers. Outline: announcement, proof, last call; all three sections are drafted and none is signed off beyond the subject line. Legal has not yet approved the footer wording, so the merged file is a draft.",
+  "decisions": [
+    {
+      "what": "Professional tone, not playful",
+      "why": "The first draft read as too playful for freelance designers and the user rejected it."
+    },
+    {
+      "what": "Three-email arc: announcement, proof, last call",
+      "why": "The user approved this structure; each email stays under 150 words."
+    },
+    {
+      "what": "No A/B test on the subject line",
+      "why": "The user judged it too complicated for this launch."
+    },
+    {
+      "what": "Deliver one merged HTML file",
+      "why": "The email platform takes a single upload, and it replaces the three separate drafts."
+    }
+  ],
+  "dead_ends": [
+    {
+      "what": "Countdown timer GIF in email 3",
+      "why": "Email clients strip animated GIFs, so the timer never renders. Not fixable on the client side."
+    },
+    {
+      "what": "Urgency wording in email 3",
+      "why": "The user said no pressure tactics, so it was removed."
+    }
+  ],
+  "artifacts": [
+    {
+      "name": "sequence.html",
+      "location": "/Users/dev/fieldnote/emails/sequence.html",
+      "status": "draft: merged file, waiting on legal approval of the footer"
+    },
+    {
+      "name": "email-1.md",
+      "location": "/Users/dev/fieldnote/emails/email-1.md",
+      "status": "superseded by sequence.html"
+    },
+    {
+      "name": "email-2.md",
+      "location": "/Users/dev/fieldnote/emails/email-2.md",
+      "status": "superseded by sequence.html"
+    },
+    {
+      "name": "email-3.md",
+      "location": "/Users/dev/fieldnote/emails/email-3.md",
+      "status": "superseded by sequence.html"
+    },
+    {
+      "name": "footer.md",
+      "location": "/Users/dev/fieldnote/emails/footer.md",
+      "status": "draft: wording not yet approved by legal"
+    }
+  ],
+  "verbatim": [
+    {
+      "label": "Email 1 subject line (approved)",
+      "value": "Your notes, one place"
+    },
+    {
+      "label": "CTA button text",
+      "value": "Start free for 14 days"
+    },
+    {
+      "label": "Price",
+      "value": "$12/month"
+    },
+    {
+      "label": "Sequence send date",
+      "value": "2026-10-14"
+    },
+    {
+      "label": "Email 2 send date",
+      "value": "2026-10-16"
+    },
+    {
+      "label": "Deadline for the whole sequence",
+      "value": "Friday 2026-10-09 at 5pm"
+    },
+    {
+      "label": "Send-from address",
+      "value": "hello@fieldnote.example"
+    },
+    {
+      "label": "Landing page",
+      "value": "https://fieldnote.example/launch"
+    },
+    {
+      "label": "Agency contact",
+      "value": "dana@agency.example"
+    },
+    {
+      "label": "Upload error seen with the HTML version",
+      "value": "Error: template not found (code 404)"
+    }
+  ],
+  "preferences": [
+    "Professional tone: no jokes or slang.",
+    "Never use exclamation marks; keep every email under 150 words.",
+    "No pressure tactics: no urgency, countdowns or scarcity.",
+    "Keep the approved subject line and button text word for word."
+  ],
+  "open_items": {
+    "next": "Send sequence.html to Dana at dana@agency.example once legal approves the footer wording.",
+    "then": [
+      "Ask Dana to confirm both send dates are scheduled."
+    ],
+    "blocked": [
+      {
+        "item": "Sending the sequence to Dana",
+        "unblocks": "Legal approval of the footer wording"
+      }
+    ]
+  },
+  "unresolved": [
+    "Plain text or HTML: the question was asked and never answered.",
+    "The send date for email 3 was never set."
+  ],
+  "uncertain": [
+    "Legal was mentioned once with no timeline; whether they will change the footer wording is unconfirmed."
+  ]
+}

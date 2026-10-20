@@ -1,0 +1,19 @@
+<section class="block block-steps tone-{{tone}}" id="{{id}}" aria-labelledby="{{id}}-title">
+  <div class="container">
+    <header class="block-head">
+      {{#if eyebrow}}<p class="eyebrow">{{eyebrow}}</p>{{/if}}
+      <h2 id="{{id}}-title">{{{title}}}</h2>
+      {{#if intro}}<p class="lead">{{{intro}}}</p>{{/if}}
+    </header>
+    <ol class="steps cols-{{cols}}">
+      {{#each items}}
+      <li class="step">
+        <span class="step-num" aria-hidden="true">{{@number2}}</span>
+        <h3>{{title}}</h3>
+        <p>{{{text}}}</p>
+      </li>
+      {{/each}}
+    </ol>
+    {{#if cta}}<div class="actions"><a class="btn btn--primary" href="{{cta.href}}">{{cta.label}}{{{arrow}}}</a></div>{{/if}}
+  </div>
+</section>

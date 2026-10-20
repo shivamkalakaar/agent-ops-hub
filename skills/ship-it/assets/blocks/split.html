@@ -1,0 +1,23 @@
+<section class="block block-split tone-{{tone}}" id="{{id}}" aria-labelledby="{{id}}-title">
+  <div class="container split{{#if reverse}} is-reverse{{/if}}{{#if has_media}} has-media{{/if}}">
+    <div class="split-copy">
+      {{#if eyebrow}}<p class="eyebrow">{{eyebrow}}</p>{{/if}}
+      <h2 id="{{id}}-title">{{{title}}}</h2>
+      <div class="prose">{{{body}}}</div>
+      {{#if points}}
+      <ul class="ticks">
+        {{#each points}}<li>{{{check}}}<span>{{{this}}}</span></li>
+        {{/each}}
+      </ul>
+      {{/if}}
+      {{#if cta}}<div class="actions"><a class="btn btn--primary" href="{{cta.href}}">{{cta.label}}{{{arrow}}}</a></div>{{/if}}
+    </div>
+    {{#if image}}<figure class="split-media"><img src="{{image.src}}" alt="{{image.alt}}"{{{image.attrs}}}></figure>{{/if}}
+    {{#if panel}}
+    <aside class="split-panel">
+      <p class="panel-value">{{panel.value}}</p>
+      <p class="panel-label">{{panel.label}}</p>
+    </aside>
+    {{/if}}
+  </div>
+</section>

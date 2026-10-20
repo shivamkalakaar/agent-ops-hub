@@ -1,0 +1,46 @@
+{
+ "pairs": [
+  {
+   "kind": "procedural",
+   "before": "You should make sure that the valve has been closed before the maintenance is being carried out.",
+   "after": "Close the valve. Make sure that the valve is closed before you start the maintenance.",
+   "why": "Imperative, no continuous form, no should, one action per sentence."
+  },
+  {
+   "kind": "procedural",
+   "before": "Once the panel has been removed, it's necessary to inspect the wiring, etc.",
+   "after": "Remove the panel. Examine the wiring for damage.",
+   "why": "No contraction, no etc., verbs instead of nouns."
+  },
+  {
+   "kind": "procedural",
+   "before": "If possible, the system could be restarted; this may fix the problem.",
+   "after": "If the system does not respond, restart the system. The restart can correct the fault.",
+   "why": "Condition first, no semicolon, can instead of may."
+  },
+  {
+   "kind": "descriptive",
+   "before": "The pump is utilized for the purpose of providing pressure to the hydraulic system.",
+   "after": "The pump supplies pressure to the hydraulic system.",
+   "why": "Plain verb, active voice."
+  },
+  {
+   "kind": "descriptive",
+   "before": "The unit is designed to be operated by the crew at temperatures between -20 and 50 degrees.",
+   "after": "The unit operates at temperatures from -20 to 50 degrees Celsius.",
+   "why": "Active voice, exact unit."
+  },
+  {
+   "kind": "warning",
+   "before": "Be careful, the terminal might be live.",
+   "after": "WARNING: Do not touch the terminal. The terminal has a dangerous voltage.",
+   "why": "Command first, then the risk. Fact instead of hedge."
+  },
+  {
+   "kind": "warning",
+   "before": "Failure to tighten the bolts may lead to damage of the housing.",
+   "after": "CAUTION: Tighten the bolts. Loose bolts can cause damage to the housing.",
+   "why": "Caution is for damage; command first."
+  }
+ ]
+}

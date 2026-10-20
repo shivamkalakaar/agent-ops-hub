@@ -16,9 +16,14 @@ ITEMS = [
     {"source": "Infra News", "tier": 2, "layer_hint": "compute", "title": "Neocloud signs $4B GPU deal",
      "url": "https://example.com/b", "published": NOW, "summary": "Four billion dollars of GPUs over five years."},
 ]
-GOOD_POST = ("Open models just got 10x cheaper than the frontier.\n\nA new open-weight model scores 88 on X.\n\n"
-             "It costs $0.20 per million tokens.\n\n" + "That changes the math for every agent builder. " * 6 +
-             "\n\nMy bet: most agent workloads move to open models within a year.\n\n#AI")
+GOOD_POST = ("An open-weight model just scored 88 on X.\n\n"
+             "It costs $0.20 per million tokens. I had to read that twice.\n\n"
+             "Last year you paid frontier prices for that score, so most teams I talk to rationed their agent calls. "
+             "They'd run one pass, check it by hand, and move on.\n\n"
+             "At this price you can run ten passes and let the model check itself. That changes what's worth building, "
+             "especially for agent workflows with a lot of retries.\n\n"
+             "I'd bet most agent workloads move to open models within a year, and the frontier labs compete on the hard 10%.\n\n"
+             "#AI")
 
 
 @pytest.fixture(autouse=True)
@@ -92,6 +97,15 @@ def test_guardrails():
         assert needle in v
 
 
+def test_humanizer_catches_structural_tells():
+    ai = ("Anthropic might be a cloud company wearing a model company's clothes.\n\n"
+          "Those leases aren't background news. They're a valuation input.\n\nMy take: track capacity, not benchmarks.")
+    v = " | ".join(graph.guardrail_violations(ai, set(), "Anthropic signed $1.3T in leases."))
+    assert "negation pivot" in v and "labelled closer" in v and "costume metaphor" in v
+    v = graph.guardrail_violations("Anthropic signed $9T in leases this year. " * 3, set(), "Anthropic signed $1.3T in leases.")
+    assert any("\"$9\"" in x and "not in the sources" in x for x in v)
+
+
 def test_parse_json_tolerates_preamble():
     assert llm.parse_json('Sure! Here it is:\n{"a": [1, 2]} trailing') == {"a": [1, 2]}
     assert llm.parse_json("```json\n[1]\n```") == [1]
@@ -100,5 +114,7 @@ def test_parse_json_tolerates_preamble():
 def test_evals_offline(monkeypatch, tmp_path):
     from evals import run_evals
     monkeypatch.setattr(run_evals, "BASELINE", tmp_path / "baseline.json")
+    # the fake writer's canned post can't match real golden sources, so skip the fact guard here
+    monkeypatch.setattr("core.humanizer.invented_facts", lambda sources, post: [])
     monkeypatch.setattr("sys.argv", ["run_evals", "--cases", "2"])
     assert run_evals.main() == 0

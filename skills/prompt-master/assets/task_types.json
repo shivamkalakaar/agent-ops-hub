@@ -1,0 +1,259 @@
+{
+ "_meta": {
+  "version": "1.0.0",
+  "updated": "2026-09-29",
+  "notes": "14 task types for scripts/dump.py slots. A slot is a BLOCKER only when it is required and has default_assumption null; every other missing slot becomes a stated assumption. String entries in slots refer to the shared slots under common; an object with ref overrides fields of that shared slot. detect and cues are case-insensitive regexes/phrases that only suggest; the model judges."
+ },
+ "common": {
+  "audience": {"label": "Who will read or use it", "detect": ["\\b(?:for|to) (?:my|our|the|a) (?:boss|client|customers?|team|board|investors?|ceo|cfo|manager|staff|students?|audience|partners?|prospects?|leadership|execs?|executives?|stakeholders?)\\b", "\\baudience\\b", "\\b(?:client|customer|boss|investor|reader|reviewer)s? (?:is|are|will|wants?|hates?|loves?|needs?)\\b", "\\bsend (?:it )?to \\w+", "\\bfor \\w+ (?:company|team|department)\\b"], "blocker_question": "Who is this for?", "default_assumption": "A smart reader who knows the topic but not the details of this situation."},
+  "deadline": {"label": "When it is needed", "detect": ["\\b(?:by|before|until|due|no later than) (?:the )?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|tonight|tomorrow|today|eod|end of|next|\\d)", "\\b(?:tonight|tomorrow|asap|eod|deadline|this week|next week)\\b", "\\bdue\\b"], "blocker_question": "When do you need it?", "default_assumption": "No deadline stated: deliver in this response."},
+  "tone": {"label": "Tone and voice", "detect": ["\\b(?:tone|formal|casual|friendly|warm|professional|blunt|direct|playful|corporate|punchy|conversational|serious|polite|sounds? like)\\b"], "blocker_question": "What tone should it have?", "default_assumption": "Plain, direct, warm-professional; no corporate filler."},
+  "length": {"label": "Length", "detect": ["\\b\\d+\\s*(?:words?|pages?|slides?|lines?|sentences?|paragraphs?|bullets?|minutes?|mins?|characters?)\\b", "\\b(?:short|brief|concise|long|detailed|one[- ]pager|one page|quick|tight|in depth|thorough)\\b"], "blocker_question": "How long should it be?", "default_assumption": "As short as the content allows: one screen or one page."},
+  "source_material": {"label": "The material to work from (text, file or data)", "detect": ["\\b(?:attached|below|pasted|here(?:'s| is| are)|see (?:the )?(?:file|doc|data)|this (?:text|draft|data|doc|file|email|copy)|the (?:data|draft|numbers|notes|text|file))\\b"], "blocker_question": "Can you paste the text, data or file I should work from?", "default_assumption": null}
+ },
+ "types": {
+  "email": {
+   "label": "Email",
+   "cues": ["email", "e-mail", "reply to", "respond to", "follow up", "follow-up", "subject line", "inbox", "write to", "cc", "note to"],
+   "spec_hint": "Put the one thing the reader must do or know in the first two sentences; everything else supports it.",
+   "slots": {
+    "required": [
+     {"id": "purpose", "label": "What the email must achieve", "detect": ["\\b(?:ask|tell|let \\w+ know|remind|apolog\\w+|thank|invite|decline|confirm|schedule|request|introduce|update|chase|nudge|pitch|negotiate|push back)\\b"], "blocker_question": "What should the reader do or understand after reading it?", "default_assumption": null},
+     {"id": "recipient", "label": "Who it goes to", "detect": ["\\b(?:to|for) (?:my|our|the)? ?\\w+ (?:boss|client|team|customer|manager|vendor|landlord|recruiter)\\b", "\\bemail (?:to )?\\w+", "\\bwrite to \\w+", "\\breply to \\w+"], "blocker_question": "Who is it to?", "default_assumption": "One recipient, greeted with a first-name placeholder; relationship inferred from the context."},
+     "tone"
+    ],
+    "optional": [
+     {"ref": "length", "default_assumption": "Under 150 words."},
+     {"ref": "deadline", "label": "Reply-by date", "default_assumption": "No reply-by date; end with a clear next step."},
+     {"id": "subject", "label": "Subject line", "detect": ["\\bsubject\\b"], "default_assumption": "One subject line under eight words."}
+    ]
+   }
+  },
+  "one-pager": {
+   "label": "One-pager or brief",
+   "cues": ["one pager", "one-pager", "one page", "1 pager", "brief", "leave-behind", "fact sheet", "handout", "summary sheet", "overview page"],
+   "spec_hint": "One page means one message: lead with the outcome for the reader, then three to five proof points, then the ask.",
+   "slots": {
+    "required": [
+     "audience",
+     {"id": "purpose", "label": "What the reader should do or decide after reading", "detect": ["\\b(?:so that (?:they|he|she|we)|to (?:convince|persuade|get|win|sell|show|explain|pitch)|goal|the point|decide|approve|sign off|buy|mention|introduc\\w+|announc\\w+|upsell|pitch)\\b"], "blocker_question": "What should the reader do or decide after reading it?", "default_assumption": null},
+     {"id": "key_facts", "label": "Facts and numbers it must contain", "detect": ["\\d", "\\b(?:mention|include|cover|highlight|lead with|proof|results?|numbers?|pricing|price)\\b"], "blocker_question": "Which facts or numbers must be on the page?", "default_assumption": null}
+    ],
+    "optional": [
+     "tone",
+     {"ref": "length", "default_assumption": "One page, roughly 300 to 400 words."},
+     "deadline",
+     {"id": "avoid", "label": "Topics to keep out", "detect": ["\\b(?:do not|don'?t|never|avoid|leave out|skip|without)\\b"], "default_assumption": "Nothing excluded beyond what is stated."}
+    ]
+   }
+  },
+  "presentation": {
+   "label": "Presentation or deck",
+   "cues": ["deck", "slides", "slide", "presentation", "powerpoint", "keynote", "pitch deck", "talk", "present to"],
+   "spec_hint": "Define the single decision or belief the audience should leave with, then one idea per slide in support of it.",
+   "slots": {
+    "required": [
+     "audience",
+     {"id": "purpose", "label": "What the audience should decide, do or believe at the end", "detect": ["\\b(?:so that (?:they|we)|goal|decide|approve|buy in|convince|persuade|pitch|walk away|takeaway)\\b"], "blocker_question": "What should the audience decide or do after the last slide?", "default_assumption": null},
+     {"ref": "length", "label": "Slide count or talk time", "default_assumption": "8 to 10 slides, about 10 minutes."}
+    ],
+    "optional": [
+     "tone",
+     {"ref": "source_material", "default_assumption": "Use only the facts stated here and mark gaps as [to fill]."},
+     {"id": "visuals", "label": "Visual style", "detect": ["\\b(?:visual|image|chart|graph|diagram|template|brand|colou?rs?|font|minimal|text[- ]heavy)\\b"], "default_assumption": "Text-light slides, one idea per slide, no images assumed."}
+    ]
+   }
+  },
+  "analysis": {
+   "label": "Analysis of data or a situation",
+   "cues": ["analyze", "analyse", "analysis", "trends", "correlation", "breakdown", "variance", "insights", "compare", "what does the data", "figure out why"],
+   "spec_hint": "Name the question first; findings lead, evidence follows, caveats and what was not checked close.",
+   "slots": {
+    "required": [
+     "source_material",
+     {"id": "question", "label": "The question the analysis must answer", "detect": ["\\b(?:why|whether|figure out|find out|understand|which|what (?:is|are|drives|caused)|how (?:much|many|come))\\b", "\\?"], "blocker_question": "What question should the analysis answer?", "default_assumption": null},
+     "audience"
+    ],
+    "optional": [
+     {"id": "output_form", "label": "Shape of the result", "detect": ["\\b(?:table|chart|summary|bullets?|memo|recommendations?|ranked|top \\d+)\\b"], "default_assumption": "Findings first, then evidence, then caveats and next steps."},
+     {"ref": "length", "default_assumption": "One page of findings; detail on request."},
+     "deadline"
+    ]
+   }
+  },
+  "plan": {
+   "label": "Plan, roadmap or strategy",
+   "cues": ["plan", "roadmap", "timeline", "schedule", "milestones", "strategy", "rollout", "launch plan", "project plan", "steps to", "game plan", "30-60-90"],
+   "spec_hint": "A plan needs a finish line, a time frame and the constraints; without them it is a list of good intentions.",
+   "slots": {
+    "required": [
+     {"id": "outcome", "label": "What done looks like", "detect": ["\\b(?:goal|objective|by the end|so that|target|want to (?:launch|ship|hit|reach|get)|aim(?:ing)? to)\\b"], "blocker_question": "What does finished look like, in one sentence?", "default_assumption": null},
+     {"id": "timeframe", "label": "Time frame", "detect": ["\\b\\d+\\s*(?:days?|weeks?|months?|quarters?|years?)\\b", "\\b(?:by|before|until|q[1-4]|this (?:quarter|year)|next (?:quarter|month|year))\\b"], "blocker_question": "How much time do you have?", "default_assumption": "Not stated: phase the plan without hard dates and date it once a start date is given."},
+     {"id": "resources", "label": "Budget, people and other limits", "detect": ["\\b(?:budget|team of|headcount|people|hours per|no money|\\$\\d|only \\d+|constraint|limited)\\b"], "blocker_question": "What budget, people or other limits should the plan respect?", "default_assumption": "No limits stated: I assume a small team and no extra budget, and flag where that matters."}
+    ],
+    "optional": [
+     {"id": "owner", "label": "Who does the work", "detect": ["\\b(?:owner|owned by|i will|we will|assigned|responsible)\\b"], "default_assumption": "Written for the requester as the owner."},
+     {"id": "risks", "label": "Known risks", "detect": ["\\b(?:risk|worried|might fail|blocker|dependency|depends on)\\b"], "default_assumption": "List the top three risks with a mitigation each."},
+     "tone"
+    ]
+   }
+  },
+  "research-summary": {
+   "label": "Research summary",
+   "cues": ["research", "summarize", "summarise", "summary of", "papers", "literature", "sources", "what do we know", "state of", "overview of", "findings on", "look into"],
+   "spec_hint": "Answer the question first, then what supports it, then what is uncertain or contested. Say which claims are from the user's sources and which are general knowledge.",
+   "slots": {
+    "required": [
+     {"id": "topic", "label": "The question or topic", "detect": ["\\b(?:about|on|into|regarding|what (?:do we|is|are)|how (?:does|do)|whether)\\b"], "blocker_question": "What exactly should I find out?", "default_assumption": null},
+     {"ref": "source_material", "label": "Sources to use", "default_assumption": "No sources supplied: use general knowledge, say when unsure, and make no claim that needs a live lookup."},
+     "audience"
+    ],
+    "optional": [
+     {"ref": "length", "default_assumption": "One page: answer, key findings, open questions."},
+     {"id": "recency", "label": "How current it must be", "detect": ["\\b(?:latest|recent|this year|since \\d{4}|up to date|current|2\\d{3})\\b"], "default_assumption": "As current as my knowledge; flag anything that may have changed."},
+     "deadline"
+    ]
+   }
+  },
+  "rewrite": {
+   "label": "Rewrite or edit",
+   "cues": ["rewrite", "rephrase", "edit this", "proofread", "tighten", "polish", "improve this", "make it sound", "shorten", "fix the wording", "clean up", "reword", "sounds off"],
+   "spec_hint": "Never change facts, numbers, names or quotes unless asked; state what changes (length, tone, structure) and what must stay.",
+   "slots": {
+    "required": [
+     {"ref": "source_material", "label": "The text to rewrite", "blocker_question": "Can you paste the text you want rewritten?", "default_assumption": null},
+     {"id": "change_wanted", "label": "What should change", "detect": ["\\b(?:shorter|longer|clearer|simpler|punchier|more \\w+|less \\w+|tone|too \\w+|make it|sounds?|flow|tighten|formal|casual|fix)\\b"], "blocker_question": "What should be different about it?", "default_assumption": "Improve clarity and concision; keep the meaning and the writer's voice."},
+     "audience"
+    ],
+    "optional": [
+     {"id": "keep", "label": "What must stay untouched", "detect": ["\\b(?:keep|leave|don'?t change|do not change|as is|unchanged|must stay)\\b"], "default_assumption": "Keep all facts, numbers, names and quoted text unchanged."},
+     {"ref": "length", "default_assumption": "Same length or shorter."},
+     "tone"
+    ]
+   }
+  },
+  "brainstorm": {
+   "label": "Brainstorm",
+   "cues": ["brainstorm", "ideas", "options for", "come up with", "names for", "angles", "suggestions", "what could", "think of"],
+   "spec_hint": "Ask for range first, then rank: many distinct ideas grouped by approach, the best three marked with why.",
+   "slots": {
+    "required": [
+     {"id": "topic", "label": "What the ideas are for", "detect": ["\\b(?:ideas? (?:for|about)|names? for|ways to|options for|angles? (?:for|on)|brainstorm)\\b"], "blocker_question": "What are we brainstorming ideas for?", "default_assumption": null},
+     {"id": "count", "label": "How many ideas", "detect": ["\\b(?:\\d+|a few|dozen|handful) (?:ideas?|options?|names?|angles?|ways?)\\b"], "blocker_question": "How many ideas do you want?", "default_assumption": "Ten ideas, grouped by approach, best three marked."},
+     {"id": "limits", "label": "Limits the ideas must respect", "detect": ["\\b(?:budget|can'?t|cannot|must|only|no more than|under|without|constraint)\\b"], "blocker_question": "What limits must the ideas respect?", "default_assumption": "No limits beyond those stated."}
+    ],
+    "optional": [
+     "audience",
+     {"id": "criteria", "label": "How to rank the ideas", "detect": ["\\b(?:best|rank|prioriti[sz]e|impact|effort|cheapest|fastest|most)\\b"], "default_assumption": "Rank by impact against effort."},
+     {"id": "avoid", "label": "Ideas already tried or ruled out", "detect": ["\\b(?:already tried|tried that|not that|not again|rule out|obvious)\\b"], "default_assumption": "Skip the obvious first ideas."}
+    ]
+   }
+  },
+  "decision-memo": {
+   "label": "Decision memo",
+   "cues": ["decide", "decision", "should we", "pros and cons", "trade-off", "tradeoff", "recommend", "which option", "memo", "choose between", "go or no-go", "worth it"],
+   "spec_hint": "Recommendation first, then the options compared on the same criteria, then the risks of the recommended path and what would change the answer.",
+   "slots": {
+    "required": [
+     {"id": "decision", "label": "What exactly is being decided", "detect": ["\\b(?:should (?:we|i)|whether to|choose between|decide (?:if|whether|between)|go or no[- ]go|which (?:one|option|vendor|tool)|or should)\\b", "\\bvs\\.?\\b"], "blocker_question": "What exactly is being decided?", "default_assumption": null},
+     {"id": "options", "label": "The options on the table", "detect": ["\\b(?:option|alternative|either|or else|versus|vs\\.?|instead of|rather than|between)\\b"], "blocker_question": "What are the options?", "default_assumption": "The options named here plus doing nothing as the baseline."},
+     {"id": "criteria", "label": "What matters in choosing", "detect": ["\\b(?:cost|price|risk|time|speed|quality|revenue|margin|effort|criteria|matters|priority|important)\\b"], "blocker_question": "What matters most in making this choice?", "default_assumption": "Cost, risk, time and upside, weighed equally unless stated."},
+     "audience"
+    ],
+    "optional": [
+     {"id": "recommendation", "label": "Whether to recommend one", "detect": ["\\b(?:recommend|your (?:call|view|opinion)|what would you|just lay out|no recommendation)\\b"], "default_assumption": "Give a clear recommendation first, then the alternatives."},
+     {"ref": "length", "default_assumption": "One to two pages."},
+     "deadline"
+    ]
+   }
+  },
+  "social-post": {
+   "label": "Social media post",
+   "cues": ["post", "linkedin", "tweet", "thread", "caption", "x post", "instagram", "carousel", "hook for", "newsletter blurb"],
+   "spec_hint": "The first line decides everything: one idea, one concrete detail, plain words, no filler opener.",
+   "slots": {
+    "required": [
+     {"id": "message", "label": "The one idea the post carries", "detect": ["\\b(?:about|announce|announcing|share|sharing|celebrate|launch(?:ing)?|story|lesson|tip|take on)\\b"], "blocker_question": "What is the one thing the post should say?", "default_assumption": null},
+     {"id": "platform", "label": "Where it will be posted", "detect": ["\\b(?:linkedin|twitter|x|instagram|threads|facebook|tiktok|newsletter|substack|bluesky)\\b"], "blocker_question": "Which platform is it for?", "default_assumption": "Platform-neutral plain text I can adapt, under 1,300 characters."},
+     "audience",
+     "tone"
+    ],
+    "optional": [
+     {"id": "cta", "label": "What readers should do next", "detect": ["\\b(?:call to action|cta|link|sign up|subscribe|comment|reply|dm me|register|download)\\b"], "default_assumption": "One soft call to action at the end."},
+     {"id": "hashtags", "label": "Hashtags and mentions", "detect": ["#\\w+", "\\bhashtags?\\b", "@\\w+"], "default_assumption": "No hashtags."},
+     {"ref": "length", "default_assumption": "Under 1,300 characters."}
+    ]
+   }
+  },
+  "spreadsheet": {
+   "label": "Spreadsheet or tracker",
+   "cues": ["spreadsheet", "excel", "google sheet", "sheet", "formulas", "columns", "rows", "pivot", "csv", "tracker", "budget"],
+   "spec_hint": "List inputs, calculated columns and outputs separately; state every formula in plain words before building it.",
+   "slots": {
+    "required": [
+     {"id": "purpose", "label": "What the sheet must calculate or track", "detect": ["\\b(?:track|calculate|compute|forecast|budget|total|sum|compare|log|monitor|model)\\b"], "blocker_question": "What should the sheet calculate or keep track of?", "default_assumption": null},
+     {"id": "columns", "label": "The columns or data fields", "detect": ["\\bcolumns?\\b", "\\bfields?\\b", "\\b(?:date|name|amount|status|owner|category|price|quantity)\\b.*\\b(?:date|name|amount|status|owner|category|price|quantity)\\b"], "blocker_question": "Which columns or fields do you need?", "default_assumption": "I propose the columns and list them first for a quick check."},
+     {"id": "tool", "label": "Which spreadsheet tool", "detect": ["\\b(?:excel|google sheets?|numbers|airtable|notion|csv|libreoffice)\\b"], "blocker_question": "Excel or Google Sheets?", "default_assumption": "Formulas that work in both Excel and Google Sheets."}
+    ],
+    "optional": [
+     {"ref": "source_material", "label": "Existing data to load", "default_assumption": "Start empty with two example rows."},
+     {"id": "volume", "label": "How many rows to expect", "detect": ["\\b\\d[\\d,]*\\s*(?:rows?|entries|records|items|customers?|orders?)\\b"], "default_assumption": "Up to a few hundred rows."},
+     {"id": "formatting", "label": "Formatting and validation", "detect": ["\\b(?:dropdown|colou?r|conditional|validation|format|frozen|header)\\b"], "default_assumption": "Header row frozen, dropdowns for status fields."}
+    ]
+   }
+  },
+  "automation": {
+   "label": "Automation or workflow",
+   "cues": ["automate", "automation", "workflow", "zapier", "n8n", "make.com", "trigger", "every time", "whenever", "script", "cron", "integration", "webhook"],
+   "spec_hint": "Write it as trigger, steps, output, failure handling; one sentence each, before any tool is chosen.",
+   "slots": {
+    "required": [
+     {"id": "trigger", "label": "What starts it", "detect": ["\\b(?:when|whenever|every time|each time|every (?:day|week|morning|monday|hour)|on a schedule|as soon as|after)\\b"], "blocker_question": "What should start it (an event or a schedule)?", "default_assumption": null},
+     {"id": "steps", "label": "What happens each time it runs", "detect": ["\\b(?:then|and (?:send|save|create|update|add|post|move|copy)|send|save|create|update|add to|post to|move|copy|notify)\\b"], "blocker_question": "What should happen each time it runs?", "default_assumption": null},
+     {"id": "tools", "label": "Which tools are involved", "detect": ["\\b(?:zapier|n8n|make|gmail|outlook|slack|notion|airtable|sheets?|python|shell|hubspot|stripe|calendar|drive|dropbox)\\b"], "blocker_question": "Which apps or tools are involved?", "default_assumption": "Use the tools named; otherwise propose the simplest stack that works."}
+    ],
+    "optional": [
+     {"id": "failure", "label": "What to do when it fails", "detect": ["\\b(?:fail\\w*|error|retry|alert|if it breaks|fallback)\\b"], "default_assumption": "Log the failure and notify the requester; never retry silently."},
+     {"id": "volume", "label": "How often and how much", "detect": ["\\b\\d[\\d,]*\\s*(?:per|a|each)\\s*(?:day|week|hour|month)\\b", "\\bhundreds|thousands\\b"], "default_assumption": "A handful of runs per day."},
+     {"id": "secrets", "label": "Credentials handling", "detect": ["\\b(?:api key|token|password|credentials?|oauth)\\b"], "default_assumption": "No secrets in the prompt or output; use clearly marked placeholders."}
+    ]
+   }
+  },
+  "meeting-prep": {
+   "label": "Meeting prep",
+   "cues": ["meeting", "prep for", "talking points", "agenda", "call with", "1:1", "one on one", "interview", "negotiation", "brief me", "walk into"],
+   "spec_hint": "Prep is the goal of the meeting, the other side's likely position, three points to make, the questions to ask and the exit you want.",
+   "slots": {
+    "required": [
+     {"id": "meeting", "label": "Who the meeting is with and what it is about", "detect": ["\\b(?:meeting|call|interview|1:1|one on one|sync|review|negotiation|catch[- ]up) (?:with|about|for|on)\\b", "\\bwith (?:my|our|the)? ?\\w+ (?:boss|client|team|investor|customer|manager|recruiter)\\b"], "blocker_question": "Who is the meeting with, and what is it about?", "default_assumption": null},
+     {"id": "goal", "label": "What you want out of the meeting", "detect": ["\\b(?:goal|want to (?:get|leave|walk)|need (?:them|him|her) to|outcome|agree|approve|convince|close|get a yes)\\b"], "blocker_question": "What outcome do you want from the meeting?", "default_assumption": "Leave with a clear next step and an owner."},
+     {"id": "when", "label": "When the meeting is", "detect": ["\\b(?:today|tonight|tomorrow|monday|tuesday|wednesday|thursday|friday|next week|this week|\\d{1,2}\\s?(?:am|pm))\\b"], "blocker_question": "When is it?", "default_assumption": "Date not needed for the prep itself."}
+    ],
+    "optional": [
+     {"id": "background", "label": "What is known about the other side", "detect": ["\\b(?:they|he|she) (?:are|is|were|was|have|had|want|wants|said|hate|hates|care|cares)\\b", "\\blast (?:time|quarter|meeting|call)\\b"], "default_assumption": "Only what is stated here; unknowns listed as questions to ask."},
+     {"id": "objections", "label": "Objections to expect", "detect": ["\\b(?:objection|push ?back|worried|concern|will (?:say|ask)|hesitat\\w+)\\b"], "default_assumption": "Three likely objections with a short answer each."},
+     {"ref": "length", "default_assumption": "One page: goal, three points, questions, objections, exit."}
+    ]
+   }
+  },
+  "report": {
+   "label": "Report or status update",
+   "cues": ["report", "weekly report", "monthly report", "status update", "quarterly", "kpi", "dashboard", "write-up", "writeup", "results", "recap"],
+   "spec_hint": "Headline number or verdict first, then what changed and why, then risks and the next period's plan.",
+   "slots": {
+    "required": [
+     "audience",
+     "source_material",
+     {"id": "period", "label": "Period and scope covered", "detect": ["\\b(?:week|month|quarter|q[1-4]|year|ytd|period|since|from \\w+ to \\w+|last \\w+)\\b"], "blocker_question": "Which period and scope should the report cover?", "default_assumption": "Everything in the material provided."},
+     {"id": "purpose", "label": "What the report is for", "detect": ["\\b(?:update|inform|justify|prove|decide|review|hold accountable|show progress|explain why)\\b"], "blocker_question": "What is the report for (inform, justify, decide)?", "default_assumption": "Inform: what happened, what it means, what comes next."}
+    ],
+    "optional": [
+     {"id": "structure", "label": "Required sections or format", "detect": ["\\b(?:section|template|format|summary|appendix|table|chart|bullet)\\b"], "default_assumption": "Headline, key numbers, what changed and why, risks, next steps."},
+     "tone",
+     {"ref": "length", "default_assumption": "One to two pages."},
+     "deadline"
+    ]
+   }
+  }
+ }
+}

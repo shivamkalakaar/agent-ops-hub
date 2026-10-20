@@ -1,0 +1,19 @@
+<section class="block block-hero tone-{{tone}}{{#if compact}} is-compact{{/if}}{{#if center}} is-center{{/if}}{{#if image}} has-media{{/if}}" id="{{id}}">
+  <div class="container hero-grid">
+    <div class="hero-copy">
+      {{#if eyebrow}}<p class="eyebrow">{{eyebrow}}</p>{{/if}}
+      <h1 class="hero-title">{{{headline}}}</h1>
+      {{#if subhead}}<p class="lead">{{{subhead}}}</p>{{/if}}
+      {{#if cta}}
+      <div class="actions">
+        <a class="btn btn--primary" href="{{cta.href}}">{{cta.label}}{{{arrow}}}</a>
+        {{#if cta_secondary}}<a class="btn btn--secondary" href="{{cta_secondary.href}}">{{cta_secondary.label}}</a>{{/if}}
+      </div>
+      {{/if}}
+      {{#if note}}<p class="note">{{{note}}}</p>{{/if}}
+    </div>
+    {{#if image}}
+    <figure class="hero-media"><img src="{{image.src}}" alt="{{image.alt}}"{{{image.attrs}}}></figure>
+    {{/if}}
+  </div>
+</section>

@@ -1,0 +1,15 @@
+analyze
+Copyright 2026 How to AI by Ruben Hassid
+
+This skill is derived from the "analyze" skill of the data plugin in Anthropic's knowledge-work-plugins:
+https://github.com/anthropics/knowledge-work-plugins/blob/main/data/skills/analyze/SKILL.md
+The original work is licensed under the Apache License, Version 2.0
+(http://www.apache.org/licenses/LICENSE-2.0). You may not use this work except in compliance with that License;
+unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND.
+
+Modified by How to AI by Ruben Hassid on 2026-09-29. Changes: the original text-only, SQL-warehouse workflow was
+rewritten as a file-first analyst kit for spreadsheets and CSVs, with references to files that were not part of
+the original package removed, and the following added: scripts/ (file reading, profiling, driver analysis,
+statistics, charts, report builder) and assets/ (metric glossary, report schema). These additions are offered
+under the same license (Apache-2.0).

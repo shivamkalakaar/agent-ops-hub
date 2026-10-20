@@ -1,0 +1,7 @@
+<section class="block block-text tone-{{tone}}{{#if center}} is-center{{/if}}{{#if wide}} is-wide{{/if}}" id="{{id}}"{{#if title}} aria-labelledby="{{id}}-title"{{/if}}>
+  <div class="container text-wrap">
+    {{#if eyebrow}}<p class="eyebrow">{{eyebrow}}</p>{{/if}}
+    {{#if title}}<h2 id="{{id}}-title">{{{title}}}</h2>{{/if}}
+    <div class="prose">{{{body}}}</div>
+  </div>
+</section>

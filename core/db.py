@@ -134,6 +134,11 @@ class DB:
                         " order by approved_at desc limit %s", (limit,))
         return [r["post"] for r in rows]
 
+    def recent_angles(self, limit: int = 5) -> list[str]:
+        """Angles of the latest drafts in any status, so a pending or rejected topic isn't picked again."""
+        rows = self.all("select angle from drafts order by created_at desc limit %s", (limit,))
+        return [r["angle"].get("angle", "") for r in rows if isinstance(r["angle"], dict)]
+
 
 @contextmanager
 def connect():

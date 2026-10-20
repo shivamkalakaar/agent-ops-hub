@@ -1,0 +1,25 @@
+<section class="block block-pricing tone-{{tone}}" id="{{id}}" aria-labelledby="{{id}}-title">
+  <div class="container">
+    <header class="block-head">
+      {{#if eyebrow}}<p class="eyebrow">{{eyebrow}}</p>{{/if}}
+      <h2 id="{{id}}-title">{{{title}}}</h2>
+      {{#if intro}}<p class="lead">{{{intro}}}</p>{{/if}}
+    </header>
+    <div class="plans cols-{{count}}">
+      {{#each plans}}
+      <article class="plan{{#if featured}} is-featured{{/if}}">
+        {{#if badge}}<p class="badge">{{badge}}</p>{{/if}}
+        <h3>{{name}}</h3>
+        <p class="price"><span class="amount">{{price}}</span>{{#if period}} <span class="period">{{period}}</span>{{/if}}</p>
+        {{#if description}}<p class="plan-desc">{{{description}}}</p>{{/if}}
+        <ul class="ticks">
+          {{#each features}}<li>{{{check}}}<span>{{{this}}}</span></li>
+          {{/each}}
+        </ul>
+        <a class="btn {{#if featured}}btn--primary{{else}}btn--secondary{{/if}}" href="{{cta.href}}">{{cta.label}}</a>
+      </article>
+      {{/each}}
+    </div>
+    {{#if note}}<p class="fine">{{{note}}}</p>{{/if}}
+  </div>
+</section>

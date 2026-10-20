@@ -1,0 +1,33 @@
+{
+  "_meta": {"version": "1", "updated": "2026-09-29", "notes": "White, deep teal ink, a calm teal accent, humanist sans, soft outlines and a light wash behind the hero. Has a night variant."},
+  "name": "clinical-clean",
+  "label": "Clinical clean",
+  "best_for": "Health, finance, legal, B2B software and anything that must feel trustworthy and calm: clear, precise, unhurried.",
+  "mood": "White, teal, humanist sans, soft outlines, plenty of air.",
+  "fonts": {
+    "heading": {"family": "Atkinson Hyperlegible Next", "weights": [500, 600, 700], "fallback": "\"Segoe UI\", system-ui, -apple-system, sans-serif", "google": "Atkinson+Hyperlegible+Next:ital,wght@0,400..700;1,400..700"},
+    "body": {"family": "Atkinson Hyperlegible Next", "weights": [400, 500, 600], "fallback": "\"Segoe UI\", system-ui, -apple-system, sans-serif", "google": "Atkinson+Hyperlegible+Next:ital,wght@0,400..700;1,400..700"}
+  },
+  "colors": {
+    "bg": "#FFFFFF", "surface": "#F3F8F8", "text": "#12262B", "muted": "#4A6068", "border": "#D5E2E4",
+    "accent": "#0E7C86", "accent_ink": "#FFFFFF", "danger": "#B3261E"
+  },
+  "dark": {
+    "bg": "#0B1A1D", "surface": "#122328", "text": "#E6F2F3", "muted": "#9DB6BB", "border": "#22383D",
+    "accent": "#4FC3CD", "accent_ink": "#06262A", "danger": "#FF9088"
+  },
+  "radius": {"sm": "6px", "md": "10px", "lg": "16px"},
+  "space_unit": "0.25rem",
+  "container": "70rem",
+  "shadow": "0 1px 2px rgb(18 38 43 / 6%), 0 12px 28px -14px rgb(18 38 43 / 16%)",
+  "type_scale": {
+    "xs": [0.8, 0.86], "sm": [0.92, 0.97], "base": [1, 1.0625], "lg": [1.15, 1.32], "xl": [1.3, 1.5],
+    "2xl": [1.7, 2.4], "3xl": [2.1, 3.1], "display": [2.3, 3.9]
+  },
+  "style": {
+    "heading_weight": "650", "heading_tracking": "-0.015em", "lh_heading": "1.14", "lh_body": "1.62",
+    "eyebrow_case": "uppercase", "eyebrow_tracking": "0.1em",
+    "btn_radius": "var(--radius-md)", "btn_weight": "600", "card_border_w": "1px",
+    "measure": "62ch", "decor": "wash", "hero_align": "left"
+  }
+}

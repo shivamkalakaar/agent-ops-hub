@@ -1,0 +1,19 @@
+<header class="site-header{{#if sticky}} is-sticky{{/if}}">
+  <div class="container nav-bar">
+    <a class="brand" href="{{home}}">{{#if logo}}<img src="{{logo.src}}" alt="{{logo.alt}}"{{{logo.attrs}}}>{{else}}{{name}}{{/if}}</a>
+    {{#if has_menu}}
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" data-nav-toggle>
+      <span class="sr-only">{{ui.menu}}</span>
+      <svg class="icon icon-open" aria-hidden="true"><use href="#i-menu"/></svg>
+      <svg class="icon icon-close" aria-hidden="true"><use href="#i-x"/></svg>
+    </button>
+    <nav class="site-nav" id="site-nav" aria-label="{{ui.main_nav}}">
+      <ul>
+        {{#each items}}<li><a href="{{href}}"{{#if current}} aria-current="page"{{/if}}>{{label}}</a></li>
+        {{/each}}
+      </ul>
+      {{#if cta}}<a class="btn btn--primary btn--sm" href="{{cta.href}}">{{cta.label}}</a>{{/if}}
+    </nav>
+    {{/if}}
+  </div>
+</header>

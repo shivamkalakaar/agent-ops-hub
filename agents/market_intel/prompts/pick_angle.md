@@ -5,10 +5,14 @@ From this week's top-scored AI news, pick the single story (or 2–3 items that 
 - something with a "so what" for builders or buyers (cost, pricing, who wins/loses),
 - a non-obvious angle over a restatement of the headline.
 
-Avoid: pure hype, items you can't support from the summaries given, and topics covered in recent posts listed below.
+Prefer a concrete event (a launch, a price change, a deal, a number that moved, a product someone can try) over an opinion piece or essay. If you do pick commentary, the angle must be the author's own reaction to it, not a summary of the commentator's argument.
 
-Recent approved posts (do not repeat their topic):
+Avoid: pure hype, items you can't support from the summaries given, and the topics of recent drafts listed below.
+
+Recent draft angles (pick a different topic):
 {{RECENT}}
+
+The angle and hook may only state facts that appear in the item summaries. Don't infer capabilities, dates, or numbers the summaries don't give.
 
 Reply with ONLY JSON:
 {"item_ids": [<1-3 ids>], "angle": "<the take in one sentence>", "hook": "<a candidate first line, max 15 words>", "why_now": "<one sentence>"}

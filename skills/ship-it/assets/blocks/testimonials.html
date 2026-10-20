@@ -1,0 +1,21 @@
+<section class="block block-quotes tone-{{tone}}" id="{{id}}" aria-labelledby="{{id}}-title">
+  <div class="container">
+    <header class="block-head">
+      {{#if eyebrow}}<p class="eyebrow">{{eyebrow}}</p>{{/if}}
+      <h2 id="{{id}}-title">{{{title}}}</h2>
+    </header>
+    <ul class="quotes cols-{{cols}}{{#if solo}} is-solo{{/if}}">
+      {{#each items}}
+      <li class="quote-card">
+        <figure>
+          <blockquote><p>{{{quote}}}</p></blockquote>
+          <figcaption>
+            {{#if image}}<img class="avatar" src="{{image.src}}" alt=""{{{image.attrs}}}>{{else}}<span class="avatar" aria-hidden="true">{{initial}}</span>{{/if}}
+            <span><strong>{{name}}</strong>{{#if role}}<span class="role">{{role}}</span>{{/if}}</span>
+          </figcaption>
+        </figure>
+      </li>
+      {{/each}}
+    </ul>
+  </div>
+</section>

@@ -1,0 +1,2121 @@
+{
+ "_meta": {
+  "version": "1.0.0",
+  "updated": "2026-09-29",
+  "notes": "14 document blueprints. Keys: aliases, purpose, reader, length_words [min,max], grade_max (reading-grade target), sections in reading order {name, aka (heading synonyms), purpose, good_looks_like, words [min,max], common_failure, optional}, write_order (start where the unknowns are, summary last), reader_questions (seed for the cold-reader test), checks (machine-checkable must-haves). A check passes when ANY of its tests passes, or, for 'none', when NONE of its regexes match. Test kinds: re (case-insensitive regex; n = distinct matches needed, total = total matches needed, date = the same paragraph must also hold a calendar date, in = blueprint section names to search, first = only the first N words), items (n list items, sub-headings or table rows inside the named sections), ol (n numbered-list items), dates (n calendar dates, optionally in named sections). If none of the named sections exist in the document, the whole document is searched. A check with 'when' (regex) only applies when the document matches it. sev is error, warn or info."
+ },
+ "types": {
+  "decision-doc": {
+   "name": "Decision doc",
+   "aliases": ["decision", "decision-record", "decision-memo", "adr", "go-no-go"],
+   "purpose": "Get one specific decision made by a named person by a stated date, with the trade-offs laid out honestly.",
+   "reader": "The decision maker (senior, short on time) and the people who will carry the decision out.",
+   "length_words": [280, 1200],
+   "grade_max": 11,
+   "sections": [
+    {
+     "name": "Decision needed",
+     "aka": ["the ask", "summary", "tl;dr", "bottom line", "decision requested", "decision"],
+     "purpose": "State the decision, who makes it and by when, before any background.",
+     "good_looks_like": "One or two sentences: 'Decide X by DATE. Recommendation: Y.' The decider is named.",
+     "words": [30, 120],
+     "common_failure": "The ask is buried under history, or it asks for 'feedback' when a decision is needed."
+    },
+    {
+     "name": "Context",
+     "aka": ["background", "situation", "why now", "problem"],
+     "purpose": "Give only the background the decider needs to judge the options.",
+     "good_looks_like": "What changed, why the decision cannot wait, what happens if nothing is decided, one or two hard numbers.",
+     "words": [55, 250],
+     "common_failure": "Project history the decider did not ask for, so the options start a page too late."
+    },
+    {
+     "name": "Options considered",
+     "aka": ["options", "alternatives", "choices", "approaches"],
+     "purpose": "Show at least two real options, doing nothing included, judged on the same criteria.",
+     "good_looks_like": "Each option gets one line of description plus cost, benefit and risk, ideally in a small table.",
+     "words": [105, 450],
+     "common_failure": "One real option and two strawmen, or options scored on different criteria."
+    },
+    {
+     "name": "Recommendation",
+     "aka": ["our recommendation", "recommended option", "proposal", "proposed decision"],
+     "purpose": "Say which option you back and why, in the decider's terms.",
+     "good_looks_like": "Leads with the pick, gives the two strongest reasons and admits the biggest downside.",
+     "words": [40, 200],
+     "common_failure": "Hedged ('it depends') or a restatement of the option with no reason."
+    },
+    {
+     "name": "Risks and open questions",
+     "aka": ["risks", "open questions", "unknowns", "what could go wrong", "concerns"],
+     "purpose": "Name what could make the recommendation wrong and how you would notice.",
+     "good_looks_like": "Three risks or fewer, each with a warning sign, an owner and a fallback.",
+     "words": [35, 200],
+     "common_failure": "A generic list (delays, budget) that would fit any project."
+    },
+    {
+     "name": "Next steps",
+     "aka": ["actions", "timeline", "after the decision", "follow up", "action items"],
+     "purpose": "Say what happens right after the decision, who does it and by when.",
+     "good_looks_like": "Numbered actions, each with an owner and a calendar date.",
+     "words": [30, 150],
+     "common_failure": "'Team to align' with no owner and no date."
+    },
+    {
+     "name": "Appendix",
+     "aka": ["appendices", "supporting data", "evidence", "data", "references"],
+     "purpose": "Hold evidence the decider may want but should not need.",
+     "good_looks_like": "Tables, links and analysis behind the numbers in the body, each referenced from the text.",
+     "words": [0, 600],
+     "common_failure": "Essential reasoning parked here so the body looks short.",
+     "optional": true
+    }
+   ],
+   "write_order": [
+    "Options considered",
+    "Recommendation",
+    "Context",
+    "Risks and open questions",
+    "Next steps",
+    "Decision needed",
+    "Appendix"
+   ],
+   "reader_questions": [
+    "What decision is being asked for, who makes it, and by what date?",
+    "What are the options, including doing nothing?",
+    "Which option is recommended, and what are the two main reasons?",
+    "What is the biggest risk of the recommendation, and how would we notice it going wrong?",
+    "What happens if no decision is made by the deadline?",
+    "After the decision, what are the next steps, who owns each, and by when?"
+   ],
+   "checks": [
+    {
+     "id": "decision-date",
+     "label": "Names the date the decision is needed by",
+     "sev": "error",
+     "any": [
+      {"re": "\\b(?:decid\\w*|decision|approv\\w*|sign[- ]?off|go/no-go|choose)\\b[^.\\n]{0,90}\\b(?:by|before|no later than|until|deadline|due)\\b", "date": true},
+      {"re": "\\b(?:decision|approval|sign[- ]?off)\\s+(?:date|deadline|due)\\b", "date": true}
+     ]
+    },
+    {
+     "id": "decider",
+     "label": "Names who makes the decision",
+     "sev": "error",
+     "any": [
+      {"re": "\\b(?:decision[- ]?maker|decider|approver|decision owner|approved by|dri|owner|decides|will decide|for (?:approval|decision) (?:by|from)|sign[- ]?off from)\\b"}
+     ]
+    },
+    {
+     "id": "options",
+     "label": "Shows at least two options",
+     "sev": "error",
+     "any": [
+      {"items": ["Options considered"], "n": 2},
+      {"re": "\\boption\\s+(?:[a-c]|[1-3])\\b", "n": 2}
+     ]
+    },
+    {
+     "id": "recommendation",
+     "label": "Contains a clear recommendation",
+     "sev": "error",
+     "any": [
+      {"re": "\\brecommend\\w*|\\bwe (?:should|propose)\\b|\\bi (?:propose|suggest)\\b"}
+     ]
+    },
+    {
+     "id": "do-nothing",
+     "label": "Says what happens if nothing is decided",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:do(?:ing)? nothing|status quo|no change|if we (?:wait|delay|do not|don't)|cost of (?:delay|waiting|inaction)|leave (?:it|things) as)\\b"}
+     ]
+    }
+   ]
+  },
+  "proposal": {
+   "name": "Proposal",
+   "aliases": ["project-proposal", "pitch", "initiative-proposal", "improvement-proposal", "business-proposal"],
+   "purpose": "Persuade a specific approver to fund or allow a defined piece of work, by showing the problem is real and the plan is credible.",
+   "reader": "The approver or committee, plus anyone who must staff the work or live with its effects.",
+   "length_words": [420, 1800],
+   "grade_max": 12,
+   "sections": [
+    {
+     "name": "Summary",
+     "aka": ["executive summary", "overview", "tl;dr", "the ask", "abstract"],
+     "purpose": "Give the whole case in miniature so a reader who stops here still knows the ask.",
+     "good_looks_like": "Problem, proposed work, cost and time, and the request, in five sentences or fewer.",
+     "words": [55, 200],
+     "common_failure": "Describes the topic instead of asking for something."
+    },
+    {
+     "name": "Problem or opportunity",
+     "aka": ["problem", "problem statement", "opportunity", "background", "why now", "need"],
+     "purpose": "Show that the problem is real, costly and worth solving now.",
+     "good_looks_like": "Who is affected, how badly, evidence with a source, and the cost of not acting.",
+     "words": [70, 300],
+     "common_failure": "Assumes the reader already agrees the problem matters."
+    },
+    {
+     "name": "Proposed solution",
+     "aka": ["solution", "proposal", "approach", "what we will do", "scope"],
+     "purpose": "Say what will be done and what will not, and how it answers the problem above.",
+     "good_looks_like": "The work in plain words, the boundary of scope, and a direct link back to the problem.",
+     "words": [105, 450],
+     "common_failure": "Features and tools listed with no link back to the problem."
+    },
+    {
+     "name": "Plan and timeline",
+     "aka": ["plan", "timeline", "milestones", "schedule", "delivery plan", "phases"],
+     "purpose": "Make the plan checkable: what happens when, and who owns each step.",
+     "good_looks_like": "Three to six milestones with dates and named owners; the first result arrives early.",
+     "words": [70, 300],
+     "common_failure": "A single end date with no checkpoints."
+    },
+    {
+     "name": "Cost and resources",
+     "aka": ["budget", "costs", "resources", "investment", "effort", "resourcing"],
+     "purpose": "Say what it costs in money, people and time, and what that buys.",
+     "good_looks_like": "A total, the two or three biggest components, the people needed and the assumptions behind them.",
+     "words": [40, 200],
+     "common_failure": "One round number with no breakdown."
+    },
+    {
+     "name": "Expected outcomes",
+     "aka": ["benefits", "success measures", "success metrics", "impact", "outcomes", "expected results", "roi"],
+     "purpose": "Define what success looks like so the approver can hold you to it.",
+     "good_looks_like": "Two to four measurable results, each with baseline, target and date.",
+     "words": [40, 200],
+     "common_failure": "Vague benefits ('better efficiency') with no number."
+    },
+    {
+     "name": "Risks and alternatives",
+     "aka": ["risks", "alternatives", "alternatives considered", "risks and mitigations", "what could go wrong"],
+     "purpose": "Show you looked for the reasons this could fail or be done differently.",
+     "good_looks_like": "The top risks with mitigations, and why the main alternative, doing nothing included, was set aside.",
+     "words": [55, 250],
+     "common_failure": "Risks that are all external, or no alternative at all."
+    },
+    {
+     "name": "Ask and next step",
+     "aka": ["ask", "next steps", "decision requested", "call to action", "approval"],
+     "purpose": "End with the exact approval requested.",
+     "good_looks_like": "What is requested, from whom, by which date, and what happens the day after a yes.",
+     "words": [20, 100],
+     "common_failure": "Ends on a summary with no request."
+    }
+   ],
+   "write_order": [
+    "Problem or opportunity",
+    "Proposed solution",
+    "Cost and resources",
+    "Plan and timeline",
+    "Expected outcomes",
+    "Risks and alternatives",
+    "Ask and next step",
+    "Summary"
+   ],
+   "reader_questions": [
+    "What is being proposed, and what exactly is being asked of the reader?",
+    "What problem does it solve, and how do we know the problem is real?",
+    "What will it cost in money, people and time?",
+    "How will we know it worked: which measure, baseline, target and date?",
+    "What are the main risks, and what was considered instead?",
+    "If the reader says yes, what happens next and who does what by when?"
+   ],
+   "checks": [
+    {
+     "id": "ask",
+     "label": "States what is being asked for",
+     "sev": "error",
+     "any": [
+      {"re": "\\b(?:we|i) (?:ask|request|propose|recommend|seek|need)\\b|\\b(?:approval|approve|sign[- ]?off|funding|green[- ]?light)\\b"}
+     ]
+    },
+    {
+     "id": "cost",
+     "label": "Gives a cost or an effort estimate",
+     "sev": "error",
+     "any": [
+      {"re": "[$€£]\\s?\\d|\\b\\d[\\d,.]*\\s?(?:k|m|mm|bn|million|billion|thousand|eur|usd|gbp)\\b"},
+      {"re": "\\b\\d+(?:\\.\\d+)?\\s+(?:person[- ]?(?:days?|weeks?|months?)|fte|hours?|days?|weeks?|months?)\\b"}
+     ]
+    },
+    {
+     "id": "success-measure",
+     "label": "Says how success is measured, with a number",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:success|measure\\w*|metrics?|kpis?|targets?|goals?|baseline)\\b[^.\\n]{0,100}\\d"}
+     ]
+    },
+    {
+     "id": "alternatives",
+     "label": "Says what was considered instead, doing nothing included",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:alternatives?|instead|do(?:ing)? nothing|status quo|considered|rejected)\\b"}
+     ]
+    },
+    {
+     "id": "plan-dates",
+     "label": "Puts at least two calendar dates on the plan",
+     "sev": "warn",
+     "any": [
+      {"dates": 2}
+     ]
+    }
+   ]
+  },
+  "one-pager": {
+   "name": "One-pager",
+   "aliases": ["brief", "one-page-brief", "onepager", "1-pager", "executive-brief", "project-brief"],
+   "purpose": "Give a busy reader everything needed to say yes, no or 'tell me more' on one page.",
+   "reader": "An executive or partner who reads for two minutes, then forwards it or acts.",
+   "length_words": [175, 500],
+   "grade_max": 10,
+   "sections": [
+    {
+     "name": "The ask",
+     "aka": ["ask", "summary", "tl;dr", "bottom line", "purpose", "headline"],
+     "purpose": "Open with what you want from the reader.",
+     "good_looks_like": "One or two sentences that state the request or the answer, with a date if one applies.",
+     "words": [15, 60],
+     "common_failure": "Opens with context; the ask appears on line six."
+    },
+    {
+     "name": "Why it matters",
+     "aka": ["problem", "why now", "opportunity", "context", "background", "situation"],
+     "purpose": "Give the reason this deserves the reader's attention today.",
+     "good_looks_like": "The problem or opportunity, who is affected, and one number that shows scale.",
+     "words": [35, 120],
+     "common_failure": "A paragraph of background that could sit under any request."
+    },
+    {
+     "name": "The plan",
+     "aka": ["plan", "solution", "approach", "proposal", "what we will do", "what"],
+     "purpose": "Say what you will do, in the fewest possible steps.",
+     "good_looks_like": "Three to five concrete steps or one short paragraph. No jargon the forwardee would not know.",
+     "words": [40, 150],
+     "common_failure": "A list of activities with no result attached."
+    },
+    {
+     "name": "Numbers",
+     "aka": ["cost", "budget", "impact", "metrics", "expected results", "results", "the numbers"],
+     "purpose": "Put the cost and the payoff side by side.",
+     "good_looks_like": "Cost, effort and expected result, each as a figure with its unit and a date.",
+     "words": [20, 100],
+     "common_failure": "Adjectives instead of figures."
+    },
+    {
+     "name": "Risks",
+     "aka": ["risk", "open questions", "concerns", "dependencies", "what could go wrong"],
+     "purpose": "Name the one or two things that could sink it.",
+     "good_looks_like": "Two risks at most, each with what you will do about it.",
+     "words": [15, 80],
+     "common_failure": "A long hedge list, or no risks at all."
+    },
+    {
+     "name": "Next steps",
+     "aka": ["timeline", "owners", "who and when", "actions", "what happens next"],
+     "purpose": "Show the first moves and who makes them.",
+     "good_looks_like": "Two or three actions, each with an owner and a calendar date.",
+     "words": [15, 80],
+     "common_failure": "'We will follow up' with no owner and no date."
+    }
+   ],
+   "write_order": ["The plan", "Why it matters", "Numbers", "Risks", "Next steps", "The ask"],
+   "reader_questions": [
+    "What is being asked of me, and by when?",
+    "Why does this matter now?",
+    "What exactly will be done?",
+    "What does it cost, and what do we get for it?",
+    "What is the biggest risk?",
+    "Who does what next?"
+   ],
+   "checks": [
+    {
+     "id": "ask-up-front",
+     "label": "Opens with the ask or the one-line answer",
+     "sev": "error",
+     "any": [
+      {"re": "\\b(?:we|i) (?:ask|request|propose|recommend|need|seek|want)\\b|\\b(?:approval|approve|decision|decide|recommend\\w*|please)\\b", "first": 60}
+     ]
+    },
+    {
+     "id": "numbers",
+     "label": "Backs the case with at least three numbers",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b\\d[\\d,.]*", "n": 3}
+     ]
+    },
+    {
+     "id": "next-step-date",
+     "label": "Gives a next step with a calendar date",
+     "sev": "warn",
+     "any": [
+      {"dates": 1}
+     ]
+    }
+   ]
+  },
+  "prd": {
+   "name": "Product requirements doc (PRD)",
+   "aliases": ["product-requirements", "product-requirements-doc", "requirements-doc", "product-spec", "feature-spec"],
+   "purpose": "Align product, design and engineering on what to build, for whom and how success is measured, without dictating the implementation.",
+   "reader": "Engineers, designers and QA who must build and test it, and stakeholders who must approve it.",
+   "length_words": [700, 3000],
+   "grade_max": 12,
+   "sections": [
+    {
+     "name": "Overview",
+     "aka": ["summary", "tl;dr", "background", "executive summary", "introduction"],
+     "purpose": "Say in a paragraph what is being built, for whom and why now.",
+     "good_looks_like": "The feature, the user, the problem, the target date and the owner, in five lines.",
+     "words": [55, 200],
+     "common_failure": "A marketing pitch that never says what will ship."
+    },
+    {
+     "name": "Problem and users",
+     "aka": [
+      "problem",
+      "problem statement",
+      "users",
+      "target users",
+      "personas",
+      "user problem",
+      "customer problem"
+     ],
+     "purpose": "Ground the work in a real user problem with evidence.",
+     "good_looks_like": "Named user groups, the job they are trying to do, what fails today, and evidence such as quotes or data with sources.",
+     "words": [85, 350],
+     "common_failure": "A solution described as a problem ('users need a dashboard')."
+    },
+    {
+     "name": "Goals and success metrics",
+     "aka": ["goals", "success metrics", "objectives", "metrics", "kpis", "success criteria", "okrs"],
+     "purpose": "Define how anyone will know this worked.",
+     "good_looks_like": "Two to four metrics, each with baseline, target and date; one guardrail metric that must not get worse.",
+     "words": [55, 250],
+     "common_failure": "Goals with no numbers ('improve engagement')."
+    },
+    {
+     "name": "Non-goals",
+     "aka": ["non goals", "out of scope", "not in scope", "not doing", "scope exclusions"],
+     "purpose": "Fence the scope so requests do not creep in silently.",
+     "good_looks_like": "Three to six things a reasonable reader might expect but that are deliberately left out, with a reason.",
+     "words": [30, 150],
+     "common_failure": "Missing altogether, or listing things nobody expected."
+    },
+    {
+     "name": "Requirements",
+     "aka": ["functional requirements", "user stories", "features", "scope", "requirements and priorities"],
+     "purpose": "List what the product must do, in priority order, testably.",
+     "good_looks_like": "Numbered requirements grouped by priority (P0/P1/P2), each with acceptance criteria a tester can run.",
+     "words": [175, 900],
+     "common_failure": "Implementation detail dressed as requirements, or no priorities."
+    },
+    {
+     "name": "Design and flows",
+     "aka": ["user flow", "design", "ux", "mockups", "wireframes", "experience", "user experience"],
+     "purpose": "Show the intended experience so engineering and design build the same thing.",
+     "good_looks_like": "Links to designs, the main flow in numbered steps, empty and error states named.",
+     "words": [40, 300],
+     "common_failure": "Screenshots with no explanation of behavior.",
+     "optional": true
+    },
+    {
+     "name": "Launch and rollout",
+     "aka": ["rollout", "launch plan", "release plan", "go to market", "milestones", "timeline"],
+     "purpose": "Say how and when it reaches users and how to back out.",
+     "good_looks_like": "Milestones with dates, staged rollout percentages, owners, and the rollback trigger.",
+     "words": [40, 250],
+     "common_failure": "One ship date and no plan for what happens if it goes badly."
+    },
+    {
+     "name": "Open questions",
+     "aka": ["unknowns", "risks", "risks and open questions", "dependencies", "questions"],
+     "purpose": "Keep unresolved items visible and owned.",
+     "good_looks_like": "Each question with an owner and a date it must be answered by.",
+     "words": [30, 200],
+     "common_failure": "Questions with no owner, left open until launch week."
+    }
+   ],
+   "write_order": [
+    "Problem and users",
+    "Goals and success metrics",
+    "Non-goals",
+    "Requirements",
+    "Design and flows",
+    "Launch and rollout",
+    "Open questions",
+    "Overview"
+   ],
+   "reader_questions": [
+    "Who is this for, and what problem does it solve for them?",
+    "How will we know it worked: which metric, baseline, target and date?",
+    "What is explicitly out of scope?",
+    "Which requirements are must-haves and which can wait?",
+    "How will each must-have be tested?",
+    "What is still undecided, and who decides by when?",
+    "When does it ship, and how is it rolled out and rolled back?"
+   ],
+   "checks": [
+    {
+     "id": "goal-metric",
+     "label": "Goals carry a number (metric, baseline or target)",
+     "sev": "warn",
+     "any": [
+      {"re": "\\d", "in": ["Goals and success metrics"]}
+     ]
+    },
+    {
+     "id": "non-goals",
+     "label": "States what is out of scope",
+     "sev": "warn",
+     "any": [
+      {"re": "\\bnon[- ]?goals?\\b|\\bout of scope\\b|\\bnot in scope\\b|\\bwill not\\b|\\bnot (?:doing|building|included)\\b"}
+     ]
+    },
+    {
+     "id": "priorities",
+     "label": "Requirements are prioritized (P0/P1, must/should/could)",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:p[0-3]|must[- ]have|should[- ]have|could[- ]have|nice[- ]to[- ]have|mvp|priority|priorities)\\b"}
+     ]
+    },
+    {
+     "id": "acceptance",
+     "label": "Says how each requirement is accepted or tested",
+     "sev": "warn",
+     "any": [
+      {"re": "\\bacceptance criteria\\b|\\bdefinition of done\\b|\\bgiven\\b[^.\\n]{0,80}\\bwhen\\b[^.\\n]{0,80}\\bthen\\b|\\bdone when\\b"}
+     ]
+    },
+    {
+     "id": "owner",
+     "label": "Names the owner (PM, DRI) and the status",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:owner|author|pm|product manager|dri|status)\\b[\\s*_]*[:=]"}
+     ]
+    }
+   ]
+  },
+  "rfc": {
+   "name": "RFC or design doc",
+   "aliases": [
+    "design-doc",
+    "technical-design",
+    "tech-spec",
+    "technical-spec",
+    "architecture-doc",
+    "design-spec",
+    "eng-design",
+    "engineering-design"
+   ],
+   "purpose": "Propose a technical change, record why this design beat the alternatives, and collect review before code is written.",
+   "reader": "Engineers who must review, build on or operate the system, including someone who joins a year from now.",
+   "length_words": [840, 4000],
+   "grade_max": 13,
+   "sections": [
+    {
+     "name": "Summary",
+     "aka": ["abstract", "tl;dr", "overview"],
+     "purpose": "Let a reviewer decide in one minute whether this concerns them.",
+     "good_looks_like": "What changes, why, the chosen approach and the review deadline, in a short paragraph.",
+     "words": [35, 150],
+     "common_failure": "A restatement of the title."
+    },
+    {
+     "name": "Motivation",
+     "aka": ["background", "context", "problem", "problem statement", "why"],
+     "purpose": "Explain the problem and why it must be solved now.",
+     "good_looks_like": "Current behavior, what hurts (with numbers or incidents), and the cost of leaving it.",
+     "words": [85, 400],
+     "common_failure": "Assumes the reviewer knows the history."
+    },
+    {
+     "name": "Goals and non-goals",
+     "aka": ["goals", "non goals", "non-goals", "requirements", "scope", "constraints"],
+     "purpose": "Set the yardstick the design will be judged against.",
+     "good_looks_like": "Numbered goals, explicit non-goals, hard constraints such as latency, cost, compatibility.",
+     "words": [55, 300],
+     "common_failure": "Goals that only the chosen design can meet."
+    },
+    {
+     "name": "Proposed design",
+     "aka": [
+      "design",
+      "detailed design",
+      "proposal",
+      "architecture",
+      "solution",
+      "implementation",
+      "technical approach"
+     ],
+     "purpose": "Describe the design well enough that another engineer could build it.",
+     "good_looks_like": "Components and their interfaces, data model, key flows, one diagram, and the reasons for the non-obvious choices.",
+     "words": [210, 1400],
+     "common_failure": "Code-level detail with no picture of the whole."
+    },
+    {
+     "name": "Alternatives considered",
+     "aka": ["alternatives", "options considered", "rejected alternatives", "other approaches", "prior art"],
+     "purpose": "Prove the chosen design was compared with real options.",
+     "good_looks_like": "Two or more alternatives, each with what it would look like and the specific reason it lost.",
+     "words": [85, 500],
+     "common_failure": "Strawmen, or 'we considered X' with no reason."
+    },
+    {
+     "name": "Rollout and migration",
+     "aka": [
+      "rollout",
+      "migration",
+      "rollout plan",
+      "deployment",
+      "migration plan",
+      "launch",
+      "backwards compatibility",
+      "compatibility"
+     ],
+     "purpose": "Show how this reaches production safely and how it is undone.",
+     "good_looks_like": "Phases, flags, data migration steps, compatibility promises, and the rollback procedure.",
+     "words": [55, 350],
+     "common_failure": "'Deploy and monitor' with no rollback."
+    },
+    {
+     "name": "Risks and testing",
+     "aka": [
+      "risks",
+      "testing",
+      "test plan",
+      "security",
+      "failure modes",
+      "risks and mitigations",
+      "operational concerns",
+      "observability"
+     ],
+     "purpose": "Say what can go wrong and how you will find out.",
+     "good_looks_like": "Failure modes with detection and mitigation, the test strategy, and the metrics and alerts added.",
+     "words": [70, 400],
+     "common_failure": "A test plan that repeats 'unit and integration tests'."
+    },
+    {
+     "name": "Open questions",
+     "aka": ["unresolved questions", "unknowns", "future work", "questions"],
+     "purpose": "Keep the undecided parts visible for review.",
+     "good_looks_like": "Each question with an owner and a date; future work separated from open questions.",
+     "words": [20, 200],
+     "common_failure": "Hidden uncertainty; reviewers discover it late.",
+     "optional": true
+    }
+   ],
+   "write_order": [
+    "Motivation",
+    "Goals and non-goals",
+    "Alternatives considered",
+    "Proposed design",
+    "Rollout and migration",
+    "Risks and testing",
+    "Open questions",
+    "Summary"
+   ],
+   "reader_questions": [
+    "What problem does this solve, and why now?",
+    "What are the non-goals?",
+    "What is the proposed design in two sentences, and what are its key components?",
+    "Which alternatives were rejected, and why?",
+    "How is it rolled out, and how do we roll back?",
+    "What could fail, and how would we detect it?",
+    "What is still undecided, and who decides by when?"
+   ],
+   "checks": [
+    {
+     "id": "alternatives",
+     "label": "Compares at least two alternatives",
+     "sev": "error",
+     "any": [
+      {"items": ["Alternatives considered"], "n": 2},
+      {"re": "\\b(?:alternative|option|approach)\\s+(?:[a-c]|[1-3])\\b", "n": 2}
+     ]
+    },
+    {
+     "id": "non-goals",
+     "label": "States non-goals",
+     "sev": "warn",
+     "any": [
+      {"re": "\\bnon[- ]?goals?\\b|\\bout of scope\\b|\\bnot a goal\\b|\\bnot in scope\\b"}
+     ]
+    },
+    {
+     "id": "rollback",
+     "label": "Explains how to roll back or stay compatible",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:rollback|roll back|roll-back|revert|fall ?back|feature flag|kill switch|backward[s]? compat\\w*)\\b"}
+     ]
+    },
+    {
+     "id": "failure-modes",
+     "label": "Covers testing, monitoring or failure modes",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:test(?:s|ing|ed)?|monitor\\w*|alert\\w*|metrics?|observab\\w*|failure modes?)\\b"}
+     ]
+    },
+    {
+     "id": "review-deadline",
+     "label": "Gives a review or decision deadline (a date)",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:review|comments?|feedback|decision|approval)\\b[^.\\n]{0,60}\\b(?:by|before|until|due)\\b", "date": true}
+     ]
+    }
+   ]
+  },
+  "project-plan": {
+   "name": "Project plan",
+   "aliases": ["plan", "work-plan", "project-charter", "charter", "delivery-plan", "execution-plan"],
+   "purpose": "Show what will be delivered, by whom and by when, with the risks named, so a sponsor can approve it and the team can run it.",
+   "reader": "The sponsor who approves it, the team who executes it, and the stakeholders who depend on it.",
+   "length_words": [420, 2000],
+   "grade_max": 12,
+   "sections": [
+    {
+     "name": "Summary",
+     "aka": ["overview", "executive summary", "tl;dr", "at a glance"],
+     "purpose": "Let the sponsor approve or question the plan from one paragraph.",
+     "good_looks_like": "The goal, the deliverables, the end date, the cost or team size and the biggest risk.",
+     "words": [40, 150],
+     "common_failure": "Restates the project name and nothing else."
+    },
+    {
+     "name": "Scope",
+     "aka": [
+      "scope and deliverables",
+      "objectives",
+      "deliverables",
+      "goals",
+      "in scope",
+      "what we will deliver",
+      "out of scope"
+     ],
+     "purpose": "Draw the line around the work.",
+     "good_looks_like": "A short list of deliverables, a matching list of things explicitly out of scope, and the acceptance test for each deliverable.",
+     "words": [70, 350],
+     "common_failure": "Activities listed instead of deliverables."
+    },
+    {
+     "name": "Milestones and timeline",
+     "aka": ["milestones", "timeline", "schedule", "phases", "roadmap", "work breakdown", "plan"],
+     "purpose": "Make progress observable: what is done by which date.",
+     "good_looks_like": "Milestones as outcomes, each with a date and an owner; dependencies between them visible.",
+     "words": [85, 450],
+     "common_failure": "Milestones that are activities ('start testing') with no date."
+    },
+    {
+     "name": "Team and owners",
+     "aka": ["team", "roles", "roles and responsibilities", "owners", "stakeholders", "raci", "governance"],
+     "purpose": "Name who is accountable for what.",
+     "good_looks_like": "One accountable owner per deliverable, the sponsor, and who must be consulted.",
+     "words": [40, 250],
+     "common_failure": "Team lists with no accountability."
+    },
+    {
+     "name": "Budget and resources",
+     "aka": ["budget", "resources", "costs", "resourcing", "effort"],
+     "purpose": "State what the plan needs in money and people.",
+     "good_looks_like": "Total budget or effort, the breakdown by phase or role, and the contingency.",
+     "words": [35, 200],
+     "common_failure": "A total with no basis."
+    },
+    {
+     "name": "Risks and dependencies",
+     "aka": ["risks", "dependencies", "assumptions", "risks and mitigations", "constraints"],
+     "purpose": "Expose what could derail the dates.",
+     "good_looks_like": "The top five risks with likelihood, impact, an owner and a mitigation; dependencies on other teams named.",
+     "words": [70, 350],
+     "common_failure": "Generic risks and no mitigation."
+    },
+    {
+     "name": "Success criteria",
+     "aka": ["success measures", "definition of done", "success metrics", "acceptance", "exit criteria", "outcomes"],
+     "purpose": "Define done in terms someone else can verify.",
+     "good_looks_like": "Two to five measurable criteria that the sponsor can check without asking the team.",
+     "words": [30, 150],
+     "common_failure": "'On time and on budget' as the only criterion."
+    },
+    {
+     "name": "Communication and reviews",
+     "aka": ["communication", "reporting", "check-ins", "cadence", "review points"],
+     "purpose": "Say how progress is reported and when the plan is re-examined.",
+     "good_looks_like": "Cadence, format, audience, and the dates of the formal checkpoints.",
+     "words": [20, 120],
+     "common_failure": "No checkpoints until the end.",
+     "optional": true
+    }
+   ],
+   "write_order": [
+    "Scope",
+    "Milestones and timeline",
+    "Team and owners",
+    "Risks and dependencies",
+    "Budget and resources",
+    "Success criteria",
+    "Communication and reviews",
+    "Summary"
+   ],
+   "reader_questions": [
+    "What will be delivered, and what is out of scope?",
+    "What are the milestones and their dates?",
+    "Who is accountable for each deliverable?",
+    "What does it cost in money and people?",
+    "What are the top risks, and what is the fallback for each?",
+    "How will we know it is done, and how often is progress reported?"
+   ],
+   "checks": [
+    {
+     "id": "milestone-dates",
+     "label": "Puts at least three calendar dates on the milestones",
+     "sev": "error",
+     "any": [
+      {"dates": 3, "in": ["Milestones and timeline"]}
+     ]
+    },
+    {
+     "id": "owners",
+     "label": "Names an owner for the work and for each milestone",
+     "sev": "error",
+     "any": [
+      {"re": "\\b(?:owner|owned by|lead|led by|responsible|dri|accountable|raci|sponsor)\\b|@\\w+"}
+     ]
+    },
+    {
+     "id": "out-of-scope",
+     "label": "Says what is out of scope",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:out of scope|not in scope|non[- ]?goals?|excluded|will not|won't|not included)\\b"}
+     ]
+    },
+    {
+     "id": "mitigations",
+     "label": "Pairs risks with mitigations or fallbacks",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:mitigat\\w+|contingency|fall ?back|workaround|trigger|if (?:this|that|it) happens)\\b"}
+     ]
+    },
+    {
+     "id": "dependencies",
+     "label": "Names dependencies on other teams or systems",
+     "sev": "warn",
+     "any": [
+      {"re": "\\bdepend\\w*\\b"}
+     ]
+    },
+    {
+     "id": "success-number",
+     "label": "Success criteria include a number",
+     "sev": "warn",
+     "any": [
+      {"re": "\\d", "in": ["Success criteria"]}
+     ]
+    }
+   ]
+  },
+  "post-mortem": {
+   "name": "Post-mortem",
+   "aliases": [
+    "postmortem",
+    "incident-review",
+    "incident-report",
+    "rca",
+    "root-cause-analysis",
+    "after-action-review",
+    "blameless-review"
+   ],
+   "purpose": "Explain what happened, why, and what will change so it does not happen again, without assigning blame.",
+   "reader": "Engineers and leaders who were not there, and the future on-call person who meets the same failure.",
+   "length_words": [420, 2000],
+   "grade_max": 12,
+   "sections": [
+    {
+     "name": "Summary",
+     "aka": ["overview", "tl;dr", "executive summary", "incident summary", "what happened"],
+     "purpose": "Tell the whole story in one short paragraph.",
+     "good_looks_like": "What broke, for whom, for how long, the cause in a clause, and the main fix.",
+     "words": [40, 150],
+     "common_failure": "Starts at the root cause with no impact."
+    },
+    {
+     "name": "Impact",
+     "aka": ["customer impact", "user impact", "business impact", "blast radius", "severity"],
+     "purpose": "Quantify who was affected and how badly.",
+     "good_looks_like": "Duration, share or count of users, requests or orders lost, money at stake, and the severity level.",
+     "words": [30, 150],
+     "common_failure": "'Some customers were affected.'"
+    },
+    {
+     "name": "Timeline",
+     "aka": ["chronology", "sequence of events", "events", "detection and response"],
+     "purpose": "Give the exact order of events so the analysis has evidence.",
+     "good_looks_like": "Time-stamped lines with time zone: first sign, detection, escalation, each mitigation, resolution.",
+     "words": [85, 450],
+     "common_failure": "A narrative with no timestamps, or a gap during detection."
+    },
+    {
+     "name": "Root cause",
+     "aka": ["causes", "contributing factors", "root causes", "why it happened", "analysis", "five whys", "5 whys"],
+     "purpose": "Explain why it happened, at the level of systems and process.",
+     "good_looks_like": "A chain of causes down to the fixable condition, and the contributing factors that made it worse.",
+     "words": [70, 400],
+     "common_failure": "Stops at 'human error' or names a person."
+    },
+    {
+     "name": "What went well and badly",
+     "aka": [
+      "what went well",
+      "what went wrong",
+      "what went badly",
+      "lessons",
+      "lessons learned",
+      "detection",
+      "response",
+      "where we got lucky",
+      "what we learned"
+     ],
+     "purpose": "Separate what worked from what did not, and where luck helped.",
+     "good_looks_like": "Three short lists: worked, failed, lucky. Detection and response time are called out.",
+     "words": [40, 250],
+     "common_failure": "Only positives, or only a list of complaints."
+    },
+    {
+     "name": "Action items",
+     "aka": [
+      "actions",
+      "follow ups",
+      "follow up actions",
+      "remediation",
+      "corrective actions",
+      "next steps",
+      "prevention",
+      "preventive actions"
+     ],
+     "purpose": "Turn lessons into tracked work.",
+     "good_looks_like": "Each action is specific, has one owner and a due date, and is labeled prevent, detect or mitigate.",
+     "words": [40, 300],
+     "common_failure": "'Improve monitoring' with no owner or date."
+    }
+   ],
+   "write_order": ["Timeline", "Impact", "Root cause", "What went well and badly", "Action items", "Summary"],
+   "reader_questions": [
+    "What happened, in two sentences?",
+    "Who or what was affected, for how long, and by how much?",
+    "When and how was it detected, and how long until it was fixed?",
+    "What was the root cause, and which contributing factors made it worse?",
+    "What went well, what went badly, and where did we get lucky?",
+    "What is being changed, who owns each action, and by when?"
+   ],
+   "checks": [
+    {
+     "id": "timestamps",
+     "label": "Timeline has at least three time-stamped events",
+     "sev": "error",
+     "any": [
+      {"re": "\\b\\d{1,2}:\\d{2}\\b", "n": 3, "in": ["Timeline"]}
+     ]
+    },
+    {
+     "id": "impact-numbers",
+     "label": "Impact is quantified (duration, users, orders, money)",
+     "sev": "error",
+     "any": [
+      {"re": "\\b\\d[\\d,.]*\\s?(?:%|minutes?|mins?|hours?|hrs?|days?|users?|customers?|accounts?|requests?|orders?|transactions?|errors?|incidents?)|[$€£]\\s?\\d", "in": ["Impact", "Summary"]}
+     ]
+    },
+    {
+     "id": "root-cause",
+     "label": "States a root cause and contributing factors",
+     "sev": "error",
+     "any": [
+      {"re": "\\broot[- ]causes?\\b|\\bcaused by\\b|\\bthe cause\\b|\\bunderlying cause\\b|\\bcontributing factors?\\b"}
+     ]
+    },
+    {
+     "id": "detection",
+     "label": "Says how and when the problem was detected",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:detected|noticed|alert(?:ed|s)?|paged|reported by|discovered|first sign)\\b"}
+     ]
+    },
+    {
+     "id": "time-to-fix",
+     "label": "Gives time to detect or time to resolve",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:time to (?:detect|resolve|mitigate|recover)|ttd|ttr|mttr|mttd)\\b|\\b(?:detected|resolved|mitigated|restored|fixed)\\b[^.\\n]{0,80}\\d"}
+     ]
+    },
+    {
+     "id": "no-blame",
+     "label": "Avoids blame language (human error, careless)",
+     "sev": "warn",
+     "none": [
+      "\\b(?:human error|operator error|user error|careless\\w*|negligen\\w*|incompetent|should have known|failed to (?:notice|check|read))\\b"
+     ]
+    }
+   ]
+  },
+  "strategy-memo": {
+   "name": "Strategy memo",
+   "aliases": ["strategy", "strategy-doc", "strategic-memo", "memo", "leadership-memo", "position-paper"],
+   "purpose": "Choose a direction under uncertainty: diagnose the situation, make the guiding choice, and commit to actions and trade-offs.",
+   "reader": "Executives and team leads who must agree, fund and act on the direction.",
+   "length_words": [560, 2500],
+   "grade_max": 12,
+   "sections": [
+    {
+     "name": "Bottom line",
+     "aka": ["summary", "tl;dr", "recommendation", "the choice", "executive summary", "headline", "the ask"],
+     "purpose": "Give the direction and the ask before the argument.",
+     "good_looks_like": "The choice in one sentence, the two reasons that carry it, and what you need from the reader.",
+     "words": [35, 150],
+     "common_failure": "A topic description with no position."
+    },
+    {
+     "name": "Diagnosis",
+     "aka": ["situation", "the challenge", "problem", "context", "where we are", "assessment", "what is going on"],
+     "purpose": "Name the core problem or opportunity, not the list of symptoms.",
+     "good_looks_like": "A short, evidenced account of what is going on and the one or two forces that matter most.",
+     "words": [105, 500],
+     "common_failure": "A tour of every issue with no ranking."
+    },
+    {
+     "name": "Strategic choice",
+     "aka": ["guiding policy", "strategy", "our approach", "the bet", "direction", "where to play", "how to win"],
+     "purpose": "State the choice that answers the diagnosis.",
+     "good_looks_like": "One clear approach, why it beats the obvious alternatives, and the assumption it rests on.",
+     "words": [85, 400],
+     "common_failure": "Goals and aspirations instead of a choice."
+    },
+    {
+     "name": "Actions",
+     "aka": ["coherent actions", "plan", "initiatives", "priorities", "what we will do", "roadmap", "key actions"],
+     "purpose": "Show the moves that put the choice into effect.",
+     "good_looks_like": "Three to six actions that reinforce each other, each with an owner and a first date.",
+     "words": [85, 450],
+     "common_failure": "A wish list that does not follow from the choice."
+    },
+    {
+     "name": "Trade-offs",
+     "aka": [
+      "what we will not do",
+      "tradeoffs",
+      "not doing",
+      "stop doing",
+      "sacrifices",
+      "cost of the strategy",
+      "non-goals"
+     ],
+     "purpose": "Make the sacrifice explicit; a strategy that costs nothing is not a choice.",
+     "good_looks_like": "What we stop, delay or decline, and who will be unhappy about it.",
+     "words": [40, 250],
+     "common_failure": "Nothing is given up, so nothing was chosen."
+    },
+    {
+     "name": "Risks and signals",
+     "aka": [
+      "risks",
+      "what would change our mind",
+      "assumptions",
+      "signals",
+      "leading indicators",
+      "how we will know",
+      "metrics"
+     ],
+     "purpose": "Say how you will find out early if the choice is wrong.",
+     "good_looks_like": "Key assumptions, the signals that would contradict them, and the review date.",
+     "words": [55, 300],
+     "common_failure": "Risks listed with no trigger for revisiting the choice."
+    },
+    {
+     "name": "Decisions and timing",
+     "aka": ["next steps", "asks", "decision needed", "timing", "decisions needed", "resources"],
+     "purpose": "Close with what is needed and when.",
+     "good_looks_like": "The decisions requested, the resources, the first review date.",
+     "words": [30, 150],
+     "common_failure": "Ends without a request."
+    }
+   ],
+   "write_order": [
+    "Diagnosis",
+    "Strategic choice",
+    "Trade-offs",
+    "Actions",
+    "Risks and signals",
+    "Decisions and timing",
+    "Bottom line"
+   ],
+   "reader_questions": [
+    "What is the recommended direction, in one sentence?",
+    "What is the diagnosis: the core problem or opportunity?",
+    "What are we choosing to do, and what are we choosing not to do?",
+    "How do the actions follow from the diagnosis?",
+    "What would change our mind, and which signals will we watch?",
+    "What is being asked of the reader, and by when?"
+   ],
+   "checks": [
+    {
+     "id": "choice",
+     "label": "States the strategic choice in plain words",
+     "sev": "error",
+     "any": [
+      {"re": "\\bwe (?:will|should|recommend|choose|propose|are choosing)\\b|\\bour (?:strategy|bet|choice|approach|direction) is\\b|\\bthe (?:strategy|bet|choice) is\\b|\\brecommend\\w*"}
+     ]
+    },
+    {
+     "id": "not-doing",
+     "label": "Says what we will NOT do (the trade-off)",
+     "sev": "error",
+     "any": [
+      {"re": "\\b(?:we will not|we won't|we are not|we're not|not doing|stop(?:ping)?|deprioriti[sz]\\w*|say no to|out of scope|instead of|at the expense of|trade[- ]?offs?|give up|sacrific\\w+)\\b"}
+     ]
+    },
+    {
+     "id": "signals",
+     "label": "Names signals that would show it is working, or not",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:signals?|indicators?|metrics?|kpis?|would change our mind|tripwires?|triggers?)\\b"}
+     ]
+    },
+    {
+     "id": "timing",
+     "label": "Gives a date for the decision or the first review",
+     "sev": "warn",
+     "any": [
+      {"dates": 1}
+     ]
+    },
+    {
+     "id": "evidence",
+     "label": "Diagnosis cites at least two numbers",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b\\d[\\d,.]*", "n": 2, "in": ["Diagnosis"]}
+     ]
+    }
+   ]
+  },
+  "business-case": {
+   "name": "Business case",
+   "aliases": [
+    "case",
+    "investment-case",
+    "cost-benefit",
+    "cost-benefit-analysis",
+    "roi-case",
+    "budget-request",
+    "funding-request"
+   ],
+   "purpose": "Justify spending money or people on one option by weighing costs, benefits and risk against doing nothing.",
+   "reader": "A finance-minded approver who will test the numbers and the assumptions.",
+   "length_words": [700, 3000],
+   "grade_max": 12,
+   "sections": [
+    {
+     "name": "Executive summary",
+     "aka": ["summary", "tl;dr", "recommendation", "bottom line", "overview"],
+     "purpose": "Give the approver the decision and the numbers first.",
+     "good_looks_like": "The request, total cost, main benefit, payback or return, and the recommendation, in a short paragraph.",
+     "words": [55, 200],
+     "common_failure": "Benefits without cost."
+    },
+    {
+     "name": "Problem or opportunity",
+     "aka": ["problem", "opportunity", "background", "strategic fit", "need", "why now", "situation"],
+     "purpose": "Show what is at stake if nothing changes.",
+     "good_looks_like": "The problem in business terms, the size of it in money or time, and why now.",
+     "words": [70, 300],
+     "common_failure": "A technical description with no business consequence."
+    },
+    {
+     "name": "Options",
+     "aka": ["options considered", "alternatives", "options analysis", "choices", "do nothing"],
+     "purpose": "Compare real options on the same basis, doing nothing included.",
+     "good_looks_like": "The baseline (do nothing), two or more options, and a one-line reason each was kept or dropped.",
+     "words": [105, 500],
+     "common_failure": "Only the preferred option is analyzed."
+    },
+    {
+     "name": "Costs",
+     "aka": ["cost", "costs and benefits", "investment", "budget", "costs and resources", "total cost"],
+     "purpose": "State what the preferred option costs, one-off and recurring.",
+     "good_looks_like": "Line items with amounts and timing, internal effort priced, and contingency shown separately.",
+     "words": [70, 350],
+     "common_failure": "Omits recurring or internal costs."
+    },
+    {
+     "name": "Benefits",
+     "aka": ["benefit", "value", "expected benefits", "returns", "savings", "revenue impact"],
+     "purpose": "State what the option returns and when.",
+     "good_looks_like": "Each benefit as a figure, how it is measured, who owns realizing it, and when it starts.",
+     "words": [70, 350],
+     "common_failure": "Soft benefits counted as hard savings."
+    },
+    {
+     "name": "Financial summary",
+     "aka": [
+      "financials",
+      "financial analysis",
+      "roi",
+      "payback",
+      "npv",
+      "return on investment",
+      "cash flow",
+      "the numbers"
+     ],
+     "purpose": "Put cost and benefit on one timeline and give the headline metric.",
+     "good_looks_like": "Yearly cash flow table, payback period, ROI or NPV with the discount rate, and the time horizon.",
+     "words": [55, 300],
+     "common_failure": "A return figure with no timeline or method."
+    },
+    {
+     "name": "Assumptions and risks",
+     "aka": ["assumptions", "risks", "sensitivity", "risks and assumptions", "what could go wrong", "downside case"],
+     "purpose": "Show which assumptions drive the answer and what happens if they fail.",
+     "good_looks_like": "The three assumptions that move the result most, a downside case, and the break-even point.",
+     "words": [70, 350],
+     "common_failure": "Assumptions buried in a spreadsheet nobody opens."
+    },
+    {
+     "name": "Recommendation and next steps",
+     "aka": ["recommendation", "next steps", "decision requested", "ask", "approval requested", "implementation"],
+     "purpose": "Close with the exact approval and the first steps.",
+     "good_looks_like": "The approval requested, who decides, by which date, and the first three actions.",
+     "words": [35, 200],
+     "common_failure": "Ends on a summary with no request."
+    }
+   ],
+   "write_order": [
+    "Options",
+    "Costs",
+    "Benefits",
+    "Financial summary",
+    "Assumptions and risks",
+    "Problem or opportunity",
+    "Recommendation and next steps",
+    "Executive summary"
+   ],
+   "reader_questions": [
+    "What is being requested (money, people, time), and for what?",
+    "What happens if we do nothing?",
+    "What are the total costs, one-off and recurring?",
+    "What are the benefits, how are they measured, and when do they arrive?",
+    "What is the payback or return, and which assumptions drive it most?",
+    "What is the downside case, and what would we lose?",
+    "What decision is needed, from whom, by when?"
+   ],
+   "checks": [
+    {
+     "id": "cost-figures",
+     "label": "Costs are given as figures (at least two)",
+     "sev": "error",
+     "any": [
+      {"re": "[$€£]\\s?\\d[\\d,.]*|\\b\\d[\\d,.]*\\s?(?:k|m|mm|bn|million|billion|thousand|eur|usd|gbp)\\b", "n": 2, "in": ["Costs"]}
+     ]
+    },
+    {
+     "id": "baseline",
+     "label": "Includes a do-nothing baseline",
+     "sev": "error",
+     "any": [
+      {"re": "\\b(?:do(?:ing)? nothing|status quo|baseline|current state|no action|business as usual|as[- ]is)\\b"}
+     ]
+    },
+    {
+     "id": "return-metric",
+     "label": "Gives payback, ROI, NPV or break-even",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:roi|payback|npv|irr|break[- ]?even|return on investment|cost[- ]benefit)\\b"}
+     ]
+    },
+    {
+     "id": "assumptions",
+     "label": "Lists the assumptions behind the numbers",
+     "sev": "warn",
+     "any": [
+      {"re": "\\bassum\\w+\\b"}
+     ]
+    },
+    {
+     "id": "horizon",
+     "label": "States the time horizon of the numbers",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:\\d+[- ](?:year|month|quarter)s?|over (?:the )?(?:next )?\\d+ (?:years?|months?|quarters?)|fy\\s?\\d{2,4}|per (?:year|month|annum)|annual(?:ly)?)\\b"}
+     ]
+    },
+    {
+     "id": "downside",
+     "label": "Shows a downside or sensitivity case",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:downside|worst case|sensitiv\\w+|pessimistic|conservative case)\\b"}
+     ]
+    },
+    {
+     "id": "decision-date",
+     "label": "Says by when the decision is needed",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:decid\\w*|decision|approv\\w*|sign[- ]?off)\\b[^.\\n]{0,90}\\b(?:by|before|no later than|until|deadline|due)\\b", "date": true}
+     ]
+    }
+   ]
+  },
+  "meeting-brief": {
+   "name": "Meeting brief",
+   "aliases": ["meeting", "agenda", "meeting-agenda", "pre-read", "briefing", "briefing-note", "call-brief"],
+   "purpose": "Make a meeting worth holding: everyone knows the goal, the decisions needed, what to read first and who does what.",
+   "reader": "Attendees who will skim it two minutes before the meeting starts.",
+   "length_words": [105, 450],
+   "grade_max": 10,
+   "sections": [
+    {
+     "name": "Purpose and outcome",
+     "aka": [
+      "purpose",
+      "goal",
+      "objective",
+      "outcome",
+      "why we are meeting",
+      "desired outcome",
+      "decision needed",
+      "summary"
+     ],
+     "purpose": "Say why the meeting exists and what must be true when it ends.",
+     "good_looks_like": "One sentence on purpose and one on the outcome, phrased as a result: 'Leave with X decided'.",
+     "words": [20, 80],
+     "common_failure": "A topic ('Q3 planning') with no outcome."
+    },
+    {
+     "name": "Attendees and roles",
+     "aka": ["attendees", "participants", "who", "roles", "people", "invitees"],
+     "purpose": "Show who is needed and what each person is there to do.",
+     "good_looks_like": "Names with roles: decider, presenter, note taker, input needed.",
+     "words": [15, 80],
+     "common_failure": "A guest list with no roles."
+    },
+    {
+     "name": "Agenda",
+     "aka": ["agenda and timing", "run of show", "topics", "schedule", "discussion topics"],
+     "purpose": "Give every item a time box, an owner and a type: inform, discuss or decide.",
+     "good_looks_like": "Three to five items adding up to the meeting length, decisions placed early.",
+     "words": [35, 180],
+     "common_failure": "A topic list with no times."
+    },
+    {
+     "name": "Background and pre-reads",
+     "aka": ["background", "pre-read", "pre-reads", "context", "read before", "materials"],
+     "purpose": "Give only what attendees must know before they arrive.",
+     "good_looks_like": "Two or three links with a one-line reason each and the minutes they take to read.",
+     "words": [20, 120],
+     "common_failure": "A folder of documents with no guidance."
+    },
+    {
+     "name": "Decisions and questions",
+     "aka": [
+      "decisions needed",
+      "decisions",
+      "questions",
+      "open questions",
+      "questions for the group",
+      "discussion questions"
+     ],
+     "purpose": "Turn the discussion into the specific questions to settle.",
+     "good_looks_like": "Each question phrased so the answer is yes, no or a named choice, with the recommended answer.",
+     "words": [20, 120],
+     "common_failure": "Open-ended topics that will run over."
+    },
+    {
+     "name": "After the meeting",
+     "aka": ["next steps", "follow up", "actions", "action items", "outputs", "notes and actions"],
+     "purpose": "Say where decisions and actions will be recorded and by whom.",
+     "good_looks_like": "Who sends notes, by when, and the format for actions (owner and date).",
+     "words": [15, 80],
+     "common_failure": "Nobody records the outcome.",
+     "optional": true
+    }
+   ],
+   "write_order": [
+    "Purpose and outcome",
+    "Decisions and questions",
+    "Agenda",
+    "Background and pre-reads",
+    "Attendees and roles",
+    "After the meeting"
+   ],
+   "reader_questions": [
+    "Why is this meeting happening, and what must be true when it ends?",
+    "What decisions or questions must be settled?",
+    "What is my role, and what should I prepare?",
+    "How long does each agenda item get?",
+    "What should I read before I arrive?",
+    "Where will decisions and actions be recorded?"
+   ],
+   "checks": [
+    {
+     "id": "outcome",
+     "label": "States the outcome or the decision wanted",
+     "sev": "error",
+     "any": [
+      {"re": "\\b(?:by the end|at the end of (?:this|the) meeting|outcomes?|decid\\w+|decision|goal|objective|purpose|agree on|leave with)\\b", "first": 80}
+     ]
+    },
+    {
+     "id": "timed-agenda",
+     "label": "Agenda items carry time allocations",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b\\d{1,3}\\s?(?:min|mins|minutes)\\b|\\b\\d{1,2}:\\d{2}\\b", "n": 2}
+     ]
+    },
+    {
+     "id": "facilitator",
+     "label": "Names who leads the meeting and who presents",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:facilitat\\w+|chair\\w*|led by|lead(?:er)?|owner|presenter|presents?|note[- ]?taker|scribe|host)\\b"}
+     ]
+    },
+    {
+     "id": "when",
+     "label": "Gives the meeting date or time",
+     "sev": "info",
+     "any": [
+      {"dates": 1}
+     ]
+    },
+    {
+     "id": "pre-read",
+     "label": "Says what to read or prepare beforehand",
+     "sev": "info",
+     "any": [
+      {"re": "\\b(?:pre[- ]?reads?|read before|please read|prepare|come prepared|bring|before the meeting|in advance)\\b"}
+     ]
+    }
+   ]
+  },
+  "sop": {
+   "name": "SOP or how-to",
+   "aliases": ["how-to", "runbook", "procedure", "playbook", "process-doc", "work-instruction", "guide", "checklist"],
+   "purpose": "Let a competent newcomer complete a recurring task correctly and alone, the same way every time.",
+   "reader": "Someone doing the task for the first time, maybe under time pressure, with nobody to ask.",
+   "length_words": [210, 1500],
+   "grade_max": 8,
+   "sections": [
+    {
+     "name": "Purpose and scope",
+     "aka": ["purpose", "scope", "overview", "when to use this", "what this covers", "use when", "summary"],
+     "purpose": "Say when to use this procedure and when not to.",
+     "good_looks_like": "The task in one line, the trigger that starts it, and what it does not cover.",
+     "words": [20, 100],
+     "common_failure": "A history of why the process exists."
+    },
+    {
+     "name": "Before you start",
+     "aka": [
+      "prerequisites",
+      "requirements",
+      "before you begin",
+      "you will need",
+      "materials",
+      "access",
+      "preparation",
+      "what you need"
+     ],
+     "purpose": "List everything needed so nobody stops at step 4 to find access.",
+     "good_looks_like": "Access, tools, inputs and approvals as a checklist, plus the time the task takes.",
+     "words": [20, 150],
+     "common_failure": "Assumed access discovered mid-task."
+    },
+    {
+     "name": "Steps",
+     "aka": ["procedure", "instructions", "process", "how to", "walkthrough", "steps to follow", "the procedure"],
+     "purpose": "Give the exact actions in the order they happen.",
+     "good_looks_like": "Numbered steps, each starting with a verb and doing one thing, with the exact command, button or value.",
+     "words": [85, 900],
+     "common_failure": "Steps that combine several actions or hide a decision."
+    },
+    {
+     "name": "Check the result",
+     "aka": [
+      "verify",
+      "verification",
+      "expected result",
+      "how to check",
+      "done when",
+      "success looks like",
+      "confirm it worked",
+      "validation"
+     ],
+     "purpose": "Let the reader confirm success without asking anyone.",
+     "good_looks_like": "The observable result: what they should see, where, and a value or screenshot to compare.",
+     "words": [15, 100],
+     "common_failure": "The procedure ends at the last click with no proof."
+    },
+    {
+     "name": "If something goes wrong",
+     "aka": [
+      "troubleshooting",
+      "troubleshoot",
+      "common problems",
+      "common errors",
+      "rollback",
+      "escalation",
+      "who to ask",
+      "faq",
+      "problems"
+     ],
+     "purpose": "Cover the failures that actually happen and the way out.",
+     "good_looks_like": "Symptom, cause and fix for the top failures, how to undo the change, and who to contact.",
+     "words": [30, 250],
+     "common_failure": "No escalation path, so the newcomer improvises."
+    },
+    {
+     "name": "Owner and review",
+     "aka": [
+      "owner",
+      "ownership",
+      "document owner",
+      "maintenance",
+      "revision history",
+      "last reviewed",
+      "review",
+      "version"
+     ],
+     "purpose": "Say who keeps this current so it does not rot.",
+     "good_looks_like": "Owner, last review date, next review date.",
+     "words": [10, 60],
+     "common_failure": "No owner; the steps drift from reality."
+    }
+   ],
+   "write_order": [
+    "Steps",
+    "Before you start",
+    "Check the result",
+    "If something goes wrong",
+    "Purpose and scope",
+    "Owner and review"
+   ],
+   "reader_questions": [
+    "When should I use this procedure, and when should I not?",
+    "What do I need (access, tools, information) before step 1?",
+    "Walk me through the steps in order: is any step unclear or missing?",
+    "How do I know it worked?",
+    "What do I do if a step fails, and who do I contact?",
+    "Who owns this document, and when was it last reviewed?"
+   ],
+   "checks": [
+    {
+     "id": "numbered-steps",
+     "label": "Steps are a numbered list (at least three)",
+     "sev": "error",
+     "any": [
+      {"ol": 3}
+     ]
+    },
+    {
+     "id": "verify",
+     "label": "Says how to confirm the result",
+     "sev": "error",
+     "any": [
+      {"re": "\\b(?:you should see|expected (?:result|output)|verify|confirm(?:ed)?|check that|you will see|success looks like|it worked|done when|should (?:show|display|read))\\b"}
+     ]
+    },
+    {
+     "id": "escalation",
+     "label": "Says who to contact or what to do when it fails",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:escalat\\w+|on[- ]call|who to (?:ask|contact)|contact|reach out|ask in|ping|page)\\b"}
+     ]
+    },
+    {
+     "id": "owner-review",
+     "label": "Gives an owner and a last-reviewed date",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:last (?:reviewed|updated)|reviewed on|updated on|review date|next review)\\b", "date": true}
+     ]
+    },
+    {
+     "id": "prerequisites",
+     "label": "Lists what is needed before step 1",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:prerequisites?|before you (?:start|begin)|you(?:'ll| will) need|requirements?|access to|make sure you have)\\b"}
+     ]
+    }
+   ]
+  },
+  "policy": {
+   "name": "Policy",
+   "aliases": [
+    "guideline",
+    "guidelines",
+    "standard",
+    "handbook-policy",
+    "acceptable-use",
+    "code-of-conduct",
+    "rules",
+    "governance-doc"
+   ],
+   "purpose": "State binding rules clearly enough to follow and to enforce: what applies to whom, what is required, what happens otherwise.",
+   "reader": "People who must comply, the manager who enforces it, and an auditor who tests it.",
+   "length_words": [350, 2500],
+   "grade_max": 12,
+   "sections": [
+    {
+     "name": "Purpose",
+     "aka": ["objective", "intent", "overview", "background", "summary", "policy statement"],
+     "purpose": "Say what the policy protects or achieves in one short paragraph.",
+     "good_looks_like": "The risk or goal behind the rules, and the principle in a sentence.",
+     "words": [20, 120],
+     "common_failure": "A history of the company."
+    },
+    {
+     "name": "Scope",
+     "aka": [
+      "applies to",
+      "applicability",
+      "who this applies to",
+      "coverage",
+      "audience",
+      "scope and applicability"
+     ],
+     "purpose": "Say exactly who and what the policy covers.",
+     "good_looks_like": "Roles, locations, systems and situations included, and what is explicitly excluded.",
+     "words": [20, 150],
+     "common_failure": "'All employees' when contractors and vendors are also covered."
+    },
+    {
+     "name": "Definitions",
+     "aka": ["glossary", "terms", "key terms", "terms and definitions", "definitions and abbreviations"],
+     "purpose": "Fix the meaning of any term the rules depend on.",
+     "good_looks_like": "Each defined term used later in the rules, in alphabetical order.",
+     "words": [15, 250],
+     "common_failure": "Defines everyday words and misses the ones that decide edge cases.",
+     "optional": true
+    },
+    {
+     "name": "Rules",
+     "aka": [
+      "policy",
+      "requirements",
+      "policy requirements",
+      "principles",
+      "standards",
+      "what is required",
+      "the policy",
+      "obligations"
+     ],
+     "purpose": "State what people must and must not do.",
+     "good_looks_like": "Numbered rules using must / must not, each one testable, each with a short reason.",
+     "words": [105, 900],
+     "common_failure": "Soft wording ('try to') that cannot be enforced."
+    },
+    {
+     "name": "Roles and responsibilities",
+     "aka": ["responsibilities", "roles", "ownership", "accountability", "who does what", "governance"],
+     "purpose": "Say who is accountable for what.",
+     "good_looks_like": "Each role with its duties: owner, approver, employees, managers, the enforcing function.",
+     "words": [35, 250],
+     "common_failure": "Responsibilities assigned to 'the business'."
+    },
+    {
+     "name": "Exceptions",
+     "aka": ["waivers", "exception process", "deviations", "exemptions", "requesting an exception"],
+     "purpose": "Say how to ask for an exception and who can grant it.",
+     "good_looks_like": "Who approves, what must be submitted, how long approval lasts, how exceptions are logged.",
+     "words": [20, 150],
+     "common_failure": "No route, so people break the rule quietly."
+    },
+    {
+     "name": "Compliance and consequences",
+     "aka": [
+      "enforcement",
+      "compliance",
+      "consequences",
+      "violations",
+      "monitoring",
+      "non-compliance",
+      "breaches",
+      "audit"
+     ],
+     "purpose": "Say how compliance is checked and what follows a breach.",
+     "good_looks_like": "How it is monitored, how to report a concern, and the range of consequences.",
+     "words": [30, 200],
+     "common_failure": "Threats with no process."
+    },
+    {
+     "name": "Ownership and review",
+     "aka": [
+      "owner",
+      "document control",
+      "version history",
+      "revision history",
+      "review cycle",
+      "effective date",
+      "approval",
+      "document owner",
+      "references"
+     ],
+     "purpose": "Show the document is controlled and current.",
+     "good_looks_like": "Owner, approver, version, effective date, next review date, related documents.",
+     "words": [15, 100],
+     "common_failure": "No effective date, so nobody knows which version applies."
+    }
+   ],
+   "write_order": [
+    "Rules",
+    "Scope",
+    "Roles and responsibilities",
+    "Exceptions",
+    "Compliance and consequences",
+    "Definitions",
+    "Purpose",
+    "Ownership and review"
+   ],
+   "reader_questions": [
+    "Who does this apply to, and who is exempt?",
+    "What exactly is required or forbidden, in three concrete examples?",
+    "Who is responsible for what?",
+    "How do I request an exception, and who approves it?",
+    "What happens if someone does not comply?",
+    "Who owns this policy, when does it take effect, and when is it next reviewed?"
+   ],
+   "checks": [
+    {
+     "id": "effective-date",
+     "label": "Gives an effective date",
+     "sev": "error",
+     "any": [
+      {"re": "\\b(?:effective|in force|takes? effect|applies from|valid from|comes? into (?:effect|force))\\b", "date": true}
+     ]
+    },
+    {
+     "id": "owner",
+     "label": "Names the policy owner or approver",
+     "sev": "error",
+     "any": [
+      {"re": "\\b(?:policy owner|document owner|owner|owned by|approved by|approver|accountable)\\b"}
+     ]
+    },
+    {
+     "id": "review-cycle",
+     "label": "Says when the policy is next reviewed",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:next review|review(?:ed)? (?:date|cycle|annually|every|yearly|quarterly|by)|annual review|reviewed (?:annually|yearly|quarterly))\\b"}
+     ]
+    },
+    {
+     "id": "binding-language",
+     "label": "Uses must / must not / shall for real requirements (at least three)",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:must not|must|shall not|shall|is required to|are required to|may not|is prohibited|are prohibited)\\b", "total": 3}
+     ]
+    },
+    {
+     "id": "exceptions",
+     "label": "Explains how to request an exception",
+     "sev": "warn",
+     "any": [
+      {"re": "\\bexception\\w*\\b|\\bwaiver\\w*\\b|\\bexempt\\w*\\b"}
+     ]
+    },
+    {
+     "id": "consequences",
+     "label": "States the consequence of non-compliance",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:disciplin\\w+|consequences?|sanctions?|terminat\\w+|violations?|breach\\w*|non[- ]?compliance)\\b"}
+     ]
+    },
+    {
+     "id": "no-soft-rules",
+     "label": "Avoids soft wording that cannot be enforced (try to, where possible)",
+     "sev": "warn",
+     "none": [
+      "\\b(?:try to|should attempt|where possible|as appropriate|when appropriate|if feasible|reasonable efforts?|best efforts?)\\b"
+     ]
+    }
+   ]
+  },
+  "report": {
+   "name": "Report or analysis",
+   "aliases": [
+    "analysis",
+    "research-report",
+    "findings",
+    "white-paper",
+    "assessment",
+    "market-analysis",
+    "audit-report"
+   ],
+   "purpose": "Report what was found and what it means: the answer first, then the evidence and the method behind it.",
+   "reader": "A decision maker who wants the answer, and a skeptic who will test how you got it.",
+   "length_words": [840, 4000],
+   "grade_max": 13,
+   "sections": [
+    {
+     "name": "Key findings",
+     "aka": [
+      "summary",
+      "executive summary",
+      "tl;dr",
+      "headline findings",
+      "bottom line",
+      "main findings",
+      "top findings"
+     ],
+     "purpose": "Give the answer before the evidence.",
+     "good_looks_like": "The three to five findings that matter most, each a full sentence with its number, and the confidence.",
+     "words": [55, 250],
+     "common_failure": "A description of what the report contains."
+    },
+    {
+     "name": "Question and scope",
+     "aka": [
+      "background",
+      "objective",
+      "objectives",
+      "purpose",
+      "scope",
+      "research question",
+      "context",
+      "introduction",
+      "questions"
+     ],
+     "purpose": "Say what question the work answers and what it leaves out.",
+     "good_looks_like": "The question in one sentence, why it matters, and the boundaries of the study.",
+     "words": [40, 250],
+     "common_failure": "Background on the topic instead of the question."
+    },
+    {
+     "name": "Method and data",
+     "aka": [
+      "method",
+      "methods",
+      "methodology",
+      "data",
+      "data and method",
+      "data sources",
+      "approach",
+      "sources",
+      "sample"
+     ],
+     "purpose": "Let a skeptic judge whether the findings can be trusted.",
+     "good_looks_like": "Data sources with dates and sizes, filters and definitions, and how each number was computed.",
+     "words": [55, 350],
+     "common_failure": "'We analyzed the data' with no source or period."
+    },
+    {
+     "name": "Findings",
+     "aka": ["results", "analysis", "detailed findings", "evidence", "discussion", "what we found"],
+     "purpose": "Present the evidence behind each key finding.",
+     "good_looks_like": "One subsection per finding, leading with the claim, then the chart or table, then what it means.",
+     "words": [210, 1500],
+     "common_failure": "Charts without a claim; the reader must infer the point."
+    },
+    {
+     "name": "Limitations",
+     "aka": [
+      "caveats",
+      "limits",
+      "threats to validity",
+      "what we could not test",
+      "confidence",
+      "uncertainty",
+      "data quality"
+     ],
+     "purpose": "Say where the findings may be wrong.",
+     "good_looks_like": "Gaps in the data, biases, what was not tested, and how each could change the conclusion.",
+     "words": [35, 250],
+     "common_failure": "Missing, or generic ('more research is needed')."
+    },
+    {
+     "name": "Recommendations",
+     "aka": [
+      "implications",
+      "next steps",
+      "recommended actions",
+      "so what",
+      "what to do",
+      "conclusions",
+      "recommendations and next steps"
+     ],
+     "purpose": "Turn findings into actions.",
+     "good_looks_like": "Each recommendation tied to a finding, with an owner and a first step.",
+     "words": [55, 400],
+     "common_failure": "Recommendations that do not follow from the findings."
+    },
+    {
+     "name": "Appendix",
+     "aka": ["appendices", "supporting data", "references", "notes"],
+     "purpose": "Hold detail a skeptic may want to check.",
+     "good_looks_like": "Full tables, definitions and calculation notes, each referenced from the body.",
+     "words": [0, 1200],
+     "common_failure": "Essential evidence moved here so the body looks short.",
+     "optional": true
+    }
+   ],
+   "write_order": [
+    "Question and scope",
+    "Method and data",
+    "Findings",
+    "Limitations",
+    "Recommendations",
+    "Key findings",
+    "Appendix"
+   ],
+   "reader_questions": [
+    "What is the single most important finding, and how confident is the author?",
+    "What question was this report trying to answer?",
+    "Where does the data come from, over what period, and how many cases?",
+    "What could make these findings wrong (limitations, biases, missing data)?",
+    "Which numbers are measured and which are estimates, and what is the source of each?",
+    "What does the author recommend, and what evidence supports it?"
+   ],
+   "checks": [
+    {
+     "id": "method",
+     "label": "Explains the method and data source",
+     "sev": "error",
+     "any": [
+      {"re": "\\b(?:method\\w*|data ?sets?|data (?:source|from)|sample|survey\\w*|interview\\w*|sourced from|we (?:analy[sz]ed|measured|surveyed|reviewed|compared|interviewed|collected))\\b"}
+     ]
+    },
+    {
+     "id": "data-period",
+     "label": "Says the period the data covers (dates)",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:from|between|during|over|since|as of|through|covering|period)\\b", "date": true}
+     ]
+    },
+    {
+     "id": "limitations",
+     "label": "Names limitations or caveats",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:limitations?|caveats?|bias\\w*|small sample|uncertain\\w*|margin of error|confidence interval|we could not|we were unable|does not (?:prove|show)|cannot be sure)\\b"}
+     ]
+    },
+    {
+     "id": "recommendation",
+     "label": "Says what to do with the findings",
+     "sev": "warn",
+     "any": [
+      {"re": "\\brecommend\\w*|\\bimplications?\\b|\\bwe suggest\\b|\\bnext steps?\\b"}
+     ]
+    },
+    {
+     "id": "sample-size",
+     "label": "Gives the sample size or record count",
+     "sev": "info",
+     "any": [
+      {"re": "\\b(?:n\\s?=\\s?\\d+|\\d[\\d,]*\\s+(?:respondents|participants|customers|records|rows|responses|interviews|users|samples|cases|accounts|sites))\\b"}
+     ]
+    }
+   ]
+  },
+  "status-launch": {
+   "name": "Status or launch doc",
+   "aliases": [
+    "status",
+    "status-update",
+    "status-report",
+    "weekly-update",
+    "project-update",
+    "progress-report",
+    "launch-doc",
+    "launch-plan",
+    "launch-brief",
+    "release-plan"
+   ],
+   "purpose": "Tell stakeholders in under two minutes where things stand, what changed, what is at risk and what you need from them.",
+   "reader": "Sponsors and dependent teams who skim many updates and act only on exceptions.",
+   "length_words": [140, 600],
+   "grade_max": 10,
+   "sections": [
+    {
+     "name": "Status",
+     "aka": ["overall status", "summary", "tl;dr", "health", "rag", "headline", "current status", "state"],
+     "purpose": "Open with the overall state and the date it is true.",
+     "good_looks_like": "One word (green, amber, red) or phrase (on track, at risk) with an as-of date and one sentence of why.",
+     "words": [15, 80],
+     "common_failure": "'Good progress' with no status and no date."
+    },
+    {
+     "name": "Progress",
+     "aka": [
+      "done",
+      "what shipped",
+      "completed",
+      "accomplishments",
+      "since last update",
+      "highlights",
+      "what changed",
+      "wins",
+      "progress this period"
+     ],
+     "purpose": "Show what changed since the last update.",
+     "good_looks_like": "Three to five results phrased as outcomes, each with a number or a link.",
+     "words": [35, 180],
+     "common_failure": "A list of activities, not results."
+    },
+    {
+     "name": "Next",
+     "aka": [
+      "next up",
+      "next steps",
+      "upcoming",
+      "coming up",
+      "plan",
+      "what is next",
+      "next milestone",
+      "priorities",
+      "planned"
+     ],
+     "purpose": "Say what happens before the next update.",
+     "good_looks_like": "The next milestone with a date, and the two or three things that will move it.",
+     "words": [30, 150],
+     "common_failure": "Vague intentions with no dates."
+    },
+    {
+     "name": "Risks and blockers",
+     "aka": ["risks", "blockers", "issues", "risks and issues", "blocked", "at risk", "problems", "concerns"],
+     "purpose": "Surface what threatens the dates before it hits them.",
+     "good_looks_like": "Each risk with impact, owner, mitigation and the date it becomes a problem.",
+     "words": [20, 150],
+     "common_failure": "Risks softened until nobody notices them."
+    },
+    {
+     "name": "Asks",
+     "aka": ["decisions needed", "help needed", "what we need", "needs", "requests", "decisions", "escalations"],
+     "purpose": "Say exactly what you need from the reader.",
+     "good_looks_like": "Each ask names a person, the decision or help needed, and a date. 'None this week' is a valid answer.",
+     "words": [10, 100],
+     "common_failure": "Asks hidden inside the narrative."
+    },
+    {
+     "name": "Launch readiness",
+     "aka": [
+      "go/no-go",
+      "go no-go",
+      "launch checklist",
+      "readiness",
+      "launch criteria",
+      "launch gate",
+      "exit criteria"
+     ],
+     "purpose": "For launches: show whether the go/no-go criteria are met.",
+     "good_looks_like": "A short checklist of criteria, each with a status and an owner.",
+     "words": [30, 200],
+     "common_failure": "A checklist with no owner or evidence.",
+     "optional": true
+    },
+    {
+     "name": "Rollout and rollback",
+     "aka": [
+      "rollout",
+      "rollback",
+      "rollout plan",
+      "launch plan",
+      "comms",
+      "communications",
+      "rollout and comms",
+      "release plan"
+     ],
+     "purpose": "For launches: describe the rollout stages, the communications and the way back.",
+     "good_looks_like": "Stages with dates and percentages, who is told what and when, and the rollback trigger and steps.",
+     "words": [30, 200],
+     "common_failure": "Rollout without a rollback.",
+     "optional": true
+    }
+   ],
+   "write_order": ["Progress", "Next", "Risks and blockers", "Asks", "Launch readiness", "Rollout and rollback", "Status"],
+   "reader_questions": [
+    "What is the overall status (on track, at risk, off track), as of what date?",
+    "What changed since the last update?",
+    "What is next, and when is the next milestone?",
+    "What is at risk or blocked, and what is the plan?",
+    "What do you need from me, and by when?",
+    "For a launch: what are the go/no-go criteria, and how do we roll back?"
+   ],
+   "checks": [
+    {
+     "id": "rag",
+     "label": "Opens with an overall status (green, amber, red, on track, at risk)",
+     "sev": "error",
+     "any": [
+      {"re": "\\b(?:green|amber|yellow|red|on track|at risk|off track|blocked|delayed|complete|done|ahead|behind|slipp\\w+)\\b", "first": 120}
+     ]
+    },
+    {
+     "id": "as-of",
+     "label": "Says the date the status is as of",
+     "sev": "error",
+     "any": [
+      {"re": "\\b(?:as of|updated|status date|week of|week ending|reporting period|date)\\b", "date": true}
+     ]
+    },
+    {
+     "id": "next-milestone",
+     "label": "Names the next milestone with a date",
+     "sev": "error",
+     "any": [
+      {"re": "\\b(?:milestone|deadline|launch|release|ship|go[- ]live|due|target|next)\\b", "date": true}
+     ]
+    },
+    {
+     "id": "asks",
+     "label": "States the asks, or says there are none",
+     "sev": "warn",
+     "any": [
+      {"re": "\\b(?:asks?|need from|decisions? needed|help needed|no (?:asks|blockers|decisions)|please)\\b"}
+     ]
+    },
+    {
+     "id": "rollback",
+     "label": "For a launch: says how to roll back",
+     "sev": "info",
+     "any": [
+      {"re": "\\b(?:rollback|roll back|revert|kill switch|feature flag)\\b"}
+     ],
+     "when": "\\b(?:launch\\w*|roll ?out|go[- ]live|release)\\b"
+    },
+    {
+     "id": "go-no-go",
+     "label": "For a launch: lists go/no-go criteria",
+     "sev": "info",
+     "any": [
+      {"re": "\\b(?:go/no-go|go no-go|launch criteria|exit criteria|readiness)\\b"}
+     ],
+     "when": "\\b(?:launch\\w*|roll ?out|go[- ]live|release)\\b"
+    }
+   ]
+  }
+ }
+}

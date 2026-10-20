@@ -1,0 +1,26 @@
+{
+ "_meta": {"version": "2.0.0", "updated": "2026-09-29", "notes": "Describes the spec JSON that grill.py check, render and accept read. JSON Schema draft-07 shape, plus x-checks listing the rules that check enforces beyond structure. Errors make check exit 1; warnings only with --strict."},
+ "$schema": "http://json-schema.org/draft-07/schema#",
+ "title": "grill-me build spec",
+ "type": "object",
+ "required": ["title", "type", "goal", "success", "users", "must_have", "out_of_scope"],
+ "properties": {
+  "title": {"type": "string", "description": "Short name of the thing being built."},
+  "type": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "Project type ids from question-bank.json (website, app, automation, ...). Several allowed."},
+  "goal": {"type": "string", "description": "One sentence: what this does and for whom."},
+  "success": {"type": "string", "description": "What someone can observe or measure to say it worked. A number, a time, or an action a person can do."},
+  "users": {"type": "string", "description": "Who uses or reads it, and in what context or device."},
+  "must_have": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["item", "accept"], "properties": {"item": {"type": "string"}, "accept": {"type": "string", "description": "A test anyone can run: what you do and what you must see. Not 'works well'."}}}},
+  "nice_to_have": {"type": "array", "items": {"type": "string"}, "description": "Built only if time remains, after every must-have passes."},
+  "out_of_scope": {"type": "array", "minItems": 1, "items": {"type": "string"}, "description": "Things that look related but will not be built."},
+  "constraints": {"type": "array", "items": {"type": "string"}, "description": "Deadline, budget, tools, brand rules, platform."},
+  "assumptions": {"type": "array", "items": {"type": "object", "required": ["text", "risk"], "properties": {"text": {"type": "string"}, "from": {"type": "string", "description": "Question id the guess replaces, or 'inferred'."}, "risk": {"type": "string", "enum": ["low", "med", "high"], "description": "Cost if the guess is wrong."}}}, "description": "Guesses the build relies on. Shown to the user as 'Correct me before I build'."},
+  "reject_if": {"type": "array", "items": {"type": "string"}, "description": "Conditions under which the user sends it back. Each becomes a line in the acceptance run."},
+  "open_risks": {"type": "array", "items": {"type": "string"}, "description": "Known unknowns that could change the build later."}
+ },
+ "x-render-order": ["title", "type", "goal", "success", "users", "must_have", "nice_to_have", "out_of_scope", "constraints", "reject_if", "open_risks", "assumptions"],
+ "x-checks": {
+  "error": ["missing or empty required field", "must_have item without a testable accept", "success not observable (no number, time or action)", "out_of_scope empty", "same term in must_have and out_of_scope", "goal is more than one sentence", "assumption risk not low, med or high"],
+  "warning": ["high-risk assumption still open", "goal longer than 240 characters", "more than 8 must-haves", "no reject_if lines", "nice_to_have repeats a must_have"]
+ }
+}

@@ -1,0 +1,185 @@
+{
+  "name": "Halden & Co",
+  "tagline": "Operations help for small teams",
+  "description": "Halden & Co sets up scheduling, invoicing and handover routines for teams of two to twelve, then runs the first quarter with you.",
+  "url": "https://halden.test",
+  "lang": "en",
+  "preset": "editorial",
+  "year": 2026,
+  "nav_cta": {"label": "Book a free call", "href": "#contact"},
+  "business": {
+    "type": "ProfessionalService",
+    "email": "hello@halden.test",
+    "phone": "+44 20 7946 0123",
+    "address": {"street": "18 Mill Lane", "city": "Harlow Green", "region": "Essex", "postal": "CM1 4XX", "country": "GB"},
+    "opening_hours": ["Mo-Fr 09:00-17:00"],
+    "price_range": "$$"
+  },
+  "footer": {
+    "text": "Operations help for small teams, from a two person studio.",
+    "columns": [
+      {"title": "Company", "links": [{"label": "About", "href": "/about"}, {"label": "Pricing", "href": "/#pricing"}, {"label": "Contact", "href": "/#contact"}]}
+    ],
+    "legal": "Registered in England, company number 00000000."
+  },
+  "pages": [
+    {
+      "path": "/",
+      "blocks": [
+        {
+          "type": "hero",
+          "eyebrow": "Operations for small teams",
+          "headline": "Your team is busy. Your *systems* should not be.",
+          "subhead": "We set up the scheduling, invoicing and handover routines a growing team keeps improvising, then run the first quarter with you.",
+          "cta": {"label": "Book a free call", "href": "#contact"},
+          "cta_secondary": {"label": "See how it works", "href": "#how"},
+          "note": "Replies within one working day."
+        },
+        {
+          "type": "proof-bar",
+          "label": "Small teams we have worked with",
+          "logos": [{"name": "Nine Elms Physio"}, {"name": "Kite & Co"}, {"name": "Harbor Coffee"}, {"name": "Loom Row"}, {"name": "Fieldstone Legal"}]
+        },
+        {
+          "type": "features",
+          "id": "services",
+          "nav_label": "Services",
+          "eyebrow": "What we do",
+          "title": "Three jobs we take off your desk",
+          "intro": "Each one is set up once, written down and handed over. Pick one or all three.",
+          "variant": "rows",
+          "items": [
+            {"title": "Scheduling that holds", "text": "One shared calendar, clear rules for changes, and a weekly check so double bookings stop before they start."},
+            {"title": "Invoicing that gets paid", "text": "Templates, reminders and a Friday routine that turns finished work into sent invoices."},
+            {"title": "Handover that sticks", "text": "Written routines for the tasks only one person knows, so a holiday no longer stops the team."}
+          ]
+        },
+        {
+          "type": "split",
+          "eyebrow": "Our approach",
+          "title": "We stay until it runs without us",
+          "body": "Most advice ends with a document. Ours ends with a team that no longer needs us.\n\nWe work inside your tools, in your calendar and your inbox, so the routines are the ones you will actually use.",
+          "points": ["Fixed scope and a fixed price", "Your tools, not ours", "A written handover you own"],
+          "cta": {"label": "Read our story", "href": "/about"},
+          "panel": {"value": "90 days", "label": "From first call to handover, on every project."}
+        },
+        {
+          "type": "steps",
+          "id": "how",
+          "nav_label": "How it works",
+          "eyebrow": "The first 90 days",
+          "title": "A plain plan you can hold us to",
+          "items": [
+            {"title": "Listen", "text": "Two calls and a look at how work really moves. You get a one page diagnosis."},
+            {"title": "Build", "text": "We set up the routines that cost you the most time first."},
+            {"title": "Run", "text": "We run them with you, fix what rubs and write each one down."},
+            {"title": "Hand over", "text": "You get the playbook, a recorded walkthrough and a check-in a month later."}
+          ]
+        },
+        {
+          "type": "testimonials",
+          "title": "What clients say",
+          "items": [
+            {"quote": "They found two days a month we did not know we were losing. Nothing they built needs them to keep running.", "name": "Priya Nair", "role": "Owner, Kite & Co"},
+            {"quote": "The Friday invoicing routine paid for itself in the first month.", "name": "Tom Ellery", "role": "Practice manager, Nine Elms Physio"},
+            {"quote": "I stopped being the only person who knew how anything worked.", "name": "Marta Kowal", "role": "Founder, Harbor Coffee"}
+          ]
+        },
+        {
+          "type": "pricing",
+          "id": "pricing",
+          "nav_label": "Pricing",
+          "eyebrow": "Pricing",
+          "title": "Fixed prices, agreed before we start",
+          "intro": "Each package has a fixed scope. No hourly meter is running.",
+          "plans": [
+            {"name": "Starter", "price": "£900", "period": "one time", "description": "One routine, done properly.",
+             "features": ["One workflow set up and written down", "A recorded walkthrough", "Two weeks of email support"],
+             "cta": {"label": "Choose Starter", "href": "#contact"}},
+            {"name": "Standard", "price": "£2,400", "period": "one time", "featured": true, "description": "The full first quarter.",
+             "features": ["Scheduling, invoicing and handover", "Weekly check-ins for 12 weeks", "A written playbook you own", "A follow-up call at day 120"],
+             "cta": {"label": "Choose Standard", "href": "#contact"}},
+            {"name": "Retainer", "price": "£450", "period": "per month", "description": "For teams that want a steady hand.",
+             "features": ["Monthly review of your routines", "Same-week answers by email", "Up to four hours of hands-on help"],
+             "cta": {"label": "Ask about the retainer", "href": "#contact"}}
+          ],
+          "note": "Prices exclude VAT. Not sure which fits? Book the free call and we will tell you."
+        },
+        {
+          "type": "faq",
+          "title": "Questions we get",
+          "intro": "If yours is missing, ask on the call.",
+          "items": [
+            {"q": "Do you work with very small teams?", "a": "Yes. Most clients have between two and twelve people, and several are a single owner with a part-time assistant."},
+            {"q": "Which tools do you use?", "a": "Yours. If you keep everything in Google Workspace or Microsoft 365, that is where we build. We never ask you to buy new software."},
+            {"q": "What happens after 90 days?", "a": "You keep the playbook and the routines. Some clients add the monthly retainer, and most do not need it."},
+            {"q": "How do we pay?", "a": "Half at the start and half at handover. Invoices are due in 14 days. See the [pricing](#pricing) for what each package includes."},
+            {"q": "Can you fix just one problem?", "a": "Yes, that is the Starter package. Many clients begin there and add more later."}
+          ]
+        },
+        {
+          "type": "cta",
+          "title": "Tell us what is slowing you down",
+          "text": "A 30 minute call. You leave with a short list of what to fix first, whether or not we work together.",
+          "cta": {"label": "Book a free call", "href": "#contact"}
+        },
+        {
+          "type": "contact",
+          "id": "contact",
+          "nav_label": "Contact",
+          "eyebrow": "Get in touch",
+          "title": "Talk to a person",
+          "text": "Email us, or call in office hours. We answer within one working day.",
+          "email": "hello@halden.test",
+          "phone": "+44 20 7946 0123",
+          "address": "18 Mill Lane\nHarlow Green, Essex CM1 4XX",
+          "hours": "Monday to Friday, 9 to 5",
+          "subject": "Free call"
+        }
+      ]
+    },
+    {
+      "path": "/about",
+      "nav_label": "About",
+      "title": "About Halden & Co",
+      "description": "Halden & Co is a two person studio that fixes scheduling, invoicing and handover for small teams. Meet the people who do the work.",
+      "blocks": [
+        {
+          "type": "hero",
+          "compact": true,
+          "eyebrow": "About",
+          "headline": "Two people who like a tidy inbox",
+          "subhead": "Halden & Co is a small studio. We started it after ten years of running operations for other people's teams."
+        },
+        {
+          "type": "text",
+          "title": "How we started",
+          "body": "Halden & Co began in 2019, when Hannah Halden left an events company and found that three of her former clients still phoned her to ask how things worked.\n\nThat told us something. The knowledge lived in one head, and the head had left the building. Our whole method is a reaction to that.\n\n### What we believe\n\n- Write it down, in plain words, where the team can find it.\n- Fix the routine that costs the most time first.\n- If a client needs us forever, we did the job badly."
+        },
+        {
+          "type": "split",
+          "reverse": true,
+          "eyebrow": "The team",
+          "title": "Who you will work with",
+          "body": "Hannah Halden and Sam Oduya do the work themselves. There is no team of juniors behind us.\n\nHannah leads scheduling and handover. Sam leads invoicing and the numbers.",
+          "panel": {"value": "2 people", "label": "Everyone you meet is someone who does the work."}
+        },
+        {
+          "type": "stats",
+          "title": "Since 2019",
+          "items": [
+            {"value": "38", "label": "teams helped"},
+            {"value": "9 in 10", "label": "clients still use their playbook a year later"},
+            {"value": "2", "label": "people, no layers"}
+          ]
+        },
+        {
+          "type": "cta",
+          "title": "Want to see if we fit?",
+          "text": "The first call is free and you keep the notes.",
+          "cta": {"label": "Book a free call", "href": "/#contact"}
+        }
+      ]
+    }
+  ]
+}

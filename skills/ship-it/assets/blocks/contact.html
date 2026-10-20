@@ -1,0 +1,28 @@
+<section class="block block-contact tone-{{tone}}" id="{{id}}" aria-labelledby="{{id}}-title">
+  <div class="container contact-grid{{#if form_action}} has-form{{else}} no-form{{/if}}">
+    <div class="contact-copy">
+      {{#if eyebrow}}<p class="eyebrow">{{eyebrow}}</p>{{/if}}
+      <h2 id="{{id}}-title">{{{title}}}</h2>
+      {{#if text}}<p class="lead">{{{text}}}</p>{{/if}}
+    </div>
+    <ul class="contact-list">
+      {{#if email}}<li><svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg><span><span class="label">{{ui.email}}</span><a href="mailto:{{email}}">{{email}}</a></span></li>{{/if}}
+      {{#if phone}}<li><svg class="icon" aria-hidden="true"><use href="#i-phone"/></svg><span><span class="label">{{ui.phone}}</span><a href="{{tel}}">{{phone}}</a></span></li>{{/if}}
+      {{#if address}}<li><svg class="icon" aria-hidden="true"><use href="#i-map-pin"/></svg><span><span class="label">{{ui.address}}</span>{{{address}}}</span></li>{{/if}}
+      {{#if hours}}<li><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><span><span class="label">{{ui.hours}}</span>{{hours}}</span></li>{{/if}}
+    </ul>
+    <div class="contact-action">
+      {{#if form_action}}
+      <form class="form" action="{{form_action}}" method="post">
+        <div class="field"><label for="{{id}}-name">{{ui.name}}</label><input id="{{id}}-name" name="name" type="text" autocomplete="name" required></div>
+        <div class="field"><label for="{{id}}-email">{{ui.email}}</label><input id="{{id}}-email" name="email" type="email" autocomplete="email" required></div>
+        <div class="field"><label for="{{id}}-message">{{ui.message}}</label><textarea id="{{id}}-message" name="message" rows="5" required></textarea></div>
+        <div class="hp" aria-hidden="true"><label>Leave this empty<input name="_gotcha" type="text" tabindex="-1" autocomplete="off"></label></div>
+        <button class="btn btn--primary" type="submit">{{button}}</button>
+      </form>
+      {{else}}
+      <a class="btn btn--primary" href="{{action_href}}">{{button}}{{{arrow}}}</a>
+      {{/if}}
+    </div>
+  </div>
+</section>

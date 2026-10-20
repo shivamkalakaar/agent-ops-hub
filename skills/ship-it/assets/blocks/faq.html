@@ -1,0 +1,17 @@
+<section class="block block-faq tone-{{tone}}" id="{{id}}" aria-labelledby="{{id}}-title">
+  <div class="container faq-layout">
+    <header class="block-head">
+      {{#if eyebrow}}<p class="eyebrow">{{eyebrow}}</p>{{/if}}
+      <h2 id="{{id}}-title">{{{title}}}</h2>
+      {{#if intro}}<p class="lead">{{{intro}}}</p>{{/if}}
+    </header>
+    <div class="faq">
+      {{#each items}}
+      <details{{#if open}} open{{/if}}>
+        <summary>{{q}}</summary>
+        <div class="answer prose">{{{a}}}</div>
+      </details>
+      {{/each}}
+    </div>
+  </div>
+</section>

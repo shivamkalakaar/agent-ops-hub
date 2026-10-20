@@ -1,0 +1,100 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "updated": "2026-09-29",
+    "notes": "Extra fields a handoff must capture, by kind of work. 'where' is the HANDOFF.json section to put it in; 'keys' are lowercase words handoff.py check looks for to see whether the field was covered. 'signals' are lowercase words handoff.py sweep counts to guess the kind."
+  },
+  "profiles": {
+    "code": {
+      "title": "Code project",
+      "signals": ["repo", "branch", "commit", "pull request", "function", "stack trace", "traceback", "npm ", "pip ", "compile", "refactor", "unit test", "endpoint", "deploy", "merge conflict", "git ", "docker", "migration", "lint", "build fails", "typescript", "python"],
+      "capture": [
+        {"field": "Repo or project path", "where": "verbatim", "keys": ["repo", "project path", "directory", "folder", "checkout"], "why": "the next session must open the same tree"},
+        {"field": "Branch and last commit", "where": "verbatim", "keys": ["branch", "commit"], "why": "tells committed work from work that only exists on disk"},
+        {"field": "Uncommitted or unpushed changes", "where": "current_state", "keys": ["uncommitted", "unpushed", "working tree", "staged", "dirty", "clean tree", "all committed"], "why": "unsaved work is what gets lost"},
+        {"field": "Failing test or error", "where": "verbatim", "keys": ["failing test", "error", "traceback", "stack trace", "all tests pass", "tests pass"], "why": "the exact name or message lets the next session reproduce it first"},
+        {"field": "Commands to run", "where": "verbatim", "keys": ["command", "npm run", "pytest", "make ", "run the", "start with", "python3 "], "why": "how to start, test and build"},
+        {"field": "Runtime, versions and env var names", "where": "verbatim", "keys": ["version", "python 3", "node ", "env var", "runtime", "service"], "why": "names only, never values"}
+      ],
+      "traps": ["Never paste secrets, tokens or .env values: say where they live instead."]
+    },
+    "writing": {
+      "title": "Writing project",
+      "signals": ["draft", "headline", "subject line", "newsletter", "article", "essay", "tone", "voice", "audience", "outline", "paragraph", "rewrite", "copy", "caption", "hook", "cta", "word count", "publish"],
+      "capture": [
+        {"field": "Audience and what they already know", "where": "current_state", "keys": ["audience", "readers", "subscribers", "customers"], "why": "every wording choice depends on who reads it"},
+        {"field": "Voice and tone rules", "where": "preferences", "keys": ["voice", "tone", "style", "banned words", "avoid"], "why": "corrections about tone are the ones most often paid for twice"},
+        {"field": "Outline status", "where": "current_state", "keys": ["outline", "section", "sections", "drafted", "arc"], "why": "which parts are final, drafted or still missing"},
+        {"field": "Approved phrasings", "where": "verbatim", "keys": ["subject", "headline", "title", "tagline", "cta", "button"], "why": "a paraphrased headline is a different headline"},
+        {"field": "Length and format limits", "where": "preferences", "keys": ["words", "characters", "length", "limit", "format"], "why": "hard limits are constraints stated once"},
+        {"field": "Where and when it publishes", "where": "verbatim", "keys": ["publish", "send date", "goes out", "deadline", "schedule"], "why": "the calendar date and the channel"}
+      ],
+      "traps": ["Keep approved text word for word."]
+    },
+    "research": {
+      "title": "Research",
+      "signals": ["source", "paper", "study", "cite", "citation", "evidence", "claim", "literature", "arxiv", "doi", "findings", "hypothesis", "peer review", "journal", "statistic", "according to"],
+      "capture": [
+        {"field": "Research question and scope", "where": "objective", "keys": ["question", "scope"], "why": "keeps the next session from widening or drifting"},
+        {"field": "Sources checked", "where": "verbatim", "keys": ["checked", "read ", "reviewed", "sources"], "why": "title, link and date for each, so nothing is re-read"},
+        {"field": "Sources not yet checked", "where": "open_items", "keys": ["unchecked", "not yet checked", "queue", "still to read", "to read"], "why": "the reading list is part of the next step"},
+        {"field": "Claims verified versus unverified", "where": "uncertain", "keys": ["verified", "unverified", "confirmed", "unconfirmed"], "why": "an unverified claim must never read like a fact"},
+        {"field": "Search terms and databases used", "where": "verbatim", "keys": ["search", "query", "database", "keywords"], "why": "so the same searches are not repeated"},
+        {"field": "Conflicts between sources", "where": "unresolved", "keys": ["conflict", "disagree", "contradict"], "why": "unresolved disagreements are open items"}
+      ],
+      "traps": ["Every claim keeps its source. A claim with no source goes under Unconfirmed."]
+    },
+    "analysis": {
+      "title": "Data analysis",
+      "signals": ["dataset", "csv", "column", "dataframe", "pandas", "sql", "chart", "regression", "median", "outlier", "cohort", "metric", "pivot", "spreadsheet", "correlation", "sample size", "seed", "p-value", "group by"],
+      "capture": [
+        {"field": "Dataset name, version and location", "where": "verbatim", "keys": ["dataset", "export", "snapshot", "file version", "data file"], "why": "results are only reproducible against the same data"},
+        {"field": "Filters and exclusions applied", "where": "current_state", "keys": ["filter", "exclude", "excluded", "dropped", "removed rows"], "why": "silent filters change every number"},
+        {"field": "Metric definitions", "where": "decisions", "keys": ["metric", "definition", "defined as", "formula", "calculated"], "why": "the same word can mean two calculations"},
+        {"field": "Seed, sample size and parameters", "where": "verbatim", "keys": ["seed", "sample size", "parameter", "threshold"], "why": "needed to reproduce a result"},
+        {"field": "Results so far, with exact numbers", "where": "verbatim", "keys": ["result", "found that", "total", "rate", "mean"], "why": "numbers are copied, never recomputed from memory"},
+        {"field": "Known data quality issues", "where": "uncertain", "keys": ["missing values", "null", "duplicate", "data quality", "issue"], "why": "caveats travel with the numbers"}
+      ],
+      "traps": ["Copy numbers exactly; do not restate them from memory."]
+    },
+    "design": {
+      "title": "Design work",
+      "signals": ["design", "layout", "mockup", "wireframe", "figma", "logo", "colour", "color", "font", "typography", "palette", "brand", "banner", "slide", "thumbnail", "icon", "spacing", "css"],
+      "capture": [
+        {"field": "Brand rules: exact colours, fonts, logo use", "where": "verbatim", "keys": ["hex", "colour", "color", "font", "brand", "palette"], "why": "exact values, not descriptions"},
+        {"field": "Dimensions and formats", "where": "verbatim", "keys": ["px", "dimension", "ratio", "resolution", "format"], "why": "wrong sizes mean redoing exports"},
+        {"field": "Approved versus rejected directions", "where": "decisions", "keys": ["approved", "rejected", "direction", "option"], "why": "rejected directions belong in dead ends with the reason"},
+        {"field": "Asset locations and the live version", "where": "artifacts", "keys": ["figma", "asset", "export", "file"], "why": "never make the reader guess which file is current"},
+        {"field": "Feedback not yet applied", "where": "open_items", "keys": ["feedback", "comment", "revision", "change request"], "why": "outstanding feedback is the next step"},
+        {"field": "Target channel and specs", "where": "verbatim", "keys": ["channel", "platform", "print", "web", "spec"], "why": "where it will be used decides the constraints"}
+      ],
+      "traps": []
+    },
+    "planning": {
+      "title": "Planning or operations",
+      "signals": ["roadmap", "timeline", "milestone", "budget", "owner", "deadline", "process", "workflow", "sop", "checklist", "schedule", "headcount", "vendor", "kpi", "okr", "risk", "stakeholder", "priorit"],
+      "capture": [
+        {"field": "Owner for each open item", "where": "open_items", "keys": ["owner", "owns", "responsible", "assigned"], "why": "an item without an owner does not move"},
+        {"field": "Dates as calendar dates", "where": "verbatim", "keys": ["deadline", "due", "milestone", "date"], "why": "'next week' is wrong the day it is read"},
+        {"field": "Budget and limits with figures", "where": "verbatim", "keys": ["budget", "cost", "limit", "cap"], "why": "constraints stated once still govern everything"},
+        {"field": "Dependencies and blockers", "where": "open_items", "keys": ["depends", "dependency", "blocked", "waiting"], "why": "what is waiting on what"},
+        {"field": "Stakeholders and what each approved", "where": "decisions", "keys": ["stakeholder", "approved", "sign-off", "signoff", "approval"], "why": "approvals are decisions with a name attached"},
+        {"field": "Risks accepted versus open", "where": "uncertain", "keys": ["risk"], "why": "an accepted risk must not be reopened by accident"}
+      ],
+      "traps": []
+    },
+    "sales": {
+      "title": "Sales or outreach",
+      "signals": ["lead", "prospect", "outreach", "cold email", "follow-up", "follow up", "pipeline", "crm", "deal", "quote", "proposal", "pricing", "objection", "demo", "sequence", "reply", "icp", "persona"],
+      "capture": [
+        {"field": "Target list and where it came from", "where": "current_state", "keys": ["icp", "target", "list", "persona", "segment"], "why": "the audience and its source decide the message"},
+        {"field": "Offer, price and terms as quoted", "where": "verbatim", "keys": ["offer", "price", "pricing", "terms", "discount"], "why": "quoted terms must not drift"},
+        {"field": "Messages sent versus drafted", "where": "artifacts", "keys": ["sent", "draft", "template", "sequence", "subject"], "why": "what already reached people cannot be unsent"},
+        {"field": "Who was contacted, when, outcome", "where": "current_state", "keys": ["contacted", "replied", "booked", "outcome", "status"], "why": "with calendar dates, so nobody is contacted twice"},
+        {"field": "Objections heard and answers that worked", "where": "preferences", "keys": ["objection", "answer", "pushback"], "why": "reusable, and paid for once"},
+        {"field": "Opt-outs and compliance limits", "where": "preferences", "keys": ["opt-out", "unsubscribe", "do not contact", "consent", "gdpr", "compliance"], "why": "breaking these is not recoverable"}
+      ],
+      "traps": ["Contact details are personal data: keep only what the next step needs."]
+    }
+  }
+}
