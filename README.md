@@ -1,5 +1,7 @@
 # Agent Ops Hub
 
+**Live ops dashboard:** https://agent-ops-hub-dun.vercel.app
+
 Agents run like production systems: **budget-capped, traced, evaluated, and human-approved**, for about **$1 a month**.
 
 Agent #1 is a **market-intelligence agent**. Every day it reads 12 AI-industry feeds and scores what matters. Once a week it drafts **one short LinkedIn post** plus a sourced one-pager. Nothing is published until a human approves it in the dashboard.
@@ -62,7 +64,7 @@ uv run python -m evals.run_evals --cases 2
 2. **Langfuse Cloud**: create a project and copy its keys.
 3. **OpenRouter**: create a key with a credit limit, e.g. $5.
 4. **GitHub secrets**: `OPENROUTER_API_KEY`, `DATABASE_URL` (session pooler string), `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL`.
-5. **Vercel**: import the repo with root directory `web/` and set the variables in `web/.env.example`.
+5. **Vercel**: import the repo with root directory `web/` and set the variables in `web/.env.example`. Pushes to `main` redeploy.
 
 ## Adding an agent
 
