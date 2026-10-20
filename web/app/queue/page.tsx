@@ -55,8 +55,8 @@ function DraftCard({ draft, onChange }: { draft: Draft; onChange: () => void }) 
   const [busy, setBusy] = useState(false);
   const pending = draft.status === "pending";
   const words = text.trim().split(/\s+/).filter(Boolean).length;
+  // "accent" is the old 0-100 humanizer score on early drafts; "humanizer" is the same check on the 1-5 scale.
   const scores = Object.entries(draft.judge_scores ?? {}).filter(([k, v]) => typeof v === "number" && k !== "accent") as [string, number][];
-  const accent = typeof draft.judge_scores?.accent === "number" ? (draft.judge_scores.accent as number) : null;
   const violations = (draft.judge_scores?.violations as string[] | undefined) ?? [];
   const onepagerUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${draft.week}` : "";
 
@@ -116,13 +116,7 @@ function DraftCard({ draft, onChange }: { draft: Draft; onChange: () => void }) 
 
         <aside className="space-y-4 text-sm">
           <div>
-            {accent !== null && (
-              <div className="mb-3">
-                <div className="mb-1 text-ink-2">AI-accent score <span className="text-muted">(humanizer, lower is better)</span></div>
-                <div className={`num text-lg font-semibold ${accent > 20 ? "text-warn" : ""}`}>{accent}/100</div>
-              </div>
-            )}
-            <div className="mb-1 text-ink-2">Critic scores</div>
+            <div className="mb-1 text-ink-2">Scores <span className="text-muted">(1–5, 5 is best)</span></div>
             {scores.map(([k, v]) => (
               <div key={k} className="flex items-center justify-between border-t border-line py-1">
                 <span>{k}</span>

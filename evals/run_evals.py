@@ -29,7 +29,7 @@ def run_case(ctx, name: str, items: list[dict]) -> dict:
     scores = state["scores"]
     return {"case": name, "mean": round(mean(scores.values()), 2) if scores else 0.0, "scores": scores,
             "violations": state["violations"], "revisions": state["revisions"], "chars": len(state["post"]),
-            "accent": humanizer.scan(state["post"])["score"],
+            "humanizer": humanizer.scan(state["post"])["score"],
             "post": state["post"]}
 
 
@@ -50,7 +50,7 @@ def main() -> int:
                 for path in cases:
                     r = run_case(ctx, path.stem, json.loads(path.read_text())["items"])
                     results.append(r)
-                    print(f"{r['case']}: mean {r['mean']}  accent {r['accent']}  chars {r['chars']}  revisions {r['revisions']}"
+                    print(f"{r['case']}: mean {r['mean']}  humanizer {r['humanizer']}/5  chars {r['chars']}  revisions {r['revisions']}"
                           f"{'  VIOLATIONS ' + str(r['violations']) if r['violations'] else ''}")
             except BudgetExceeded as ex:
                 db.finish_run(run_id, "budget_exceeded", trace_url=t.url, error=str(ex))
@@ -58,12 +58,12 @@ def main() -> int:
                 return 1
             overall = round(mean(r["mean"] for r in results), 2)
             summary = {"mean": overall, "cases": len(results),
-                       "accent_mean": round(mean(r["accent"] for r in results), 1),
+                       "humanizer_mean": round(mean(r["humanizer"] for r in results), 2),
                        "guardrail_pass_rate": sum(not r["violations"] for r in results) / len(results),
                        "per_dimension": {k: round(mean(r["scores"].get(k, 0) for r in results), 2)
                                          for k in results[0]["scores"]}}
             t.score("eval.mean", overall)
-            t.score("eval.accent_mean", summary["accent_mean"])
+            t.score("eval.humanizer_mean", summary["humanizer_mean"])
             db.finish_run(run_id, "succeeded", trace_url=t.url, stats=summary)
 
     (HERE / "results").mkdir(exist_ok=True)
@@ -79,8 +79,8 @@ def main() -> int:
         if overall < base - TOLERANCE:
             print(f"REGRESSION: mean {overall} < baseline {base} - {TOLERANCE}", file=sys.stderr)
             return 1
-    if summary["accent_mean"] > humanizer.MAX_ACCENT:
-        print(f"REGRESSION: mean accent {summary['accent_mean']} > {humanizer.MAX_ACCENT}", file=sys.stderr)
+    if summary["humanizer_mean"] < humanizer.MIN_HUMAN:
+        print(f"REGRESSION: mean humanizer {summary['humanizer_mean']}/5 < {humanizer.MIN_HUMAN}", file=sys.stderr)
         return 1
     if summary["guardrail_pass_rate"] < 1:
         print("REGRESSION: some final posts still violate guardrails", file=sys.stderr)

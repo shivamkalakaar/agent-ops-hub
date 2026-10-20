@@ -8,7 +8,14 @@ from functools import cache
 from core.config import ROOT
 
 SKILL = ROOT / "skills" / "humanizer"
-MAX_ACCENT = 20  # skill bands: Clean 0-15, Light 16-34. Aim for Clean, allow the low end of Light.
+# The skill's scanner scores 0-100 (lower is better). We report it on the critic's 1-5 scale (5 = most human)
+# so every score in the dashboard reads the same way. Upper bounds of the raw score for 5, 4, 3, 2; above that is 1.
+FIVE_SCALE = (5, 12, 20, 35)
+MIN_HUMAN = 3  # below 3/5 (raw score above 20) the draft goes back for a rewrite
+
+
+def to_five(raw: int) -> int:
+    return next((5 - i for i, cap in enumerate(FIVE_SCALE) if raw <= cap), 1)
 
 # Structural tells the scanner misses in short posts; caught here so they never reach a human reviewer.
 EXTRA_TELLS = [
@@ -35,7 +42,7 @@ def scan(text: str) -> dict:
     hits = [f'{h.get("label") or h.get("id")}: "{h.get("text", "")}" → {h.get("fix", "")}'
             for h in r["hits"]]
     extras = [f'{why}: "{m.group(0).strip()[:70]}"' for rx, why in EXTRA_TELLS for m in rx.finditer(text)]
-    return {"score": r["score"], "band": r["band"], "hits": hits, "structural": extras,
+    return {"score": to_five(r["score"]), "raw": r["score"], "band": r["band"], "hits": hits, "structural": extras,
             "contributors": [c["label"] for c in r["contributors"][:3]]}
 
 

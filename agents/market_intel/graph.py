@@ -216,9 +216,9 @@ def guardrail_violations(post: str, source_urls: set[str], sources_text: str | N
     Includes the humanizer skill's accent scanner and, when sources are given, its fact guard."""
     v, lower, words = [], post.lower(), len(post.split())
     accent = humanizer.scan(post)
-    if accent["score"] > humanizer.MAX_ACCENT:
-        v.append(f"sounds like AI: accent score {accent['score']} ({accent['band']}), keep it at or under "
-                 f"{humanizer.MAX_ACCENT}. Fix: " + "; ".join(accent["hits"][:5] or accent["contributors"]))
+    if accent["score"] < humanizer.MIN_HUMAN:
+        v.append(f"sounds like AI: humanizer {accent['score']}/5, needs at least {humanizer.MIN_HUMAN}. Fix: "
+                 + "; ".join(accent["hits"][:5] or accent["contributors"]))
     v += [f"sounds like AI: {t}" for t in accent["structural"]]
     if sources_text is not None:
         v += [f"{f} is not in the sources; remove it or use the sourced figure" for f in humanizer.invented_facts(sources_text, post)
@@ -279,7 +279,7 @@ def save(state: DraftState, config: RunnableConfig) -> DraftState:
         "week": state["week"], "angle": state["angle"], "post_md": state["post"],
         "onepager_html": render_onepager(state["onepager"], sources, state["week"], AUTHOR),
         "sources": sources, "revisions": state["revisions"],
-        "judge_scores": {**state["scores"], "violations": state["violations"], "accent": state["accent"]["score"],
+        "judge_scores": {**state["scores"], "violations": state["violations"], "humanizer": state["accent"]["score"],
                          "critique": state.get("critique", ""), "unsupported_claims": state.get("unsupported", []),
                          "passed_review": not state["violations"] and not weak_scores(state["scores"])},
     }, ctx.run_id)
