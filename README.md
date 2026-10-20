@@ -61,7 +61,7 @@ uv run python -m evals.run_evals --cases 2
 1. **Supabase**: create a project and run `supabase/schema.sql`, then `supabase/policies.sql` with your email filled in, in the SQL editor. Under Auth → URL configuration, add your Vercel URL.
 2. **Langfuse Cloud**: create a project and copy its keys.
 3. **OpenRouter**: create a key with a credit limit, e.g. $5.
-4. **GitHub secrets**: `OPENROUTER_API_KEY`, `DATABASE_URL` (session pooler string), `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST`.
+4. **GitHub secrets**: `OPENROUTER_API_KEY`, `DATABASE_URL` (session pooler string), `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL`.
 5. **Vercel**: import the repo with root directory `web/` and set the variables in `web/.env.example`.
 
 ## Adding an agent

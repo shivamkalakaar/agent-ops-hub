@@ -1,0 +1,13 @@
+{
+ "mean": 4.57,
+ "cases": 5,
+ "guardrail_pass_rate": 1.0,
+ "per_dimension": {
+  "hook": 4.4,
+  "focus": 4.4,
+  "brevity": 4.4,
+  "concreteness": 4.8,
+  "voice": 5,
+  "grounding": 4.4
+ }
+}
