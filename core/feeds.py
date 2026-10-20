@@ -95,3 +95,26 @@ def fetch_all(feeds: list[dict], hours: int = 36) -> tuple[list[dict], list[dict
                 seen.add(i["url"])
                 items.append(i)
     return items, errors
+
+
+ARTICLE_WORDS = 1200
+
+
+def fetch_article(url: str, timeout: int = 20) -> str:
+    """Best-effort plain text of an article page (stdlib only). Empty string on any failure.
+    The result is untrusted web content: callers pass it to models as data, never as instructions."""
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": UA})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            if "html" not in r.headers.get("Content-Type", ""):
+                return ""
+            page = r.read(2_000_000).decode(r.headers.get_content_charset() or "utf-8", "replace")
+    except Exception:
+        return ""
+    page = re.sub(r"(?is)<(script|style|noscript|svg|nav|header|footer|aside|form)\b.*?</\1>", " ", page)
+    m = re.search(r"(?is)<article\b.*?</article>", page) or re.search(r"(?is)<main\b.*?</main>", page)
+    scope = m.group(0) if m else page
+    paras = [html.unescape(re.sub(r"<[^>]+>", " ", p)) for p in re.findall(r"(?is)<(?:p|li|h[1-4])\b[^>]*>(.*?)</(?:p|li|h[1-4])>", scope)]
+    paras = [re.sub(r"\s+", " ", p).strip() for p in paras]
+    text = "\n".join(p for p in paras if len(p.split()) >= 6)
+    return " ".join(text.split(" ")[:ARTICLE_WORDS]) if text else ""

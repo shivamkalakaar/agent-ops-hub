@@ -33,6 +33,7 @@ def offline(monkeypatch, tmp_path):
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.delenv("LANGFUSE_PUBLIC_KEY", raising=False)
     monkeypatch.setattr(graph, "fetch_all", lambda feeds: ([dict(i) for i in ITEMS], []))
+    monkeypatch.setattr(graph, "fetch_article", lambda url: "The model scores 88 on X and costs $0.20 per million tokens.")
     critic_calls = {"n": 0}
 
     def critic(_):
@@ -75,6 +76,7 @@ def test_collect_then_draft_end_to_end():
         assert run["status"] == "succeeded"
         calls = db.all("select node from llm_calls where run_id=%s order by id", (run["id"],))
         assert [c["node"] for c in calls] == ["pick_angle", "write_post", "critic", "revise", "critic", "onepager"]
+        assert "article_text" in graph._sources_block([{"source": "s", "title": "t", "summary": "x", "body": "b"}])
 
 
 def test_budget_guard_stops_run(monkeypatch):
