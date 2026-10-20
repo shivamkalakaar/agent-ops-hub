@@ -42,7 +42,8 @@ def scan(text: str) -> dict:
     hits = [f'{h.get("label") or h.get("id")}: "{h.get("text", "")}" → {h.get("fix", "")}'
             for h in r["hits"]]
     extras = [f'{why}: "{m.group(0).strip()[:70]}"' for rx, why in EXTRA_TELLS for m in rx.finditer(text)]
-    return {"score": to_five(r["score"]), "raw": r["score"], "band": r["band"], "hits": hits, "structural": extras,
+    # the scanner misses structural tells in short posts, so each one costs a point on the 1-5 scale
+    return {"score": max(1, to_five(r["score"]) - len(extras)), "raw": r["score"], "band": r["band"], "hits": hits, "structural": extras,
             "contributors": [c["label"] for c in r["contributors"][:3]]}
 
 
