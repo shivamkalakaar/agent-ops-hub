@@ -12,6 +12,7 @@ export default function Queue() {
   const [session, setSession] = useState<Session | null>(null);
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [msg, setMsg] = useState("");
+  const [li, setLi] = useState<{ connected: boolean; name?: string; daysLeft?: number } | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -25,6 +26,16 @@ export default function Queue() {
     setDrafts((data ?? []) as Draft[]);
   }, []);
   useEffect(() => { if (session) load(); }, [session, load]);
+  useEffect(() => {
+    if (!session) return;
+    fetch("/api/linkedin/status", { headers: { Authorization: `Bearer ${session.access_token}` } })
+      .then((r) => (r.ok ? r.json() : null)).then(setLi);
+    const result = new URLSearchParams(window.location.search).get("linkedin");
+    if (result) {
+      setMsg(result === "connected" ? "LinkedIn connected." : `LinkedIn: ${result}`);
+      window.history.replaceState(null, "", "/queue");
+    }
+  }, [session]);
 
   if (!configured) return <NotConfigured />;
   if (!session) return <SignIn />;
@@ -35,6 +46,12 @@ export default function Queue() {
     setMsg(res.ok ? "Workflow started. The new draft shows up here in ~2 minutes." : `Failed: ${(await res.json()).error}`);
   };
 
+  const connectLinkedIn = async () => {
+    const res = await fetch("/api/linkedin/start", { method: "POST", headers: { Authorization: `Bearer ${session.access_token}` } });
+    const body = await res.json();
+    if (body.url) window.location.href = body.url; else setMsg(`LinkedIn: ${body.error}`);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
@@ -42,14 +59,26 @@ export default function Queue() {
         <button onClick={regenerate} className="ml-auto rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-card">Generate a new draft</button>
         <button onClick={() => supabase.auth.signOut()} className="text-sm text-ink-2 hover:underline">Sign out</button>
       </div>
+      {li && (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line px-4 py-2 text-sm">
+          {li.connected ? (
+            <span><span className="text-good">✓</span> LinkedIn connected as <b>{li.name}</b>
+              <span className={li.daysLeft! <= 7 ? " text-warn" : " text-muted"}> · reconnect in {li.daysLeft} days</span></span>
+          ) : <span className="text-ink-2">LinkedIn not connected. Publishing posts directly needs a one-time connection.</span>}
+          <button onClick={connectLinkedIn} className="ml-auto rounded-lg border border-line px-3 py-1 hover:bg-card">
+            {li.connected ? "Reconnect" : "Connect LinkedIn"}
+          </button>
+        </div>
+      )}
       {msg && <p className="text-sm text-ink-2">{msg}</p>}
       {drafts.length === 0 && <Card><p className="text-ink-2">No drafts yet. The weekly run creates one every Friday.</p></Card>}
-      {drafts.map((d) => <DraftCard key={d.id} draft={d} onChange={load} />)}
+      {drafts.map((d) => <DraftCard key={d.id} draft={d} onChange={load} token={session.access_token} canPublish={!!li?.connected} />)}
     </div>
   );
 }
 
-function DraftCard({ draft, onChange }: { draft: Draft; onChange: () => void }) {
+function DraftCard({ draft, onChange, token, canPublish }: { draft: Draft; onChange: () => void; token: string; canPublish: boolean }) {
+  const [pubMsg, setPubMsg] = useState("");
   const [text, setText] = useState(draft.edited_post_md ?? draft.post_md);
   const [preview, setPreview] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -67,6 +96,20 @@ function DraftCard({ draft, onChange }: { draft: Draft; onChange: () => void }) 
       status, edited_post_md: edited, approved_at: status === "approved" ? new Date().toISOString() : null,
     }).eq("id", draft.id);
     setBusy(false);
+    onChange();
+  };
+
+  const publish = async () => {
+    if (!window.confirm("Publish this post to your LinkedIn profile now? It will be public.")) return;
+    setBusy(true);
+    setPubMsg("Publishing…");
+    const res = await fetch("/api/linkedin/publish", {
+      method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ draftId: draft.id }),
+    });
+    const body = await res.json();
+    setBusy(false);
+    setPubMsg(res.ok ? `Published. First comment ${body.comment}.` : `Failed: ${body.error}`);
     onChange();
   };
 
@@ -103,11 +146,20 @@ function DraftCard({ draft, onChange }: { draft: Draft; onChange: () => void }) 
               </>
             ) : draft.status === "approved" && (
               <>
-                <button onClick={() => navigator.clipboard.writeText(text)} className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white">Copy post</button>
+                {draft.linkedin_url ? (
+                  <a href={draft.linkedin_url} target="_blank" rel="noopener" className="rounded-lg bg-good px-4 py-2 text-sm font-medium text-white">
+                    ✓ Live on LinkedIn · view post
+                  </a>
+                ) : (
+                  <button disabled={busy || !canPublish} onClick={publish} title={canPublish ? "" : "Connect LinkedIn first"}
+                    className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50">Publish to LinkedIn</button>
+                )}
+                <button onClick={() => navigator.clipboard.writeText(text)} className="rounded-lg border border-line px-4 py-2 text-sm">Copy post</button>
                 <button onClick={() => navigator.clipboard.writeText(`Sources and the full breakdown: ${onepagerUrl}`)} className="rounded-lg border border-line px-4 py-2 text-sm">Copy first comment</button>
                 <a href="https://www.linkedin.com/feed/?shareActive=true" target="_blank" rel="noopener" className="rounded-lg border border-line px-4 py-2 text-sm">Open LinkedIn</a>
               </>
             )}
+            {pubMsg && <span className="self-center text-sm text-ink-2">{pubMsg}</span>}
             <button onClick={() => setPreview(!preview)} className="rounded-lg px-3 py-2 text-sm text-ink-2 hover:underline">
               {preview ? "Hide" : "Preview"} one-pager
             </button>

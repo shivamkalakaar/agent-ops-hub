@@ -16,4 +16,5 @@ export type Draft = {
   judge_scores: Record<string, number | string | boolean | string[]> | null;
   revisions: number; status: "pending" | "approved" | "rejected";
   edited_post_md: string | null; created_at: string; approved_at: string | null; run_id: string;
+  published_at: string | null; linkedin_url: string | null;
 };

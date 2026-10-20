@@ -14,3 +14,8 @@ create policy "public read llm_calls" on llm_calls for select using (true);
 create policy "public read approved drafts" on drafts for select using (status = 'approved');
 create policy "owner reads drafts"  on drafts for select using (auth.jwt() ->> 'email' = 'owner@example.com');
 create policy "owner updates drafts" on drafts for update using (auth.jwt() ->> 'email' = 'owner@example.com');
+
+-- LinkedIn token: only the owner's signed-in session can read or write it. No public policy at all.
+alter table linkedin_auth enable row level security;
+create policy "owner manages linkedin" on linkedin_auth for all
+  using (auth.jwt() ->> 'email' = 'owner@example.com') with check (auth.jwt() ->> 'email' = 'owner@example.com');

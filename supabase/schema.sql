@@ -62,3 +62,16 @@ create table if not exists llm_calls (
   created_at        timestamptz not null
 );
 create index if not exists llm_calls_created_idx on llm_calls (created_at);
+
+-- LinkedIn publishing (owner-only; see policies.sql)
+alter table drafts add column if not exists published_at timestamptz;
+alter table drafts add column if not exists linkedin_url text;
+
+create table if not exists linkedin_auth (
+  owner_email  text primary key,
+  person_urn   text not null,
+  name         text,
+  access_token text not null,               -- member token, ~60 days; refreshed by reconnecting
+  expires_at   timestamptz not null,
+  updated_at   timestamptz not null
+);
