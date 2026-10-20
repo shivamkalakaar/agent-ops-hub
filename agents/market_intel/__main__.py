@@ -43,6 +43,7 @@ def summarize(kind: str, state: dict) -> dict:
     if kind == "collect":
         scored = state.get("scored", [])
         return {"fetched": len(state.get("items", [])), "new": len(state.get("new", [])),
+                "from_brief": len(state.get("pending", [])),
                 "scored": sum(1 for i in scored if i.get("importance")), "feed_errors": len(state.get("feed_errors", []))}
     return {"draft_id": state.get("draft_id"), "week": state.get("week"), "revisions": state.get("revisions"),
             "chars": len(state.get("post", "")), "scores": state.get("scores"), "violations": state.get("violations")}

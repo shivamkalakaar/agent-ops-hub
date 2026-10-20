@@ -12,7 +12,7 @@ export type LlmCall = {
 export type Draft = {
   id: string; week: string; angle: { angle?: string; hook?: string } | null;
   post_md: string; onepager_html: string;
-  sources: { url: string; title: string; source: string }[] | null;
+  sources: { url: string; title: string; source: string; origin?: "rss" | "brief" }[] | null;
   judge_scores: Record<string, number | string | boolean | string[]> | null;
   revisions: number; status: "pending" | "approved" | "rejected";
   edited_post_md: string | null; created_at: string; approved_at: string | null; run_id: string;

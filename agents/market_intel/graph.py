@@ -66,6 +66,7 @@ def style_examples(n: int = 3, short_only: bool = True) -> list[str]:
 class CollectState(TypedDict, total=False):
     items: list[dict]
     new: list[dict]
+    pending: list[dict]
     scored: list[dict]
     feed_errors: list[dict]
 
@@ -76,13 +77,15 @@ def fetch(state: CollectState) -> CollectState:
 
 
 def dedupe(state: CollectState, config: RunnableConfig) -> CollectState:
-    known = ctx_of(config).db.known_urls([i["url"] for i in state["items"]])
-    return {"new": [i for i in state["items"] if i["url"] not in known]}
+    db = ctx_of(config).db
+    known = db.known_urls([i["url"] for i in state["items"]])
+    since = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    return {"new": [i for i in state["items"] if i["url"] not in known], "pending": db.unscored_items(since)}
 
 
 def score(state: CollectState, config: RunnableConfig) -> CollectState:
     ctx, scored = ctx_of(config), []
-    new = state["new"]
+    new = state["new"] + state.get("pending", [])
     for start in range(0, len(new), SCORE_BATCH):
         batch = new[start:start + SCORE_BATCH]
         listing = "\n".join(json.dumps({"id": n, "source": i["source"], "title": i["title"], "summary": i["summary"][:300]},
@@ -103,7 +106,9 @@ def score(state: CollectState, config: RunnableConfig) -> CollectState:
 
 def store(state: CollectState, config: RunnableConfig) -> CollectState:
     ctx = ctx_of(config)
-    ctx.db.insert_items(state["scored"], ctx.run_id)
+    pending = {i["url"] for i in state.get("pending", [])}
+    ctx.db.insert_items([i for i in state["scored"] if i["url"] not in pending], ctx.run_id)
+    ctx.db.update_scores([i for i in state["scored"] if i["url"] in pending])
     return {}
 
 
@@ -142,7 +147,7 @@ class DraftState(TypedDict, total=False):
 def load_items(state: DraftState, config: RunnableConfig) -> DraftState:
     db = ctx_of(config).db
     since = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
-    items = state.get("items") or db.top_items(since, limit=25)  # evals inject items directly
+    items = state.get("items") or db.top_items(since)  # evals inject items directly
     if not items:
         raise RuntimeError("no scored items in the last 7 days; run collect first")
     week = state.get("week") or "{}-W{:02d}".format(*datetime.now(timezone.utc).isocalendar()[:2])
@@ -274,7 +279,8 @@ def onepager(state: DraftState, config: RunnableConfig) -> DraftState:
 
 def save(state: DraftState, config: RunnableConfig) -> DraftState:
     ctx = ctx_of(config)
-    sources = [{"url": s["url"], "title": s["title"], "source": s["source"]} for s in state["sources"]]
+    sources = [{"url": s["url"], "title": s["title"], "source": s["source"], "origin": s.get("origin", "rss")}
+               for s in state["sources"]]
     draft_id = ctx.db.insert_draft({
         "week": state["week"], "angle": state["angle"], "post_md": state["post"],
         "onepager_html": render_onepager(state["onepager"], sources, state["week"], AUTHOR),

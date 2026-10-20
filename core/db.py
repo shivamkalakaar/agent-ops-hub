@@ -29,6 +29,7 @@ def _is_pg() -> bool:
 
 def _sqlite_schema() -> str:
     sql = SCHEMA.read_text()
+    sql = re.sub(r"^alter table .*$", "", sql, flags=re.M)  # Postgres-only migrations; fresh SQLite gets the column from create
     sql = sql.replace("integer generated always as identity primary key", "integer primary key autoincrement")
     sql = re.sub(r"\b(timestamptz|jsonb)\b", "text", sql)
     return sql
@@ -115,9 +116,23 @@ class DB:
                 (i["url"], i["title"], i["source"], i.get("layer"), i.get("importance"), i.get("why"),
                  i.get("summary"), i.get("published"), now(), run_id))
 
-    def top_items(self, since_iso: str, limit: int = 25) -> list[dict]:
-        return self.all("select * from items where published_at >= %s and importance is not null"
-                        " order by importance desc, published_at desc limit %s", (since_iso, limit))
+    def unscored_items(self, since_iso: str) -> list[dict]:
+        """Items stored without a score, e.g. pushed from the daily brief; collect scores them."""
+        rows = self.all("select * from items where importance is null and collected_at >= %s", (since_iso,))
+        return [{**r, "published": r["published_at"]} for r in rows]
+
+    def update_scores(self, items: list[dict]):
+        for i in items:
+            self.execute("update items set layer=coalesce(%s, layer), importance=%s, why=coalesce(why, %s) where url=%s",
+                         (i.get("layer"), i.get("importance"), i.get("why"), i["url"]))
+
+    def top_items(self, since_iso: str, per_origin: dict | None = None) -> list[dict]:
+        """Best-scored recent items, with a fixed share per origin so the curated brief can't crowd out RSS."""
+        rows = []
+        for origin, n in (per_origin or {"brief": 15, "rss": 10}).items():
+            rows += self.all("select * from items where published_at >= %s and importance is not null and origin = %s"
+                             " order by importance desc, published_at desc limit %s", (since_iso, origin, n))
+        return sorted(rows, key=lambda r: (-r["importance"], str(r["published_at"])), reverse=False)
 
     # --- drafts --------------------------------------------------------------
     def insert_draft(self, d: dict, run_id: str) -> str:

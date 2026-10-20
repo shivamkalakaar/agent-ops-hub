@@ -132,7 +132,7 @@ function DraftCard({ draft, onChange }: { draft: Draft; onChange: () => void }) 
             <div className="mb-1 text-ink-2">Sources</div>
             <ul className="space-y-1">
               {(draft.sources ?? []).map((s) => (
-                <li key={s.url}><a href={s.url} target="_blank" rel="noopener" className="hover:underline">{s.title}</a> <span className="text-muted">· {s.source}</span></li>
+                <li key={s.url}><a href={s.url} target="_blank" rel="noopener" className="hover:underline">{s.title}</a> <span className="text-muted">· {s.source}{s.origin === "brief" && " · via your AI Stack Brief"}</span></li>
               ))}
             </ul>
           </div>

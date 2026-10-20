@@ -25,9 +25,11 @@ create table if not exists items (
   summary      text,
   published_at timestamptz,
   collected_at timestamptz not null,
-  run_id       text references runs(id)
+  run_id       text references runs(id),
+  origin       text not null default 'rss'   -- rss | brief (pushed by ~/AI_update_agent after each daily brief)
 );
 create index if not exists items_published_idx on items (published_at);
+alter table items add column if not exists origin text not null default 'rss';
 
 create table if not exists drafts (
   id             text primary key,
