@@ -9,7 +9,7 @@ Score each 1–5 (5 = publish as-is):
 - brevity: every line earns its place; 80–180 words.
 - concreteness: names, numbers, mechanisms instead of adjectives.
 - voice: reads like a sharp human operator, not a press release or an AI summary (no "game-changer", "delve", "landscape", "revolutionize", "in today's").
-- human: reads like a specific person wrote it. Score 2 or lower for any of: negation pivots ("X isn't Y. It's Z."), labelled closers ("My take:"), dress-up metaphors, every line a punchline, a tidy hook→reversal→moral arc, or relaying someone else's opinion as the whole post.
+- human: reads like a specific person wrote it. Each of these costs a point: negation pivots ("X isn't Y. It's Z."), labelled closers ("My take:"), dress-up metaphors, every line a punchline, a tidy hook→reversal→moral arc, relaying someone else's opinion as the whole post. Give 1–2 only if the post reads as machine-written overall.
 - grounding: every factual claim is supported by the source items. Any unsupported number or claim caps this at 2.
 
 Reply with ONLY JSON:

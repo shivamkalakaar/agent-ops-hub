@@ -18,3 +18,4 @@ tiers:
     primary: deepseek/deepseek-v4.1-flash
     fallbacks: [qwen/qwen3.7-flash]
     temperature: 0.0
+    reasoning: {effort: low}   # hidden reasoning tokens were ~75% of critic cost; a rubric score doesn't need them

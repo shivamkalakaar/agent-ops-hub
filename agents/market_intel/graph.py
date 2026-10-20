@@ -227,8 +227,15 @@ def guardrails(state: DraftState) -> DraftState:
             "accent": humanizer.scan(state["post"])}
 
 
+def weak_scores(scores: dict) -> bool:
+    """A real weakness (any dimension below 3, grounding below 4, or a weak average), not every 3/5:
+    each rewrite costs a writer and a critic call."""
+    s = list(scores.values())
+    return not s or min(s) < 3 or scores.get("grounding", 5) < MIN_SCORE or sum(s) / len(s) < MIN_SCORE
+
+
 def needs_revision(state: DraftState) -> str:
-    weak = any(v < MIN_SCORE for v in state["scores"].values()) or not state["scores"]
+    weak = weak_scores(state["scores"])
     if (weak or state["violations"]) and state["revisions"] < MAX_REVISIONS:
         return "revise"
     return "onepager"
@@ -257,7 +264,7 @@ def save(state: DraftState, config: RunnableConfig) -> DraftState:
         "sources": sources, "revisions": state["revisions"],
         "judge_scores": {**state["scores"], "violations": state["violations"], "accent": state["accent"]["score"],
                          "critique": state.get("critique", ""), "unsupported_claims": state.get("unsupported", []),
-                         "passed_review": not state["violations"] and all(v >= MIN_SCORE for v in state["scores"].values())},
+                         "passed_review": not state["violations"] and not weak_scores(state["scores"])},
     }, ctx.run_id)
     return {"draft_id": draft_id}
 

@@ -39,7 +39,8 @@ def _model(tier: str):
         timeout=120,
         max_retries=2,
         default_headers={"HTTP-Referer": "https://github.com/shivamkalakaar/agent-ops-hub", "X-Title": "Agent Ops Hub"},
-        extra_body={"models": [t["primary"], *t.get("fallbacks", [])], "usage": {"include": True}},
+        extra_body={"models": [t["primary"], *t.get("fallbacks", [])], "usage": {"include": True},
+                    **({"reasoning": t["reasoning"]} if "reasoning" in t else {})},
     )
 
 
