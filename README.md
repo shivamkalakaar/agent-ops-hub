@@ -11,7 +11,7 @@ Agent #2 is a **Substack newsroom**: a super agent that manages six specialists 
 | Layer | Choice | Why |
 |---|---|---|
 | Orchestration | LangGraph | Explicit state machine: critic → rewrite loop, conditional edges, testable nodes |
-| Models | OpenRouter, four tiers (`config/models.yaml`) | Free model for bulk scoring, cheap model for planning, a strong model only for the words people read, critic from a *different* model family; automatic fallbacks |
+| Models | OpenRouter, six tiers (`config/models.yaml`) | Free models for scoring, planning and checking; a strong model only for the words people read; checkers from a *different* model family; free → cheap fallbacks when free pools are rate-limited |
 | Observability | Langfuse | One trace per run, per-node cost and latency, every score attached to the trace |
 | Runtime | GitHub Actions cron | Free, no server to babysit |
 | State + auth | Supabase Postgres + RLS | Public read-only ops data; drafts and the LinkedIn token readable only by the owner |
@@ -40,13 +40,13 @@ A single writing loop produced decent LinkedIn posts. A 1,000-word essay needs m
 
 | Specialist | Model | Job |
 |---|---|---|
-| Super agent | Haiku 5.5 | Reads every report and picks who works next, with a reason shown on the timeline |
-| Research | Haiku 5.5 | Picks the story (and a LinkedIn musing to build on, if one fits), reads the full articles, writes a brief with facts and evidence quotes. Can dig deeper on request |
+| Super agent | Nemotron 3 Ultra (free) | Reads every report and picks who works next, with a reason shown on the timeline |
+| Research | Nemotron 3 Ultra (free) | Picks the story (and a LinkedIn musing to build on, if one fits), reads the full articles, writes a brief with facts and evidence quotes. Can dig deeper on request |
 | Writer | Sonnet 5.5 | The only call on the expensive tier: writes and rewrites in my voice |
-| Editor | DeepSeek (other family) | Rubric on hook, thesis, structure, depth, concreteness, voice and human, plus the humanizer scanner at 40% |
-| Fact-checker | DeepSeek + fact guard | Checks each claim against the source text. Unsupported claims and invented numbers block the post |
-| Illustrator | Haiku plans, **Nano Banana 2.1** draws, a vision model checks | Cover and inline images in one house style, regenerated once if the check fails. Charts are drawn in code and only from numbers that appear in both the sources and the post |
-| Final check | Rules + DeepSeek | Every guardrail on the exact version being saved, plus a publish-readiness read |
+| Editor | Nemotron 3 Ultra (free, other family) | Rubric on hook, thesis, structure, depth, concreteness, voice and human, plus the humanizer scanner at 40% |
+| Fact-checker | Nemotron 3 Ultra (free) + fact guard | Checks each claim against the source text. Unsupported claims and invented numbers block the post |
+| Illustrator | Nemotron plans, **Nano Banana 2.1** draws, a free vision model checks | Cover and inline images in one house style, regenerated once if the check fails. Charts are drawn in code and only from numbers that appear in both the sources and the post |
+| Final check | Rules + Nemotron 3 Ultra (free) | Every guardrail on the exact version being saved, plus a publish-readiness read |
 
 **How the super agent is kept on a leash.** Code decides what's *allowed*; the model only chooses among allowed moves. Some examples: no editing before a draft exists, no re-checking an unchanged draft, no FINISH before the final check passes on the current version. When only one move is allowed, no LLM call is made. An invalid choice falls back to the fixed newsroom order, and the timeline marks it. A run is capped at 14 specialist turns, each specialist has a call cap (writer 3, research 2), and the budget guard runs before every call. At a limit, the best-ranked version is saved and flagged "didn't pass review".
 
@@ -55,6 +55,8 @@ A single writing loop produced decent LinkedIn posts. A 1,000-word essay needs m
 - Nano Banana was rate-limited upstream, so every image went to the 2× pricier fallback. It now retries the primary once before falling back.
 - The chart plotted a number the post never mentioned. Chart values must now appear in the post.
 - When no version passed, the saved one was ranked without its fact-check results. Fact problems now count, and a version that skipped an active fact-check can't win.
+
+**Why only the writer is paid.** I ran each free model on the same real brief. They wrote about half the length with humanizer 2/5, and one invented two source links. Sonnet wrote 806 words at 4/5 with no flags. For planning, research and judging, Nemotron 3 Ultra (free) matched Haiku and DeepSeek: it gave valid JSON as often and caught a planted false claim every time. Free pools get rate-limited upstream, so each tier falls back to a cheap paid model (~$0.001 per call) instead of failing.
 
 ## Making it sound human
 
@@ -85,8 +87,8 @@ The newsroom has its own eval (`--agent substack`): 3 cases of 3 merged brief da
 | Workflow | Calls | Models | Cost/run |
 |---|---|---|---|
 | Daily collect | 1–5 scoring batches | Gemma 4 31B (free), DeepSeek v4.1 Flash fallback | under $0.001 |
-| Weekly draft | 5–9 | Haiku 5.5 to plan, Sonnet 5.5 to write, DeepSeek critic | $0.02–0.05 |
-| Substack post (Wed, Sat) | ~20 | Haiku, Sonnet, DeepSeek, Nano Banana 2.1 + free vision check | $0.47 on the first run; ~$0.30–0.40 expected after the fixes (each Sonnet rewrite is ~$0.06, images ~$0.12) |
+| Weekly draft | 5–9 | free Nemotron to plan, Sonnet 5.5 to write, DeepSeek critic | $0.02–0.05 |
+| Substack post (Wed, Sat) | ~20 | free models for everything but the writer (Sonnet) and images (Nano Banana 2.1) | $0.47 on the first run; ~$0.20–0.30 expected now (each Sonnet draft ~$0.06, images ~$0.12) |
 | PR evals | ~30 (+~45 for the newsroom) | same, images off | ~$0.15–0.25 (+~$0.30–0.50) |
 
 Caps are $2/day and $6/month (`config/budget.yaml`) to make room for two illustrated posts a week.
