@@ -28,6 +28,9 @@ EXTRA_TELLS = [
 ]
 
 
+QUOTED = re.compile(r'"[^"\n]{1,200}"|“[^”\n]{1,200}”')
+
+
 @cache
 def _tells():
     spec = importlib.util.spec_from_file_location("humanizer_tells", SKILL / "scripts" / "tells.py")
@@ -41,7 +44,8 @@ def scan(text: str) -> dict:
     r = _tells().scan_result(text, limit=8)
     hits = [f'{h.get("label") or h.get("id")}: "{h.get("text", "")}" → {h.get("fix", "")}'
             for h in r["hits"]]
-    extras = [f'{why}: "{m.group(0).strip()[:70]}"' for rx, why in EXTRA_TELLS for m in rx.finditer(text)]
+    unquoted = QUOTED.sub(lambda m: " " * len(m.group(0)), text)  # quoting a pattern isn't using it
+    extras = [f'{why}: "{m.group(0).strip()[:70]}"' for rx, why in EXTRA_TELLS for m in rx.finditer(unquoted)]
     # the scanner misses structural tells in short posts, so each one costs a point on the 1-5 scale
     return {"score": max(1, to_five(r["score"]) - len(extras)), "raw": r["score"], "band": r["band"], "hits": hits, "structural": extras,
             "contributors": [c["label"] for c in r["contributors"][:3]]}

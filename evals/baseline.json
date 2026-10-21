@@ -1,13 +1,15 @@
 {
- "mean": 4.57,
+ "mean": 4.34,
  "cases": 5,
+ "humanizer_mean": 4,
  "guardrail_pass_rate": 1.0,
  "per_dimension": {
-  "hook": 4.4,
-  "focus": 4.4,
-  "brevity": 4.4,
-  "concreteness": 4.8,
-  "voice": 5,
-  "grounding": 4.4
+  "hook": 4.6,
+  "focus": 4.8,
+  "brevity": 4.8,
+  "concreteness": 5,
+  "voice": 4.4,
+  "human": 3.4,
+  "grounding": 5
  }
 }

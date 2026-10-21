@@ -104,6 +104,8 @@ def test_humanizer_catches_structural_tells():
           "Those leases aren't background news. They're a valuation input.\n\nMy take: track capacity, not benchmarks.")
     v = " | ".join(graph.guardrail_violations(ai, set(), "Anthropic signed $1.3T in leases."))
     assert "negation pivot" in v and "labelled closer" in v and "costume metaphor" in v
+    quoted = 'One draft said "a cloud company wearing a model company\'s clothes." Another used "X isn\'t Y. It\'s Z." on purpose.'
+    assert not graph.humanizer.scan(quoted)["structural"]
     v = graph.guardrail_violations("Anthropic signed $9T in leases this year. " * 3, set(), "Anthropic signed $1.3T in leases.")
     assert any("\"$9\"" in x and "not in the sources" in x for x in v)
 
