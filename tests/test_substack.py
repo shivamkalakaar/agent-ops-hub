@@ -294,3 +294,13 @@ def test_hedges_are_warnings_not_blockers():
         d = db.one("select * from substack_drafts")
     assert d["judge_scores"]["passed_review"] is True and d["final_report"]["blockers"] == []
     assert any(p.startswith("needs hedging") for p in d["final_report"]["polish"])
+
+
+def test_checked_version_beats_unchecked_one_with_fewer_known_problems():
+    from agents.substack import ranking
+    from core.settings import Resolved
+    base = {"md": "x", "overall": 3.0, "accent": {"score": 3}, "scores": {}}
+    state = {"settings": {"fact_checker": Resolved(True, None, 3, "", "file")}, "candidates": {
+        "1": {**base, "version": 1, "violations": ["a", "b"]},                                              # never checked
+        "3": {**base, "version": 3, "violations": ["a", "b"], "fact_issues": ["c", "d", "e"], "fact_checked": True}}}
+    assert ranking.best(state)["version"] == 3

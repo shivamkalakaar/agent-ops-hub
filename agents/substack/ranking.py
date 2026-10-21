@@ -12,6 +12,7 @@ def problems(entry: dict, fact_checker_on: bool) -> list[str]:
 
 
 def best(state) -> dict | None:
+    """A fact-checked version always beats an unchecked one: "not checked" hides an unknown number of problems."""
     on = state["settings"]["fact_checker"].enabled
     entries = [{**e, "violations": problems(e, on)} for e in state.get("candidates", {}).values()]
-    return max(entries, key=drafting.rank) if entries else None
+    return max(entries, key=lambda e: (bool(e.get("fact_checked")) or not on, drafting.rank(e))) if entries else None
