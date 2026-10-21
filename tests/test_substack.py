@@ -69,7 +69,8 @@ def offline(monkeypatch, tmp_path):
 
 
 def _steps(db, run_id=None):
-    run_id = run_id or db.one("select id from runs where agent='substack' and kind='draft' order by started_at desc")["id"]
+    run_id = run_id or db.one("select id from runs where agent='substack' and kind in ('draft','revise')"
+                              " order by started_at desc, rowid desc")["id"]
     return db.all("select * from agent_steps where run_id=%s order by seq", (run_id,))
 
 
@@ -330,3 +331,37 @@ def test_writer_sees_source_urls_and_last_rewrite_is_kept_for_the_final_check():
         work = [s["specialist"] for s in _steps(db) if s["kind"] == "work"]
     writes = [i for i, w in enumerate(work) if w == "writer"]
     assert len(writes) == 3 and work.index("final_check") < writes[-1]  # third write came after the final check
+
+
+def test_revise_fixes_blockers_in_place_and_keeps_images():
+    llm.FAKE_RESPONSES["final_check"] = lambda m: '{"ready": false, "blockers": ["the ending overclaims"]}'
+    assert cli.draft(None) == 0
+    with connect() as db:
+        d = db.one("select * from substack_drafts")
+        db.execute("update substack_drafts set edited_body_md=%s where id=%s", (d["body_md"].replace("Most coverage", "Most early coverage"), d["id"]))
+    assert d["judge_scores"]["passed_review"] is False
+    seen = {}
+    llm.FAKE_RESPONSES["writer"] = lambda m: (seen.setdefault("user", m[-1].content), GOOD_MD)[1]
+    llm.FAKE_RESPONSES["final_check"] = lambda m: '{"ready": true, "blockers": []}'
+    assert cli.revise_draft(d["id"]) == 0
+    with connect() as db:
+        after = db.one("select * from substack_drafts")
+        n = db.one("select count(*) as n from substack_drafts")["n"]
+    assert n == 1 and after["judge_scores"]["passed_review"] is True and after["edited_body_md"] is None
+    assert "the ending overclaims" in seen["user"] and "Most early coverage" in seen["user"]  # blockers + owner's edits sent
+    assert "![" not in seen["user"].split("# Current draft")[1].split("# Editor")[0]           # images stripped for the writer
+    assert after["body_md"].count("![") == 3 and after["revisions"] == d["revisions"] + 1     # images put back
+
+
+def test_revise_keeps_the_saved_version_when_rewrites_dont_help():
+    llm.FAKE_RESPONSES["final_check"] = lambda m: '{"ready": false, "blockers": ["a"]}'
+    assert cli.draft(None) == 0
+    with connect() as db:
+        before = db.one("select * from substack_drafts")
+    llm.FAKE_RESPONSES["final_check"] = lambda m: '{"ready": false, "blockers": ["a", "b", "c"]}'
+    assert cli.revise_draft(before["id"]) == 0
+    with connect() as db:
+        after = db.one("select * from substack_drafts")
+        steps = _steps(db)
+    assert after["body_md"] == before["body_md"] and "Kept the saved version" in steps[-1]["summary"]
+    assert sum(s["specialist"] == "writer" for s in steps) == 2  # MAX_ATTEMPTS

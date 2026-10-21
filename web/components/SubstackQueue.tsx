@@ -37,7 +37,7 @@ export function SubstackQueue({ token }: { token: string }) {
       </div>
       {msg && <p className="text-sm text-ink-2">{msg}</p>}
       {drafts.length === 0 && <Card><p className="text-ink-2">No Substack drafts yet. The newsroom runs every Wednesday and Saturday.</p></Card>}
-      {drafts.map((d) => <SubstackCard key={d.id} draft={d} onChange={load} />)}
+      {drafts.map((d) => <SubstackCard key={d.id} draft={d} onChange={load} token={token} />)}
     </div>
   );
 }
@@ -50,7 +50,7 @@ function download(name: string, text: string, type: string) {
   URL.revokeObjectURL(a.href);
 }
 
-function SubstackCard({ draft, onChange }: { draft: SubstackDraft; onChange: () => void }) {
+function SubstackCard({ draft, onChange, token }: { draft: SubstackDraft; onChange: () => void; token: string }) {
   const [title, setTitle] = useState(draft.edited_title ?? draft.title);
   const [subtitle, setSubtitle] = useState(draft.edited_subtitle ?? draft.subtitle ?? "");
   const [body, setBody] = useState(draft.edited_body_md ?? draft.body_md);
@@ -90,6 +90,23 @@ function SubstackCard({ draft, onChange }: { draft: SubstackDraft; onChange: () 
       setNote("This browser blocked rich copy, so the markdown was copied instead.");
     }
   };
+  const fixIt = async () => {
+    const n = draft.final_report?.blockers?.length ?? 0;
+    if (!window.confirm(`Send this draft back to the agents to fix ${n} blocker${n === 1 ? "" : "s"}? `
+      + `${edited ? "Your unsaved edits will be saved first and used as the starting point. " : ""}`
+      + "It takes ~3-5 minutes and costs about $0.06-0.12.")) return;
+    setBusy(true);
+    if (edited) await supabase.from("substack_drafts").update({
+      edited_title: title !== draft.title ? title : null, edited_subtitle: subtitle !== (draft.subtitle ?? "") ? subtitle : null,
+      edited_body_md: body !== draft.body_md ? body : null }).eq("id", draft.id);
+    const res = await fetch("/api/regenerate", {
+      method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ workflow: "substack.yml", revise_draft_id: draft.id }),
+    });
+    setBusy(false);
+    setNote(res.ok ? "The agents are on it. Watch them on the Agents page; this draft updates in ~3-5 minutes (refresh)."
+      : `Failed: ${(await res.json()).error}`);
+  };
   const markPublished = () => {
     const url = window.prompt("Paste the published Substack URL");
     if (url && /^https:\/\/\S+$/.test(url)) save({ status: "published", published_url: url });
@@ -105,7 +122,11 @@ function SubstackCard({ draft, onChange }: { draft: SubstackDraft; onChange: () 
         <a href={`/runs/${draft.run_id}`} className="ml-auto text-sm text-accent hover:underline">agent timeline</a>
       </div>
       {js.passed_review === false && (
-        <p className="mt-2 text-sm text-warn"><b>! Didn&apos;t pass the final check.</b> {String(js.finish_reason ?? "")}. Fix the blockers below or reject it.</p>
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-warn">
+          <span><b>! Didn&apos;t pass the final check.</b> Fix the blockers yourself, or send it back to the agents.</span>
+          {pending && <button disabled={busy} onClick={fixIt}
+            className="rounded-lg border border-accent px-3 py-1 font-medium text-accent hover:bg-bg disabled:opacity-50">Let the agents fix this</button>}
+        </div>
       )}
 
       <div className="mt-4 grid gap-6 md:grid-cols-[1fr_240px]">
