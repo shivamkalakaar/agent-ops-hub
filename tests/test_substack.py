@@ -365,3 +365,11 @@ def test_revise_keeps_the_saved_version_when_rewrites_dont_help():
         steps = _steps(db)
     assert after["body_md"] == before["body_md"] and "Kept the saved version" in steps[-1]["summary"]
     assert sum(s["specialist"] == "writer" for s in steps) == 2  # MAX_ATTEMPTS
+
+
+def test_monthly_cap_override_applies_only_to_its_month():
+    from core import budget
+    cfg = {"monthly_cap_usd": 6.0, "monthly_cap_overrides": {"2026-10": 10.0}}
+    assert budget.monthly_cap(cfg, datetime(2026, 10, 21, tzinfo=timezone.utc)) == 10.0
+    assert budget.monthly_cap(cfg, datetime(2026, 11, 1, tzinfo=timezone.utc)) == 6.0
+    assert budget.monthly_cap({"monthly_cap_usd": 6.0}, datetime(2026, 10, 21, tzinfo=timezone.utc)) == 6.0
