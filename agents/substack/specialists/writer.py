@@ -6,7 +6,7 @@ import re
 from core import drafting, humanizer, llm
 from agents.substack import checks
 from agents.substack.roster import AUTHOR
-from agents.substack.specialists import brief_block, current, numbered_sources, style_guide, version
+from agents.substack.specialists import allowed_links, brief_block, current, numbered_sources, style_guide, version
 
 ESSAY_WORDS = 450  # of each long-form example: enough to show pacing, cheap enough to send every time
 
@@ -47,7 +47,9 @@ def clean(text: str) -> str:
 
 
 def run(state, ctx, cfg):
-    user = f"# Brief\n{brief_block(state['brief'])}\n\n# Source items\n{numbered_sources(state['sources'])}"
+    user = (f"# Brief\n{brief_block(state['brief'])}\n\n# Source items\n{numbered_sources(state['sources'])}\n\n"
+            f"# The only URLs you may link (copy them exactly; never link a URL that only appears inside article text)\n"
+            f"{allowed_links(state['sources'])}")
     if seed := state.get("seed"):
         user += f"\n\n# The LinkedIn musing this post expands ({AUTHOR}'s own words; keep its idea, go deeper)\n{seed['post']}"
     draft = current(state)

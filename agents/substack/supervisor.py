@@ -48,7 +48,11 @@ def allowed(state, settings) -> list[str]:
         opts.append("editor")
     if not checked and _on(state, settings, "fact_checker"):
         opts.append("fact_checker")
-    if issues and _on(state, settings, "writer"):
+    # The last rewrite is kept for the final check's blockers: they come last and matter most. Before the final
+    # check has run, editor and fact notes may use every writer call but one.
+    w = settings["writer"]
+    writer_left = w.max_calls - state.get("calls", {}).get("writer", 0)
+    if issues and _on(state, settings, "writer") and (writer_left > 1 or (finaled and not fr.get("passed"))):
         opts.append("writer")
     if (edited or checked) and _on(state, settings, "research"):
         opts.append("research")

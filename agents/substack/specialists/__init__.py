@@ -28,7 +28,12 @@ def version(state) -> int:
 
 
 def numbered_sources(sources: list[dict]) -> str:
-    return "\n\n".join(f"(source {n}) {drafting.sources_block([s])}" for n, s in enumerate(sources))
+    """Each source with its URL: the writer may only link these, so it has to see them (it used to guess)."""
+    return "\n\n".join(f"(source {n}) URL: {s['url']}\n{drafting.sources_block([s])}" for n, s in enumerate(sources))
+
+
+def allowed_links(sources: list[dict]) -> str:
+    return "\n".join(f"- {s['url']}  ({s['source']}: {s['title']})" for s in sources)
 
 
 def sources_text(state) -> str:

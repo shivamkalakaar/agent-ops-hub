@@ -311,3 +311,22 @@ def test_long_subtitle_is_a_warning_not_a_violation():
     md = GOOD_MD.replace("*An open-weight model scored", "*" + "x" * 120 + " An open-weight model scored")
     assert not any("subtitle" in v for v in checks.violations(md, {"https://example.com/a", "https://example.com/b"}))
     assert checks.warnings(md) and "subtitle" in checks.warnings(md)[0]
+
+
+def test_writer_sees_source_urls_and_last_rewrite_is_kept_for_the_final_check():
+    seen = {}
+
+    def writer_fn(m):
+        seen.setdefault("user", m[-1].content)
+        return GOOD_MD
+    llm.FAKE_RESPONSES["writer"] = writer_fn
+    llm.FAKE_RESPONSES["editor"] = lambda m: json.dumps({"scores": dict.fromkeys(  # always weak: wants a rewrite
+        ["hook", "thesis", "structure", "depth", "concreteness", "voice", "human"], 2), "notes": [], "critique": "weak"})
+    finals = iter(['{"ready": false, "blockers": ["fix the ending"]}'] + ['{"ready": true, "blockers": []}'] * 5)
+    llm.FAKE_RESPONSES["final_check"] = lambda m: next(finals)
+    assert cli.draft(None) == 0
+    assert "URL: https://example.com/a" in seen["user"] and "The only URLs you may link" in seen["user"]
+    with connect() as db:
+        work = [s["specialist"] for s in _steps(db) if s["kind"] == "work"]
+    writes = [i for i, w in enumerate(work) if w == "writer"]
+    assert len(writes) == 3 and work.index("final_check") < writes[-1]  # third write came after the final check
