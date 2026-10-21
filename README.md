@@ -89,7 +89,7 @@ The newsroom has its own eval (`--agent substack`): 3 cases of 3 merged brief da
 | Substack post (Wed, Sat) | ~20 | Haiku, Sonnet, DeepSeek, Nano Banana 2.1 + free vision check | $0.47 on the first run; ~$0.30–0.40 expected after the fixes (each Sonnet rewrite is ~$0.06, images ~$0.12) |
 | PR evals | ~30 (+~45 for the newsroom) | same, images off | ~$0.15–0.25 (+~$0.30–0.50) |
 
-Caps are $1/day and $6/month (`config/budget.yaml`) to make room for two illustrated posts a week.
+Caps are $2/day and $6/month (`config/budget.yaml`) to make room for two illustrated posts a week.
 
 ## Run it locally
 
