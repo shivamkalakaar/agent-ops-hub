@@ -6,6 +6,8 @@ import type { AgentRegistry, AgentSetting, AgentStep, PromptVersion, Run } from 
 import { ms, usd, when } from "@/lib/format";
 import { Card, NotConfigured, Status } from "@/components/ui";
 import { useSession } from "@/components/auth";
+import { AgentGraph } from "@/components/AgentGraph";
+import { useRunSteps } from "@/lib/useRunSteps";
 
 type StepStat = Pick<AgentStep, "agent" | "specialist" | "kind" | "status" | "cost_usd" | "latency_ms" | "run_id">;
 
@@ -46,6 +48,8 @@ export default function Agents() {
   const newsroom = registry.filter((r) => r.agent === "substack");
   const runsOf = (agent: string) => runs.filter((r) => r.agent === agent);
   const live = runsOf("substack").find((r) => r.status === "running");
+  const shown = live ?? runsOf("substack").find((r) => r.kind === "draft") ?? runsOf("substack")[0];
+  const disabled = Object.values(settings).filter((x) => x.agent === "substack" && !x.enabled).map((x) => x.specialist);
 
   return (
     <div className="space-y-6">
@@ -64,6 +68,8 @@ export default function Agents() {
         blurb="Wed + Sat: a super agent runs six specialists to write one 800–1,200 word post with images."
         action={session ? () => start("substack.yml") : undefined} actionLabel="Run now" live={live} />
 
+      <NewsroomDiagram run={shown} disabled={disabled} />
+
       {newsroom.length === 0 ? (
         <Card><p className="text-ink-2">The newsroom registers its specialists on its first run. Start one with <b>Run now</b>.</p></Card>
       ) : (
@@ -81,6 +87,23 @@ export default function Agents() {
         </div>
       )}
     </div>
+  );
+}
+
+function NewsroomDiagram({ run, disabled }: { run?: Run; disabled: string[] }) {
+  const running = run?.status === "running";
+  const steps = useRunSteps(run?.id, running);
+  return (
+    <Card>
+      <div className="mb-4 flex flex-wrap items-baseline gap-2">
+        <h2 className="font-semibold">Newsroom</h2>
+        <span className="text-sm text-ink-2">
+          {!run ? "no runs yet" : running ? "live run" : `last run · ${when(run.started_at)}${run.kind === "eval" ? " (eval)" : ""}`}
+        </span>
+        {run && <Link href={`/runs/${run.id}`} className="ml-auto text-sm text-accent hover:underline">{running ? "watch every step →" : "see every step →"}</Link>}
+      </div>
+      <AgentGraph steps={steps} runFinished={!!run && !running} disabled={disabled} />
+    </Card>
   );
 }
 

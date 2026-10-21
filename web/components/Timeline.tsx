@@ -1,7 +1,8 @@
 "use client";
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useState } from "react";
 import type { AgentStep } from "@/lib/types";
+import { useRunSteps } from "@/lib/useRunSteps";
+import { AgentGraph } from "@/components/AgentGraph";
 import { ms, usd, when } from "@/lib/format";
 import { Card } from "@/components/ui";
 
@@ -10,26 +11,10 @@ const ROLE: Record<string, string> = {
   fact_checker: "Fact-checker", illustrator: "Illustrator", final_check: "Final check",
 };
 
-/** Live run timeline: supervisor decisions and specialist turns from agent_steps, streamed with Supabase Realtime
- *  (falls back to polling every 4 s while the run is going, in case Realtime isn't enabled on the table). */
+/** Live run timeline: the block diagram on top, then every supervisor decision and specialist turn. */
 export function Timeline({ runId, running }: { runId: string; running: boolean }) {
-  const [steps, setSteps] = useState<AgentStep[]>([]);
+  const steps = useRunSteps(runId, running);
   const [open, setOpen] = useState<number | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    const load = () => supabase.from("agent_steps").select("*").eq("run_id", runId).order("seq")
-      .then(({ data }) => alive && setSteps((data ?? []) as AgentStep[]));
-    load();
-    const upsert = (row: AgentStep) => setSteps((prev) =>
-      [...prev.filter((s) => s.id !== row.id), row].sort((a, b) => a.seq - b.seq || a.id - b.id));
-    const channel = supabase.channel(`steps-${runId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "agent_steps", filter: `run_id=eq.${runId}` },
-        (p) => p.new && upsert(p.new as AgentStep))
-      .subscribe();
-    const poll = running ? setInterval(load, 4000) : undefined;
-    return () => { alive = false; supabase.removeChannel(channel); if (poll) clearInterval(poll); };
-  }, [runId, running]);
 
   if (!steps.length) return null;
   const total = steps.reduce((s, x) => s + Number(x.cost_usd), 0);
@@ -42,7 +27,8 @@ export function Timeline({ runId, running }: { runId: string; running: boolean }
         {live && <span className="inline-flex items-center gap-1.5 text-sm text-accent"><span className="h-2 w-2 animate-pulse rounded-full bg-accent" />live</span>}
         <span className="ml-auto text-sm text-ink-2 num">{steps.filter((s) => s.kind === "work").length} turns · {usd(total)}</span>
       </div>
-      <ol className="mt-4 space-y-0">
+      <div className="mt-4"><AgentGraph steps={steps} runFinished={!running && !live} /></div>
+      <ol className="mt-6 space-y-0">
         {steps.map((s) => s.kind === "decision" ? (
           <li key={s.id} className="ml-[7px] border-l border-line py-1 pl-5 text-xs text-ink-2">
             <span className="font-medium text-ink">{s.summary ?? "deciding…"}</span>
