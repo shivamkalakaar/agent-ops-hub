@@ -22,6 +22,7 @@ const STATUS: Record<string, { icon: string; cls: string; label: string }> = {
   pending: { icon: "…", cls: "text-warn", label: "Pending" },
   approved: { icon: "✓", cls: "text-good", label: "Approved" },
   rejected: { icon: "✕", cls: "text-bad", label: "Rejected" },
+  published: { icon: "✓", cls: "text-good", label: "Published" },
 };
 
 export function Status({ status }: { status: string }) {

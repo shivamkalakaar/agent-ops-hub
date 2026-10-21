@@ -14,7 +14,7 @@ jobs:
     if: github.event_name == 'pull_request'
     needs: tests
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 50   # newsroom cases take ~5-8 min each
     env:
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -27,9 +27,16 @@ jobs:
       - name: Skip unless prompts, config or agent code changed
         id: changed
         run: |
-          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -qE '^(agents/|config/|core/llm.py|evals/)'; then
-            echo "run=true" >> "$GITHUB_OUTPUT"; fi
+          files=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          if echo "$files" | grep -qE '^(agents/market_intel/|config/style/guide|config/models.yaml|core/|evals/)'; then
+            echo "market_intel=true" >> "$GITHUB_OUTPUT"; fi
+          if echo "$files" | grep -qE '^(agents/substack/|config/style/substack_guide|config/models.yaml|core/|evals/)'; then
+            echo "substack=true" >> "$GITHUB_OUTPUT"; fi
       - uses: astral-sh/setup-uv@v6
-        if: steps.changed.outputs.run == 'true'
-      - if: steps.changed.outputs.run == 'true'
-        run: uv sync --frozen --no-dev && uv run python -m evals.run_evals --cases 5
+        if: steps.changed.outputs.market_intel == 'true' || steps.changed.outputs.substack == 'true'
+      - if: steps.changed.outputs.market_intel == 'true' || steps.changed.outputs.substack == 'true'
+        run: uv sync --frozen --no-dev
+      - if: steps.changed.outputs.market_intel == 'true'
+        run: uv run python -m evals.run_evals --cases 5
+      - if: steps.changed.outputs.substack == 'true'   # 3 cases, images off: ~$0.25-0.40
+        run: uv run python -m evals.run_evals --agent substack --cases 3

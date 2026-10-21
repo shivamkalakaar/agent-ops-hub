@@ -6,16 +6,54 @@ tiers:
     primary: google/gemma-4-31b-it:free                 # $0
     fallbacks: [deepseek/deepseek-v4.1-flash, qwen/qwen3.7-flash]   # $0.035/$0.011, $0.03/$0.13
     temperature: 0.1
+    max_tokens: 4000
   writer:  # the one call a human reads: the LinkedIn post + one-pager
     primary: anthropic/claude-haiku-5.5                 # $0.10/$0.50
     fallbacks: [deepseek/deepseek-v4-flash, openai/gpt-6-luna]
     temperature: 0.7
+    max_tokens: 6000   # research facts with evidence quotes ran past 4,000
   voice:   # write_post + revise only: the text a human reads under their own name. ~5 calls/week, ~$0.05/draft.
     primary: anthropic/claude-sonnet-5.5                # $2/$10
     fallbacks: [anthropic/claude-haiku-5.5]
     temperature: 0.8
+    max_tokens: 6000    # a 1,200-word post is ~1,800 tokens; rewrites ran ~2.7-3.8k
   judge:   # critic + evals. Different model family from the writer to limit self-preference.
     primary: deepseek/deepseek-v4.1-flash
     fallbacks: [qwen/qwen3.7-flash]
     temperature: 0.0
     reasoning: {effort: low}   # hidden reasoning tokens were ~75% of critic cost; a rubric score doesn't need them
+    max_tokens: 8000   # one fact check looped to 99k output tokens ($0.12, 4 min) before this cap
+  check:   # newsroom editor, fact-checker, final check. Same family as judge, but reasoning OFF: with effort "low",
+           # DeepSeek and Qwen spent all 8,000 tokens thinking over a fact check and returned nothing; with it off, ~70-800 tokens.
+    primary: deepseek/deepseek-v4.1-flash
+    fallbacks: [qwen/qwen3.7-flash]
+    temperature: 0.0
+    reasoning: {enabled: false}
+    max_tokens: 6000
+  vision:  # checks each generated image against its brief. Gemma 4 accepts images and is free.
+    primary: google/gemma-4-31b-it:free
+    fallbacks: [qwen/qwen3.7-flash, anthropic/claude-haiku-5.5]   # $0.03/$0.13, $0.10/$0.50
+    temperature: 0.0
+    reasoning: {enabled: false}   # qwen thought for 2 minutes over a pass/fail image check
+    max_tokens: 1500
+
+# Image generation (core/images.py). Priced per output image token: ~1,290 tokens per 1K image.
+image:
+  primary: google/gemini-nano-banana-2.1                        # $30/M image tokens, ~$0.04/image
+  fallbacks: [google/gemini-3.1-flash-image]                     # Nano Banana 2, $60/M, ~$0.08/image
+  aspect_ratio: "16:9"
+
+# Models the owner may pick per specialist in the dashboard (/agents). Anything else is ignored by the run,
+# so a typo or a tampered row can't route a call to an expensive or unknown model.
+allowed_overrides:
+  text:
+    - google/gemma-4-31b-it:free
+    - qwen/qwen3.7-flash
+    - deepseek/deepseek-v4.1-flash
+    - anthropic/claude-haiku-5.5
+    - anthropic/claude-sonnet-5.5
+    - openai/gpt-6-luna
+  image:
+    - google/gemini-nano-banana-2.1
+    - google/gemini-3.1-flash-image
+    - google/gemini-3-pro-image                                  # Nano Banana Pro, ~$0.13+/image

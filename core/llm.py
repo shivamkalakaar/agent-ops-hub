@@ -28,18 +28,26 @@ class RunContext:
     callbacks: list = field(default_factory=list)
 
 
-def _model(tier: str):
+def allowed(model: str | None, kind: str = "text") -> bool:
+    """Dashboard model overrides must be on the allowlist in config/models.yaml."""
+    return bool(model) and model in load_yaml("models.yaml").get("allowed_overrides", {}).get(kind, [])
+
+
+def _model(tier: str, model: str | None = None):
+    """The tier's model, or an allowlisted override as primary with the tier's fallbacks behind it."""
     from langchain_openai import ChatOpenAI
     t = load_yaml("models.yaml")["tiers"][tier]
+    primary = model if allowed(model) else t["primary"]
     return ChatOpenAI(
         base_url=OPENROUTER_URL,
         api_key=os.environ["OPENROUTER_API_KEY"],
-        model=t["primary"],
+        model=primary,
         temperature=t.get("temperature", 0.3),
+        max_tokens=t.get("max_tokens"),  # a hard stop on runaway generations (reasoning tokens count too)
         timeout=120,
         max_retries=2,
         default_headers={"HTTP-Referer": "https://github.com/shivamkalakaar/agent-ops-hub", "X-Title": "Agent Ops Hub"},
-        extra_body={"models": [t["primary"], *t.get("fallbacks", [])], "usage": {"include": True},
+        extra_body={"models": list(dict.fromkeys([primary, *t.get("fallbacks", [])])), "usage": {"include": True},
                     **({"reasoning": t["reasoning"]} if "reasoning" in t else {})},
     )
 
@@ -53,9 +61,12 @@ def _usage(msg) -> tuple[str | None, int, int, float | None]:
     return meta.get("model_name"), pt, ct, raw.get("cost")
 
 
-def call(ctx: RunContext, tier: str, node: str, system: str, user: str) -> str:
+def call(ctx: RunContext, tier: str, node: str, system: str, user: str, *,
+         model: str | None = None, images: list[str] | None = None) -> str:
+    """`model`: an allowlisted override for this call. `images`: data or https URLs sent with the user message."""
     budget.check(ctx.db)
-    messages = [SystemMessage(system), HumanMessage(user)]
+    content = [{"type": "text", "text": user}, *({"type": "image_url", "image_url": {"url": u}} for u in images)] if images else user
+    messages = [SystemMessage(system), HumanMessage(content)]
     start = time.monotonic()
     log = {"run_id": ctx.run_id, "node": node, "tier": tier}
     if os.environ.get("LLM_MODE") == "fake":
@@ -64,7 +75,7 @@ def call(ctx: RunContext, tier: str, node: str, system: str, user: str) -> str:
                             latency_ms=int((time.monotonic() - start) * 1000), ok=True)
         return text
     try:
-        msg = _model(tier).invoke(messages, config={"callbacks": ctx.callbacks, "run_name": node,
+        msg = _model(tier, model).invoke(messages, config={"callbacks": ctx.callbacks, "run_name": node,
                                                     "metadata": {"tier": tier}})
     except Exception:
         ctx.db.log_llm_call(**log, ok=False, latency_ms=int((time.monotonic() - start) * 1000))
@@ -86,12 +97,15 @@ def parse_json(text: str):
     return json.JSONDecoder().raw_decode(body[start:])[0]
 
 
-def call_json(ctx: RunContext, tier: str, node: str, system: str, user: str):
+def call_json(ctx: RunContext, tier: str, node: str, system: str, user: str, **kw):
     """call() + parse_json(), with one repair retry. Plain prompting instead of tool calling
-    so it works on free models that lack structured-output support."""
-    text = call(ctx, tier, node, system, user)
+    so it works on free models that lack structured-output support. The retry goes to the tier's first fallback
+    model: an empty or looping reply (seen from DeepSeek, cut off by max_tokens) tends to repeat on the same model."""
+    text = call(ctx, tier, node, system, user, **kw)
     try:
         return parse_json(text)
     except ValueError:
-        text = call(ctx, tier, node, system, user + "\n\nYour last reply was not valid JSON. Reply with ONLY the JSON.")
+        fallbacks = load_yaml("models.yaml")["tiers"][tier].get("fallbacks", [])
+        retry = {**kw, "model": kw.get("model") or (fallbacks[0] if fallbacks and allowed(fallbacks[0]) else None)}
+        text = call(ctx, tier, node, system, user + "\n\nYour last reply was not valid JSON. Reply with ONLY the JSON.", **retry)
         return parse_json(text)

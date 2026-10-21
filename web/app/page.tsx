@@ -49,8 +49,10 @@ export default async function Overview() {
       <div>
         <h1 className="text-2xl font-semibold">Agent operations</h1>
         <p className="mt-1 max-w-2xl text-ink-2">
-          A market-intel agent that reads ~12 AI feeds daily, scores what matters, and drafts one short LinkedIn
-          post a week. Every LLM call is budget-checked, traced, and evaluated; nothing ships without human approval.
+          Two agents. A market-intel agent reads ~12 AI feeds and my daily AI brief, scores what matters and drafts one
+          short LinkedIn post a week. A Substack newsroom (a super agent running six specialists) turns the same news into
+          two long posts a week with images. Every call is budget-checked, traced and evaluated; nothing ships without
+          human approval.
         </p>
       </div>
 
@@ -113,11 +115,12 @@ export default async function Overview() {
       <Card>
         <h2 className="font-semibold">Recent runs</h2>
         <table className="mt-3 w-full text-sm">
-          <thead className="text-left text-ink-2"><tr><th className="py-1 font-normal">Started</th><th className="font-normal">Workflow</th><th className="font-normal">Status</th><th className="font-normal text-right">Cost</th><th></th></tr></thead>
+          <thead className="text-left text-ink-2"><tr><th className="py-1 font-normal">Started</th><th className="font-normal">Agent</th><th className="font-normal">Workflow</th><th className="font-normal">Status</th><th className="font-normal text-right">Cost</th><th></th></tr></thead>
           <tbody>
             {R.slice(0, 15).map((r) => (
               <tr key={r.id} className="border-t border-line">
                 <td className="py-1.5">{when(r.started_at)}</td>
+                <td className="text-ink-2">{r.agent === "substack" ? "Substack" : "Market intel"}</td>
                 <td><Link className="hover:underline" href={`/runs/${r.id}`}>{r.kind}</Link></td>
                 <td><Status status={r.status} /></td>
                 <td className="text-right num">{usd(Number(r.cost_usd))}</td>
@@ -150,6 +153,15 @@ function Architecture() {
           <span className={box}>Critic (other model family)</span>{arrow}<span className={box}>Guardrails</span>{arrow}
           <span className={`${box} border-dashed`}>Revise ↺ max 2</span>{arrow}<span className={box}>One-pager</span>{arrow}
           <span className={`${box} border-accent`}>Human approval</span>
+        </div>
+      </div>
+      <div>
+        <div className="mb-1 text-xs uppercase tracking-wide text-muted">Wed + Sat · Substack newsroom (super agent + six specialists)</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={`${box} border-accent`}>Super agent picks the next move</span><span aria-hidden className="text-muted">⇄</span>
+          <span className={box}>Research</span><span className={box}>Writer · <b>Sonnet</b></span><span className={box}>Editor</span>
+          <span className={box}>Fact-checker</span><span className={box}>Illustrator · <b>Nano Banana</b></span><span className={box}>Final check</span>
+          {arrow}<span className={`${box} border-accent`}>Human approval</span>
         </div>
       </div>
       <p className="text-xs text-muted">

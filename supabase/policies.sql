@@ -23,3 +23,28 @@ create policy "owner manages linkedin" on linkedin_auth for all
 alter table linkedin_orgs enable row level security;
 create policy "owner manages linkedin orgs" on linkedin_orgs for all
   using (auth.jwt() ->> 'email' = 'owner@example.com') with check (auth.jwt() ->> 'email' = 'owner@example.com');
+
+-- Agent #2 (Substack newsroom)
+alter table substack_drafts enable row level security;
+alter table agent_steps     enable row level security;
+alter table agent_registry  enable row level security;
+alter table agent_settings  enable row level security;
+alter table prompt_versions enable row level security;
+
+create policy "owner reads substack"   on substack_drafts for select using (auth.jwt() ->> 'email' = 'owner@example.com');
+create policy "owner updates substack" on substack_drafts for update using (auth.jwt() ->> 'email' = 'owner@example.com');
+
+-- The run timeline and the agent roster are public ops data, like runs.
+create policy "public read agent_steps"    on agent_steps    for select using (true);
+create policy "public read agent_registry" on agent_registry for select using (true);
+create policy "public read agent_settings" on agent_settings for select using (true);
+create policy "owner writes agent_settings" on agent_settings for all
+  using (auth.jwt() ->> 'email' = 'owner@example.com') with check (auth.jwt() ->> 'email' = 'owner@example.com');
+create policy "owner manages prompts" on prompt_versions for all
+  using (auth.jwt() ->> 'email' = 'owner@example.com') with check (auth.jwt() ->> 'email' = 'owner@example.com');
+
+-- Live timeline: stream new steps to the dashboard.
+alter publication supabase_realtime add table agent_steps;
+
+-- Post images: a public bucket (they get published anyway). Uploads use the service key from GitHub Actions.
+insert into storage.buckets (id, name, public) values ('substack-images', 'substack-images', true) on conflict (id) do nothing;
