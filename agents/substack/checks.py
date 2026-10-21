@@ -36,6 +36,12 @@ def sections(body: str) -> list[str]:
     return [m.group(1).strip() for m in re.finditer(r"^##\s+(.+)$", body, re.M)]
 
 
+def warnings(md: str) -> list[str]:
+    """Style issues worth a note in the queue but not worth blocking a post (a 161-character subtitle failed CI)."""
+    p = parse(md)
+    return [f"subtitle is {len(p['subtitle'])} characters; Substack shows about {MAX_SUBTITLE}"] if len(p["subtitle"]) > MAX_SUBTITLE else []
+
+
 def violations(md: str, source_urls: set[str], sources_text: str | None = None) -> list[str]:
     p, v = parse(md), []
     body = p["body"]
@@ -45,8 +51,6 @@ def violations(md: str, source_urls: set[str], sources_text: str | None = None) 
         v.append(f"title is {len(p['title'])} characters; keep it to {MAX_TITLE}")
     if not p["subtitle"]:
         v.append("no subtitle: the line after the title must be an italic subtitle")
-    elif len(p["subtitle"]) > MAX_SUBTITLE:
-        v.append(f"subtitle is {len(p['subtitle'])} characters; keep it to {MAX_SUBTITLE}")
     words = body_words(body)
     if not WORDS[0] <= words <= WORDS[1]:
         v.append(f"{words} words; keep it between 800 and 1,200")

@@ -10,8 +10,8 @@ from agents.substack.specialists.editor import weak
 def warnings(state) -> list[str]:
     """Worth fixing, not worth blocking: claims the fact-checker would attribute more explicitly."""
     f, v = state.get("fact_report") or {}, current(state)["version"]
-    return [f'needs hedging: "{c.get("claim", "")}" → {c.get("fix", "")}' for c in f.get("claims", [])
-            if f.get("version") == v and c.get("verdict") == "hedge"]
+    return checks.warnings(current(state)["md"]) + [f'needs hedging: "{c.get("claim", "")}" → {c.get("fix", "")}'
+                                                     for c in f.get("claims", []) if f.get("version") == v and c.get("verdict") == "hedge"]
 
 
 def automated(state) -> list[str]:

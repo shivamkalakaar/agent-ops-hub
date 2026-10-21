@@ -304,3 +304,10 @@ def test_checked_version_beats_unchecked_one_with_fewer_known_problems():
         "1": {**base, "version": 1, "violations": ["a", "b"]},                                              # never checked
         "3": {**base, "version": 3, "violations": ["a", "b"], "fact_issues": ["c", "d", "e"], "fact_checked": True}}}
     assert ranking.best(state)["version"] == 3
+
+
+def test_long_subtitle_is_a_warning_not_a_violation():
+    from agents.substack import checks
+    md = GOOD_MD.replace("*An open-weight model scored", "*" + "x" * 120 + " An open-weight model scored")
+    assert not any("subtitle" in v for v in checks.violations(md, {"https://example.com/a", "https://example.com/b"}))
+    assert checks.warnings(md) and "subtitle" in checks.warnings(md)[0]
