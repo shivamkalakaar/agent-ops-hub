@@ -1,25 +1,29 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
 import { supabase, configured } from "@/lib/supabase";
 import type { Draft } from "@/lib/types";
 import { when } from "@/lib/format";
 import { Card, NotConfigured, Status } from "@/components/ui";
 import { SERIES } from "@/lib/linkedin";
+import { SignIn, useSession } from "@/components/auth";
+import { SubstackQueue } from "@/components/SubstackQueue";
 
 const MAX_CHARS = 1300;
 
 export default function Queue() {
-  const [session, setSession] = useState<Session | null>(null);
+  const { session } = useSession();
+  const [tab, setTab] = useState<"linkedin" | "substack">("linkedin");
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [msg, setMsg] = useState("");
   const [li, setLi] = useState<{ connected: boolean; name?: string; daysLeft?: number } | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
-    return () => data.subscription.unsubscribe();
+    if (new URLSearchParams(window.location.search).get("tab") === "substack") setTab("substack");
   }, []);
+  const pickTab = (t: "linkedin" | "substack") => {
+    setTab(t);
+    window.history.replaceState(null, "", t === "substack" ? "/queue?tab=substack" : "/queue");
+  };
 
   const load = useCallback(async () => {
     const { data, error } = await supabase.from("drafts").select("*").order("created_at", { ascending: false }).limit(10);
@@ -47,6 +51,16 @@ export default function Queue() {
     setMsg(res.ok ? "Workflow started. The new draft shows up here in ~2 minutes." : `Failed: ${(await res.json()).error}`);
   };
 
+  const expand = async (draftId: string) => {
+    setMsg("Starting the Substack newsroom on this musing…");
+    const res = await fetch("/api/regenerate", {
+      method: "POST", headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ workflow: "substack.yml", seed_draft_id: draftId }),
+    });
+    setMsg(res.ok ? "Newsroom started. The Substack draft shows up in the Substack tab in ~5 minutes; watch it live under Agents."
+      : `Failed: ${(await res.json()).error}`);
+  };
+
   const connectLinkedIn = async () => {
     const res = await fetch("/api/linkedin/start", { method: "POST", headers: { Authorization: `Bearer ${session.access_token}` } });
     const body = await res.json();
@@ -57,10 +71,19 @@ export default function Queue() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold">Approval queue</h1>
-        <button onClick={regenerate} className="ml-auto rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-card">Generate a new draft</button>
+        <div role="tablist" className="flex rounded-lg border border-line p-0.5 text-sm">
+          {(["linkedin", "substack"] as const).map((t) => (
+            <button key={t} role="tab" aria-selected={tab === t} onClick={() => pickTab(t)}
+              className={`rounded-md px-3 py-1 ${tab === t ? "bg-card font-medium shadow-sm" : "text-ink-2"}`}>
+              {t === "linkedin" ? "LinkedIn" : "Substack"}
+            </button>
+          ))}
+        </div>
+        {tab === "linkedin" && <button onClick={regenerate} className="ml-auto rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-card">Generate a new draft</button>}
         <button onClick={() => supabase.auth.signOut()} className="text-sm text-ink-2 hover:underline">Sign out</button>
       </div>
-      {li && (
+      {tab === "substack" && <SubstackQueue token={session.access_token} />}
+      {tab === "linkedin" && li && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line px-4 py-2 text-sm">
           {li.connected ? (
             <span><span className="text-good">✓</span> LinkedIn connected as <b>{li.name}</b>
@@ -72,15 +95,15 @@ export default function Queue() {
         </div>
       )}
       {msg && <p className="text-sm text-ink-2">{msg}</p>}
-      {drafts.length === 0 && <Card><p className="text-ink-2">No drafts yet. The weekly run creates one every Friday.</p></Card>}
-      {drafts.map((d) => <DraftCard key={d.id} draft={d} onChange={load} token={session.access_token} canPublish={!!li?.connected}
-        nextSeries={Math.max(0, ...drafts.map((x) => x.series_no ?? 0)) + 1} />)}
+      {tab === "linkedin" && drafts.length === 0 && <Card><p className="text-ink-2">No drafts yet. The weekly run creates one every Friday.</p></Card>}
+      {tab === "linkedin" && drafts.map((d) => <DraftCard key={d.id} draft={d} onChange={load} token={session.access_token} canPublish={!!li?.connected}
+        nextSeries={Math.max(0, ...drafts.map((x) => x.series_no ?? 0)) + 1} onExpand={expand} />)}
     </div>
   );
 }
 
-function DraftCard({ draft, onChange, token, canPublish, nextSeries }:
-  { draft: Draft; onChange: () => void; token: string; canPublish: boolean; nextSeries: number }) {
+function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
+  { draft: Draft; onChange: () => void; token: string; canPublish: boolean; nextSeries: number; onExpand: (id: string) => void }) {
   const [pubMsg, setPubMsg] = useState("");
   const [text, setText] = useState(draft.edited_post_md ?? draft.post_md);
   const [preview, setPreview] = useState(false);
@@ -167,6 +190,8 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries }:
                 <button onClick={() => navigator.clipboard.writeText(text)} className="rounded-lg border border-line px-4 py-2 text-sm">Copy post</button>
                 <button onClick={() => navigator.clipboard.writeText(`Sources and the full breakdown: ${onepagerUrl}`)} className="rounded-lg border border-line px-4 py-2 text-sm">Copy first comment</button>
                 <a href="https://www.linkedin.com/feed/?shareActive=true" target="_blank" rel="noopener" className="rounded-lg border border-line px-4 py-2 text-sm">Open LinkedIn</a>
+                <button onClick={() => window.confirm("Start the Substack newsroom on this musing? It takes ~5 minutes and costs about $0.25.") && onExpand(draft.id)}
+                  className="rounded-lg border border-line px-4 py-2 text-sm">Expand to Substack</button>
               </>
             )}
             {pubMsg && <span className="self-center text-sm text-ink-2">{pubMsg}</span>}
@@ -208,28 +233,6 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries }:
         </aside>
       </div>
       {preview && <iframe title="One-pager preview" srcDoc={draft.onepager_html} sandbox="" className="mt-4 h-[70vh] w-full rounded-lg border border-line" />}
-    </Card>
-  );
-}
-
-function SignIn() {
-  const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
-  const send = async () => {
-    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: `${window.location.origin}/queue` } });
-    if (!error) setSent(true);
-  };
-  return (
-    <Card className="mx-auto max-w-md">
-      <h1 className="text-xl font-semibold">Approval queue</h1>
-      <p className="mt-1 text-sm text-ink-2">Owner only. Drafts are visible and editable only to the approved account (enforced by row-level security).</p>
-      {sent ? <p className="mt-4 text-sm">Check your email for a sign-in link.</p> : (
-        <div className="mt-4 flex gap-2">
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com"
-            className="flex-1 rounded-lg border border-line bg-bg px-3 py-2 text-sm outline-none focus:border-accent" />
-          <button onClick={send} className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white">Send link</button>
-        </div>
-      )}
     </Card>
   );
 }

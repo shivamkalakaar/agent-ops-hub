@@ -27,9 +27,12 @@ def _is_pg() -> bool:
     return os.environ.get("DATABASE_URL", "").startswith(("postgres://", "postgresql://"))
 
 
+ADD_COLUMN = re.compile(r"^alter table (\w+) add column if not exists (.+?);?$", re.M)
+
+
 def _sqlite_schema() -> str:
     sql = SCHEMA.read_text()
-    sql = re.sub(r"^alter table .*$", "", sql, flags=re.M)  # Postgres-only migrations; fresh SQLite gets the column from create
+    sql = re.sub(r"^alter table .*$", "", sql, flags=re.M)  # migrations are replayed by _sqlite_migrate
     sql = sql.replace("integer generated always as identity primary key", "integer primary key autoincrement")
     sql = re.sub(r"\b(timestamptz|jsonb)\b", "text", sql)
     return sql
@@ -48,6 +51,15 @@ class DB:
             self.conn = sqlite3.connect(path, isolation_level=None)
             self.conn.row_factory = sqlite3.Row
             self.conn.executescript(_sqlite_schema())
+            self._sqlite_migrate()
+
+    def _sqlite_migrate(self):
+        """Replay `alter table ... add column if not exists` (SQLite has no IF NOT EXISTS for columns)."""
+        for table, column in ADD_COLUMN.findall(SCHEMA.read_text()):
+            name = column.split()[0]
+            if name not in {r[1] for r in self.conn.execute(f"pragma table_info({table})")}:
+                column = re.sub(r"\b(timestamptz|jsonb)\b", "text", column)
+                self.conn.execute(f"alter table {table} add column {column}")
 
     def json(self, obj):
         """Wrap a value bound for a jsonb column."""
@@ -153,6 +165,104 @@ class DB:
         """Angles of the latest drafts in any status, so a pending or rejected topic isn't picked again."""
         rows = self.all("select angle from drafts order by created_at desc limit %s", (limit,))
         return [r["angle"].get("angle", "") for r in rows if isinstance(r["angle"], dict)]
+
+    def search_items(self, terms: list[str], since_iso: str, limit: int = 8) -> list[dict]:
+        """Recent items whose title or summary mentions any of the terms (research follow-ups; no paid web search)."""
+        terms = [t.strip().lower() for t in terms if t.strip()][:6]
+        if not terms:
+            return []
+        cond = " or ".join(["lower(title) like %s or lower(coalesce(summary,'')) like %s"] * len(terms))
+        params = [p for t in terms for p in (f"%{t}%", f"%{t}%")]
+        return self.all(f"select * from items where published_at >= %s and ({cond})"
+                        " order by importance desc nulls last, published_at desc limit %s", (since_iso, *params, limit))
+
+    # --- agent steps (live timeline) -------------------------------------------
+    def _insert_id(self, sql: str, params) -> int:
+        if self.pg:
+            return self.execute(sql + " returning id", params).fetchone()["id"]
+        return self.execute(sql, params).lastrowid
+
+    def last_call_id(self, run_id: str) -> int:
+        return int(self.one("select coalesce(max(id),0) as m from llm_calls where run_id=%s", (run_id,))["m"])
+
+    def run_cost_after(self, run_id: str, call_id: int) -> float:
+        return float(self.one("select coalesce(sum(cost_usd),0) as c from llm_calls where run_id=%s and id>%s",
+                              (run_id, call_id))["c"])
+
+    def start_step(self, run_id: str, seq: int, agent: str, specialist: str, kind: str, reason: str | None = None) -> int:
+        return self._insert_id("insert into agent_steps (run_id, seq, agent, specialist, kind, reason, status, started_at)"
+                               " values (%s,%s,%s,%s,%s,%s,'running',%s)", (run_id, seq, agent, specialist, kind, reason, now()))
+
+    def finish_step(self, step_id: int, status: str, *, summary=None, output=None, cost_usd=0.0, latency_ms=None, reason=None):
+        self.execute("update agent_steps set status=%s, summary=%s, output=%s, cost_usd=%s, latency_ms=%s, ended_at=%s,"
+                     " reason=coalesce(%s, reason) where id=%s",
+                     (status, summary, self.json(output) if output is not None else None, cost_usd, latency_ms, now(), reason, step_id))
+
+    # --- agent registry, owner settings, prompt versions ----------------------------
+    def sync_registry(self, agent: str, rows: list[dict]):
+        for pos, r in enumerate(rows):
+            self.execute(
+                "insert into agent_registry (agent, specialist, position, role, description, default_model, allowed_models,"
+                " required, default_max_calls, updated_at) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+                " on conflict (agent, specialist) do update set position=excluded.position, role=excluded.role,"
+                " description=excluded.description, default_model=excluded.default_model, allowed_models=excluded.allowed_models,"
+                " required=excluded.required, default_max_calls=excluded.default_max_calls, updated_at=excluded.updated_at",
+                (agent, r["specialist"], pos, r["role"], r.get("description"), r.get("default_model"),
+                 self.json(r.get("allowed_models") or []), r.get("required", False), r.get("default_max_calls"), now()))
+
+    def agent_settings(self, agent: str) -> dict[str, dict]:
+        return {r["specialist"]: r for r in self.all("select * from agent_settings where agent=%s", (agent,))}
+
+    def ensure_prompt(self, agent: str, specialist: str, body: str):
+        """Seed v1 from the repo file the first time, so the dashboard has something to edit."""
+        if not self.one("select id from prompt_versions where agent=%s and specialist=%s limit 1", (agent, specialist)):
+            self.execute("insert into prompt_versions (id, agent, specialist, version, body, note, created_at)"
+                         " values (%s,%s,%s,1,%s,'seeded from the repo prompt file',%s)", (new_id(), agent, specialist, body, now()))
+
+    def prompt_version(self, version_id: str) -> dict | None:
+        return self.one("select * from prompt_versions where id=%s", (version_id,))
+
+    # --- substack drafts ---------------------------------------------------------
+    def insert_substack_draft(self, d: dict, run_id: str) -> str:
+        draft_id = new_id()
+        self.execute(
+            "insert into substack_drafts (id, slot, seed_draft_id, brief, title, subtitle, body_md, body_html, images, sources,"
+            " judge_scores, fact_report, final_report, revisions, status, created_at, run_id)"
+            " values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pending',%s,%s)",
+            (draft_id, d["slot"], d.get("seed_draft_id"), self.json(d["brief"]), d["title"], d.get("subtitle"), d["body_md"],
+             d["body_html"], self.json(d["images"]), self.json(d["sources"]), self.json(d["judge_scores"]),
+             self.json(d["fact_report"]), self.json(d["final_report"]), d["revisions"], now(), run_id))
+        return draft_id
+
+    def last_substack_at(self) -> str | None:
+        row = self.one("select max(created_at) as t from substack_drafts")
+        return str(row["t"]) if row and row["t"] else None
+
+    def used_substack_urls(self, limit: int = 20) -> set[str]:
+        """Source URLs of recent Substack drafts in any status, so a story isn't written up twice."""
+        rows = self.all("select sources from substack_drafts order by created_at desc limit %s", (limit,))
+        return {s["url"] for r in rows if isinstance(r["sources"], list) for s in r["sources"]}
+
+    def recent_substack_angles(self, limit: int = 6) -> list[str]:
+        rows = self.all("select title from substack_drafts order by created_at desc limit %s", (limit,))
+        return [r["title"] for r in rows]
+
+    def approved_substack_posts(self, limit: int = 2) -> list[str]:
+        rows = self.all("select coalesce(edited_body_md, body_md) as body from substack_drafts where status in ('approved','published')"
+                        " order by approved_at desc limit %s", (limit,))
+        return [r["body"] for r in rows]
+
+    def published_musings(self, since_iso: str, limit: int = 6) -> list[dict]:
+        """Approved LinkedIn musings (with the owner's edits) that no Substack draft has expanded yet."""
+        return self.all(
+            "select d.id, d.week, d.angle, coalesce(d.edited_post_md, d.post_md) as post, d.sources, d.series_no from drafts d"
+            " where d.status='approved' and coalesce(d.published_at, d.approved_at) >= %s"
+            " and not exists (select 1 from substack_drafts s where s.seed_draft_id = d.id)"
+            " order by coalesce(d.published_at, d.approved_at) desc limit %s", (since_iso, limit))
+
+    def musing(self, draft_id: str) -> dict | None:
+        return self.one("select id, week, angle, coalesce(edited_post_md, post_md) as post, sources, series_no from drafts"
+                        " where id=%s", (draft_id,))
 
 
 @contextmanager

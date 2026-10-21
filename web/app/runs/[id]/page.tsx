@@ -4,8 +4,9 @@ import { supabase, configured } from "@/lib/supabase";
 import type { LlmCall, Run } from "@/lib/types";
 import { ms, usd, when } from "@/lib/format";
 import { Card, NotConfigured, Status } from "@/components/ui";
+import { Timeline } from "@/components/Timeline";
 
-export const revalidate = 300;
+export const revalidate = 60;
 
 export default async function RunPage({ params }: { params: Promise<{ id: string }> }) {
   if (!configured) return <NotConfigured />;
@@ -32,8 +33,10 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
       </div>
       {r.error && <Card className="border-bad"><pre className="whitespace-pre-wrap text-sm">{r.error}</pre></Card>}
 
+      <Timeline runId={r.id} running={r.status === "running"} />
+
       <Card>
-        <h2 className="font-semibold">Steps</h2>
+        <h2 className="font-semibold">LLM calls</h2>
         <table className="mt-3 w-full text-sm">
           <thead className="text-left text-ink-2">
             <tr><th className="py-1 font-normal">Node</th><th className="font-normal">Model</th><th className="font-normal">Latency</th><th className="font-normal text-right">Tokens in/out</th><th className="font-normal text-right">Cost</th></tr>

@@ -2,8 +2,7 @@
 import argparse
 import sys
 
-from core import llm, tracing
-from core.budget import BudgetExceeded
+from core import llm, runner
 from core.config import CONFIG, git_sha
 from core.db import connect
 from agents.market_intel import graph
@@ -14,32 +13,15 @@ PROMPT_VERSION = "v1"
 
 def run(kind: str) -> int:
     builder = {"collect": graph.build_collect, "draft": graph.build_draft}[kind]
-    sha = git_sha()
-    with connect() as db:
-        run_id = db.start_run(AGENT, kind, sha)
-        with tracing.trace(f"{AGENT}.{kind}", run_id=run_id, tags=[AGENT, kind, PROMPT_VERSION],
-                           metadata={"git_sha": sha, "prompt_version": PROMPT_VERSION}) as t:
-            ctx = llm.RunContext(db=db, run_id=run_id, callbacks=t.callbacks)
-            try:
-                state = builder().invoke({}, config={"configurable": {"ctx": ctx}, "callbacks": t.callbacks,
-                                                     "run_name": f"{AGENT}.{kind}"})
-            except BudgetExceeded as ex:
-                db.finish_run(run_id, "budget_exceeded", trace_url=t.url, error=str(ex))
-                print(f"[{run_id}] stopped: {ex}", file=sys.stderr)
-                return 0  # a budget stop is the guard working, not a crash
-            except Exception as ex:
-                db.finish_run(run_id, "failed", trace_url=t.url, error=f"{type(ex).__name__}: {ex}")
-                raise
-            stats = summarize(kind, state)
-            for name, value in state.get("scores", {}).items():
-                t.score(f"critic.{name}", value)
-            if state.get("overall") is not None:
-                t.score("overall", state["overall"])
-                t.score("humanizer", state["accent"]["score"])
-            t.output(stats)
-            db.finish_run(run_id, "succeeded", trace_url=t.url, stats=stats)
-            print(f"[{run_id}] {kind} succeeded: {stats}" + (f"\ntrace: {t.url}" if t.url else ""))
-    return 0
+    return runner.run_graph(AGENT, kind, builder(), {}, lambda state: summarize(kind, state),
+                            prompt_version=PROMPT_VERSION, scores=trace_scores)
+
+
+def trace_scores(state: dict) -> dict:
+    out = {f"critic.{name}": value for name, value in state.get("scores", {}).items()}
+    if state.get("overall") is not None:
+        out |= {"overall": state["overall"], "humanizer": state["accent"]["score"]}
+    return out
 
 
 def summarize(kind: str, state: dict) -> dict:

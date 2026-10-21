@@ -84,3 +84,90 @@ create table if not exists linkedin_orgs (
   org_id  text not null,           -- numeric id, e.g. from a jobs URL: linkedin.com/jobs/search/?f_C=12345
   aliases text[] not null default '{}'   -- other spellings to match in posts, e.g. {"Google"} for "Google DeepMind"
 );
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Agent #2: Substack newsroom (a supervisor + specialists). See agents/substack/.
+
+create table if not exists substack_drafts (
+  id              text primary key,
+  slot            text not null,              -- run date, e.g. 2026-10-22 (Wed and Sat)
+  seed_draft_id   text references drafts(id), -- the LinkedIn musing this expands, if any
+  brief           jsonb,                      -- research brief: thesis, outline, facts with evidence
+  title           text not null,
+  subtitle        text,
+  body_md         text not null,
+  body_html       text not null,              -- rendered from body_md by agents/substack/render.py (no raw HTML)
+  images          jsonb,                      -- [{kind: cover|inline|chart, url, alt, caption, after_section}]
+  sources         jsonb,
+  judge_scores    jsonb,                      -- editor rubric + humanizer + overall
+  fact_report     jsonb,
+  final_report    jsonb,
+  revisions       integer not null default 0,
+  status          text not null default 'pending',   -- pending | approved | rejected | published
+  edited_title    text,
+  edited_subtitle text,
+  edited_body_md  text,
+  published_url   text,
+  created_at      timestamptz not null,
+  approved_at     timestamptz,
+  run_id          text references runs(id)
+);
+create index if not exists substack_drafts_created_idx on substack_drafts (created_at);
+
+-- One row per supervisor decision and per specialist turn: the live run timeline in the dashboard.
+create table if not exists agent_steps (
+  id          integer generated always as identity primary key,
+  run_id      text references runs(id),
+  seq         integer not null,
+  agent       text not null,
+  specialist  text not null,                -- supervisor | research | writer | ...
+  kind        text not null,                -- decision | work
+  reason      text,                         -- the supervisor's reason, or why a fallback was used
+  summary     text,                         -- one line for the timeline
+  output      jsonb,
+  cost_usd    numeric not null default 0,
+  latency_ms  integer,
+  status      text not null,                -- running | ok | failed | skipped
+  started_at  timestamptz not null,
+  ended_at    timestamptz
+);
+create index if not exists agent_steps_run_idx on agent_steps (run_id, seq);
+
+-- Written by the code on every run: which specialists exist, their defaults and the models they may use.
+create table if not exists agent_registry (
+  agent             text not null,
+  specialist        text not null,
+  position          integer not null default 0,
+  role              text not null,
+  description       text,
+  default_model     text,
+  allowed_models    jsonb,
+  required          boolean not null default false,   -- can't be switched off (e.g. research, writer)
+  default_max_calls integer,
+  updated_at        timestamptz not null,
+  primary key (agent, specialist)
+);
+
+-- Owner's overrides from the dashboard. A missing row or null field means "use the registry default".
+create table if not exists agent_settings (
+  agent             text not null,
+  specialist        text not null,
+  enabled           boolean not null default true,
+  model             text,
+  max_calls         integer,
+  prompt_version_id text,
+  updated_at        timestamptz not null,
+  primary key (agent, specialist)
+);
+
+-- Versioned prompts, editable in the dashboard. v1 of each is seeded from the repo's prompt files.
+create table if not exists prompt_versions (
+  id          text primary key,
+  agent       text not null,
+  specialist  text not null,
+  version     integer not null,
+  body        text not null,
+  note        text,
+  created_at  timestamptz not null
+);
+create index if not exists prompt_versions_idx on prompt_versions (agent, specialist, version);

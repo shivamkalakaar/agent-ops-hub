@@ -1,0 +1,35 @@
+name: substack (Wed + Sat)
+on:
+  schedule:
+    - cron: "0 15 * * 3,6"   # Wed and Sat 08:00 PT (PDT)
+  workflow_dispatch:
+    inputs:
+      seed_draft_id:
+        description: "Expand this published LinkedIn musing (drafts.id). Leave empty to let research pick."
+        required: false
+        default: ""
+concurrency: { group: market-intel, cancel-in-progress: false }   # shares the items table with collect
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+      LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+      LANGFUSE_BASE_URL: ${{ secrets.LANGFUSE_BASE_URL }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}                   # image uploads (Storage)
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      SEED: ${{ inputs.seed_draft_id }}
+    steps:
+      - name: Check image storage
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_KEY" ]; then
+            echo "::warning title=No image storage::SUPABASE_URL or SUPABASE_SERVICE_KEY secret is missing, so this post will have no images."
+          fi
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen --no-dev
+      - run: uv run python -m agents.market_intel collect   # scores stories pushed from that morning's brief
+      - run: uv run python -m agents.substack draft ${SEED:+--seed "$SEED"}
