@@ -27,11 +27,13 @@ def _feedback(state) -> str:
         if e.get("violations"):
             parts.append("# Rule violations (must fix)\n" + "\n".join(f"- {x}" for x in e["violations"]))
     if (f := state.get("fact_report")) and f.get("version") == v:
-        bad = [c for c in f.get("claims", []) if c.get("verdict") in ("hedge", "unsupported")]
-        lines = [f'- [{c["verdict"]}] "{c.get("claim", "")}" → {c.get("fix", "")}' for c in bad]
+        lines = [f'- "{c.get("claim", "")}" → {c.get("fix", "")}' for c in f.get("claims", []) if c.get("verdict") == "unsupported"]
         lines += [f"- {x} is not in the sources: remove it or use the sourced figure" for x in f.get("invented", [])]
         if lines:
-            parts.append("# Fact check (must fix)\n" + "\n".join(lines))
+            parts.append("# Fact check: unsupported (must fix)\n" + "\n".join(lines))
+        hedges = [f'- "{c.get("claim", "")}" → {c.get("fix", "")}' for c in f.get("claims", []) if c.get("verdict") == "hedge"]
+        if hedges:
+            parts.append("# Fact check: attribute more clearly (should fix)\n" + "\n".join(hedges))
     if (fr := state.get("final_report")) and fr.get("version") == v and not fr.get("passed"):
         parts.append("# Final check blockers (must fix)\n" + "\n".join(f"- {b}" for b in fr.get("blockers", [])))
     return "\n\n".join(parts)

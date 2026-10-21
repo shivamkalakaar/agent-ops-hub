@@ -284,3 +284,13 @@ def test_storage_usable_only_when_configured_on_ci(monkeypatch):
     monkeypatch.delenv("GITHUB_ACTIONS")
     monkeypatch.delenv("SUPABASE_SERVICE_KEY")
     assert storage.usable()  # local runs fall back to ./out/img
+
+
+def test_hedges_are_warnings_not_blockers():
+    llm.FAKE_RESPONSES["fact_checker"] = lambda m: json.dumps({"supported_count": 9, "claims": [
+        {"claim": "costs $0.20 per million tokens", "verdict": "hedge", "fix": "say it's the lab's price sheet"}]})
+    assert cli.draft(None) == 0
+    with connect() as db:
+        d = db.one("select * from substack_drafts")
+    assert d["judge_scores"]["passed_review"] is True and d["final_report"]["blockers"] == []
+    assert any(p.startswith("needs hedging") for p in d["final_report"]["polish"])
