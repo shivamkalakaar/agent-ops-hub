@@ -76,3 +76,11 @@ create table if not exists linkedin_auth (
   updated_at   timestamptz not null
 );
 alter table drafts add column if not exists series_no integer;   -- "AI Musing #N", assigned at publish time
+
+-- Company pages to @mention when a post names them. LinkedIn's lookup API needs partner access,
+-- so the owner adds each company's numeric ID once from the queue.
+create table if not exists linkedin_orgs (
+  name    text primary key,        -- the company page's name exactly as LinkedIn shows it
+  org_id  text not null,           -- numeric id, e.g. from a jobs URL: linkedin.com/jobs/search/?f_C=12345
+  aliases text[] not null default '{}'   -- other spellings to match in posts, e.g. {"Google"} for "Google DeepMind"
+);

@@ -19,3 +19,7 @@ create policy "owner updates drafts" on drafts for update using (auth.jwt() ->> 
 alter table linkedin_auth enable row level security;
 create policy "owner manages linkedin" on linkedin_auth for all
   using (auth.jwt() ->> 'email' = 'owner@example.com') with check (auth.jwt() ->> 'email' = 'owner@example.com');
+
+alter table linkedin_orgs enable row level security;
+create policy "owner manages linkedin orgs" on linkedin_orgs for all
+  using (auth.jwt() ->> 'email' = 'owner@example.com') with check (auth.jwt() ->> 'email' = 'owner@example.com');

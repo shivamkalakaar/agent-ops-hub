@@ -5,7 +5,7 @@ import { supabase, configured } from "@/lib/supabase";
 import type { Draft } from "@/lib/types";
 import { when } from "@/lib/format";
 import { Card, NotConfigured, Status } from "@/components/ui";
-import { SERIES } from "@/lib/linkedin";
+import { SERIES, findMentions, type Org } from "@/lib/linkedin";
 
 const MAX_CHARS = 1300;
 
@@ -13,6 +13,11 @@ export default function Queue() {
   const [session, setSession] = useState<Session | null>(null);
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [msg, setMsg] = useState("");
+  const [orgs, setOrgs] = useState<Org[]>([]);
+  const loadOrgs = useCallback(async () => {
+    const { data } = await supabase.from("linkedin_orgs").select("*").order("name");
+    setOrgs((data ?? []) as Org[]);
+  }, []);
   const [li, setLi] = useState<{ connected: boolean; name?: string; daysLeft?: number } | null>(null);
 
   useEffect(() => {
@@ -26,7 +31,7 @@ export default function Queue() {
     if (error) setMsg(error.message);
     setDrafts((data ?? []) as Draft[]);
   }, []);
-  useEffect(() => { if (session) load(); }, [session, load]);
+  useEffect(() => { if (session) { load(); loadOrgs(); } }, [session, load, loadOrgs]);
   useEffect(() => {
     if (!session) return;
     fetch("/api/linkedin/status", { headers: { Authorization: `Bearer ${session.access_token}` } })
@@ -72,15 +77,16 @@ export default function Queue() {
         </div>
       )}
       {msg && <p className="text-sm text-ink-2">{msg}</p>}
+      <Companies orgs={orgs} onChange={loadOrgs} />
       {drafts.length === 0 && <Card><p className="text-ink-2">No drafts yet. The weekly run creates one every Friday.</p></Card>}
-      {drafts.map((d) => <DraftCard key={d.id} draft={d} onChange={load} token={session.access_token} canPublish={!!li?.connected}
+      {drafts.map((d) => <DraftCard key={d.id} draft={d} onChange={load} token={session.access_token} canPublish={!!li?.connected} orgs={orgs}
         nextSeries={Math.max(0, ...drafts.map((x) => x.series_no ?? 0)) + 1} />)}
     </div>
   );
 }
 
-function DraftCard({ draft, onChange, token, canPublish, nextSeries }:
-  { draft: Draft; onChange: () => void; token: string; canPublish: boolean; nextSeries: number }) {
+function DraftCard({ draft, onChange, token, canPublish, nextSeries, orgs }:
+  { draft: Draft; onChange: () => void; token: string; canPublish: boolean; nextSeries: number; orgs: Org[] }) {
   const [pubMsg, setPubMsg] = useState("");
   const [text, setText] = useState(draft.edited_post_md ?? draft.post_md);
   const [preview, setPreview] = useState(false);
@@ -114,7 +120,10 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries }:
     });
     const body = await res.json();
     setBusy(false);
-    setPubMsg(res.ok ? `Published as ${SERIES} #${body.seriesNo}. First comment ${body.comment}.` : `Failed: ${body.error}`);
+    setPubMsg(res.ok
+      ? `Published as ${SERIES} #${body.seriesNo}.${body.tagged?.length ? ` Tagged ${body.tagged.join(", ")}.` : ""}`
+        + `${body.tagsFailed ? " LinkedIn rejected the tags, so it went out untagged: check those company IDs." : ""} First comment ${body.comment}.`
+      : `Failed: ${body.error}`);
     onChange();
   };
 
@@ -140,6 +149,10 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries }:
             className="w-full rounded-lg border border-line bg-bg p-3 text-[15px] leading-relaxed outline-none focus:border-accent" />
           <div className={`mt-1 text-xs num ${text.length > MAX_CHARS ? "text-bad" : "text-muted"}`}>
             {text.length} / {MAX_CHARS} characters · {words} words
+            {!draft.published_at && draft.status !== "rejected" && (() => {
+              const tags = findMentions(text, orgs).map((m) => m.org.name);
+              return tags.length ? ` · will tag ${tags.join(", ")}` : "";
+            })()}
             {draft.series_no ? ` · published as ${SERIES} #${draft.series_no}`
               : draft.status !== "rejected" && ` · publishes as ${SERIES} #${nextSeries} (added as the last line)`}
           </div>
@@ -205,6 +218,61 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries }:
         </aside>
       </div>
       {preview && <iframe title="One-pager preview" srcDoc={draft.onepager_html} sandbox="" className="mt-4 h-[70vh] w-full rounded-lg border border-line" />}
+    </Card>
+  );
+}
+
+/** Company pages to @mention. LinkedIn's lookup API needs partner access, so IDs are added by hand once. */
+function Companies({ orgs, onChange }: { orgs: Org[]; onChange: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [id, setId] = useState("");
+  const [aliases, setAliases] = useState("");
+  const [err, setErr] = useState("");
+  const add = async () => {
+    const orgId = (id.match(/f_C=(\d+)/)?.[1] ?? id.match(/(\d{3,})/)?.[1] ?? "").trim();
+    if (!name.trim() || !orgId) return setErr("Enter the page name and its numeric ID (or a jobs link containing f_C=…).");
+    const { error } = await supabase.from("linkedin_orgs").upsert({
+      name: name.trim(), org_id: orgId, aliases: aliases.split(",").map((a) => a.trim()).filter(Boolean),
+    });
+    if (error) return setErr(error.message);
+    setName(""); setId(""); setAliases(""); setErr(""); onChange();
+  };
+  const remove = async (n: string) => { await supabase.from("linkedin_orgs").delete().eq("name", n); onChange(); };
+  return (
+    <Card>
+      <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between text-left">
+        <span className="font-semibold">Companies to tag <span className="font-normal text-muted">({orgs.length})</span></span>
+        <span className="text-sm text-ink-2">{open ? "Hide" : "Manage"}</span>
+      </button>
+      {open && (
+        <div className="mt-3 space-y-3 text-sm">
+          <p className="text-ink-2">
+            The first mention of each company below becomes an @tag when you publish. To find a company&apos;s ID, open its LinkedIn page,
+            click <b>Jobs</b>, then <b>See all jobs</b>: the link contains <code>f_C=</code> followed by the ID. Paste that link or just the number.
+            Use the page name exactly as LinkedIn shows it.
+          </p>
+          <ul className="divide-y divide-line">
+            {orgs.map((o) => (
+              <li key={o.name} className="flex items-center gap-3 py-1.5">
+                <b>{o.name}</b><span className="text-muted num">{o.org_id}</span>
+                {o.aliases?.length > 0 && <span className="text-muted">also matches {o.aliases.join(", ")}</span>}
+                <button onClick={() => remove(o.name)} className="ml-auto text-ink-2 hover:underline">Remove</button>
+              </li>
+            ))}
+          </ul>
+          <div className="grid gap-2 md:grid-cols-[1fr_1fr_1fr_auto]">
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Page name, e.g. Anthropic"
+              className="rounded-lg border border-line bg-bg px-3 py-2 outline-none focus:border-accent" />
+            <input value={id} onChange={(e) => setId(e.target.value)} placeholder="ID or jobs link with f_C="
+              className="rounded-lg border border-line bg-bg px-3 py-2 outline-none focus:border-accent" />
+            <input value={aliases} onChange={(e) => setAliases(e.target.value)} placeholder="Other spellings, comma-separated"
+              className="rounded-lg border border-line bg-bg px-3 py-2 outline-none focus:border-accent" />
+            <button onClick={add} className="rounded-lg bg-accent px-4 py-2 font-medium text-white">Add</button>
+          </div>
+          {err && <p className="text-bad">{err}</p>}
+        </div>
+      )}
     </Card>
   );
 }
