@@ -1,7 +1,7 @@
 # Checked before every LLM and image call. On breach the run stops and is marked budget_exceeded.
 # Also set a matching credit limit on the OpenRouter key itself (openrouter.ai/settings/keys).
 # Raised from $0.50/$3 for the Substack newsroom (2 posts/week with generated images, ~$0.25/post).
-daily_cap_usd: 2.00   # a newsroom post (~$0.40) plus PR evals (~$0.65) on the same day fits
+daily_cap_usd: 5.00   # TEMPORARY for 2026-10-21 (evals + merge + first newsroom run); back to 3.00 after
 monthly_cap_usd: 6.00
 # Used when the provider does not report cost, so the guard errs on the side of caution.
 fallback_cost_per_1k_tokens_usd: 0.001
