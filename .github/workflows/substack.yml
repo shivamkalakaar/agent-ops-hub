@@ -23,6 +23,11 @@ jobs:
       SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
       SEED: ${{ inputs.seed_draft_id }}
     steps:
+      - name: Check image storage
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_KEY" ]; then
+            echo "::warning title=No image storage::SUPABASE_URL or SUPABASE_SERVICE_KEY secret is missing, so this post will have no images."
+          fi
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --frozen --no-dev

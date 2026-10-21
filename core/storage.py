@@ -22,6 +22,16 @@ def to_jpeg(raw: bytes, max_width: int = 1600) -> bytes:
     return out.getvalue()
 
 
+def configured() -> bool:
+    return bool(os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_SERVICE_KEY"))
+
+
+def usable() -> bool:
+    """Local runs can fall back to ./out/img. On GitHub Actions the runner's disk is thrown away after the job,
+    so an image saved there would be a broken link in the post: storage has to be configured."""
+    return configured() or not os.environ.get("GITHUB_ACTIONS")
+
+
 def put(path: str, data: bytes, content_type: str) -> str:
     """Store a file and return a URL the dashboard and Substack can load (a file:// path when local)."""
     url, key = os.environ.get("SUPABASE_URL", "").rstrip("/"), os.environ.get("SUPABASE_SERVICE_KEY")

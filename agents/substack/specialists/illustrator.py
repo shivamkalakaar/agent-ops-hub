@@ -70,6 +70,9 @@ def _chart_ok(spec: dict, text: str) -> bool:
 
 
 def run(state, ctx, cfg):
+    if not storage.usable():  # don't pay for images that would be lost with the runner
+        note = "skipped: image storage isn't configured (set the SUPABASE_URL and SUPABASE_SERVICE_KEY secrets)"
+        return {"images": [], "image_notes": [note], "image_headings": []}, f"No images. {note}", {"notes": [note]}
     draft, brief = current(state), state["brief"]
     p = checks.parse(draft["md"])
     heads = checks.sections(p["body"])

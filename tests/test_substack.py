@@ -37,7 +37,7 @@ def _allowed(messages) -> list[str]:
 def offline(monkeypatch, tmp_path):
     monkeypatch.setenv("LLM_MODE", "fake")
     monkeypatch.setenv("SQLITE_PATH", str(tmp_path / "t.db"))
-    for var in ("DATABASE_URL", "LANGFUSE_PUBLIC_KEY", "SUPABASE_URL", "SUPABASE_SERVICE_KEY"):
+    for var in ("DATABASE_URL", "LANGFUSE_PUBLIC_KEY", "SUPABASE_URL", "SUPABASE_SERVICE_KEY", "GITHUB_ACTIONS"):
         monkeypatch.delenv(var, raising=False)
     monkeypatch.setattr(storage, "put", lambda path, data, content_type: f"https://img.example.com/{path}")
     monkeypatch.setattr(research, "fetch_article", lambda url: ARTICLE)
@@ -263,3 +263,24 @@ def test_saved_fallback_version_is_the_one_with_fewest_fact_problems():
         d = db.one("select * from substack_drafts")
     assert d["judge_scores"]["passed_review"] is False and d["judge_scores"]["version"] == 2
     assert "Most coverage" in d["body_md"]
+
+
+def test_images_are_skipped_on_ci_without_storage(monkeypatch):
+    monkeypatch.setattr(storage, "usable", lambda: False)
+    assert cli.draft(None) == 0
+    with connect() as db:
+        d = db.one("select * from substack_drafts")
+        step = next(s for s in _steps(db) if s["specialist"] == "illustrator")
+    assert d["images"] == [] and "storage isn't configured" in step["summary"]
+    assert d["judge_scores"]["passed_review"] is True  # the post still goes out for review
+
+
+def test_storage_usable_only_when_configured_on_ci(monkeypatch):
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    assert not storage.usable()
+    monkeypatch.setenv("SUPABASE_URL", "https://x.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_KEY", "sb_secret_x")
+    assert storage.usable()
+    monkeypatch.delenv("GITHUB_ACTIONS")
+    monkeypatch.delenv("SUPABASE_SERVICE_KEY")
+    assert storage.usable()  # local runs fall back to ./out/img
