@@ -91,7 +91,7 @@ The newsroom has its own eval (`--agent substack`): 3 cases of 3 merged brief da
 | Substack post (Wed, Sat) | ~20 | free models for everything but the writer (Sonnet) and images (Nano Banana 2.1) | $0.47 on the first run; ~$0.20–0.30 expected now (each Sonnet draft ~$0.06, images ~$0.12) |
 | PR evals | ~30 (+~45 for the newsroom) | same, images off | ~$0.15–0.25 (+~$0.30–0.50) |
 
-Caps are $2/day and $6/month (`config/budget.yaml`) to make room for two illustrated posts a week.
+Caps are $3/day and $6/month ($10 for the October 2026 launch month) (`config/budget.yaml`) to make room for two illustrated posts a week.
 
 ## Run it locally
 

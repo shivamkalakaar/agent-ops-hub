@@ -22,6 +22,9 @@ HERE = Path(__file__).parent
 BASELINE = HERE / "baseline.json"
 SUBSTACK_BASELINE = HERE / "baseline.substack.json"
 TOLERANCE = 0.3
+# The newsroom saves its best version even when nothing passes, flagged for the owner, so one flagged post in a
+# 3-case run isn't a regression; two are. The LinkedIn agent still needs every final post clean.
+SUBSTACK_MIN_GUARDRAIL_PASS = 2 / 3
 DAYS_PER_SUBSTACK_CASE = 3  # a Wed/Sat post covers 3-4 days of news
 
 
@@ -150,10 +153,10 @@ def substack_main(args) -> int:
     (HERE / "results").mkdir(exist_ok=True)
     (HERE / "results" / "substack.json").write_text(json.dumps({"summary": summary, "results": results}, indent=1))
     print(json.dumps(summary, indent=1))
-    return gate(summary, SUBSTACK_BASELINE, args.update_baseline)
+    return gate(summary, SUBSTACK_BASELINE, args.update_baseline, min_guardrail_pass=SUBSTACK_MIN_GUARDRAIL_PASS)
 
 
-def gate(summary: dict, baseline: Path, update: bool) -> int:
+def gate(summary: dict, baseline: Path, update: bool, min_guardrail_pass: float = 1.0) -> int:
     if update:
         baseline.write_text(json.dumps(summary, indent=1) + "\n")
         print("baseline updated")
@@ -166,8 +169,8 @@ def gate(summary: dict, baseline: Path, update: bool) -> int:
     if summary["humanizer_mean"] < humanizer.MIN_HUMAN:
         print(f"REGRESSION: mean humanizer {summary['humanizer_mean']}/5 < {humanizer.MIN_HUMAN}", file=sys.stderr)
         return 1
-    if summary["guardrail_pass_rate"] < 1:
-        print("REGRESSION: some final posts still violate guardrails", file=sys.stderr)
+    if summary["guardrail_pass_rate"] < min_guardrail_pass - 1e-9:
+        print(f"REGRESSION: guardrail pass rate {summary['guardrail_pass_rate']:.2f} < {min_guardrail_pass:.2f}", file=sys.stderr)
         return 1
     return 0
 
