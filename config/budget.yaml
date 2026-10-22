@@ -2,9 +2,8 @@
 # Also set a matching credit limit on the OpenRouter key itself (openrouter.ai/settings/keys).
 # Raised from $0.50/$3 for the Substack newsroom (2 posts/week with generated images, ~$0.25/post).
 daily_cap_usd: 3.00   # a newsroom post (~$0.45) plus PR evals (~$0.65) on the same day fits, with room for a retry
-monthly_cap_usd: 6.00
+monthly_cap_usd: 10.00   # weekday LinkedIn (~$1) + 2 illustrated Substack posts a week (~$4) + PR evals, with headroom
 # One-off overrides by month (UTC, YYYY-MM). Without an entry, monthly_cap_usd applies, so caps reset on their own.
-monthly_cap_overrides:
-  "2026-10": 10.00   # launch month: ~$3.50 of one-off testing and evals on 2026-10-21
+monthly_cap_overrides: {}
 # Used when the provider does not report cost, so the guard errs on the side of caution.
 fallback_cost_per_1k_tokens_usd: 0.001

@@ -11,8 +11,15 @@ AGENT = "market_intel"
 PROMPT_VERSION = "v1"
 
 
-def run(kind: str) -> int:
+def run(kind: str, skip_if_pending: int | None = None) -> int:
     builder = {"collect": graph.build_collect, "draft": graph.build_draft}[kind]
+    if kind == "draft" and skip_if_pending:
+        with connect() as db:
+            if (n := db.pending_drafts()) >= skip_if_pending:  # scheduled runs don't pile up unreviewed posts
+                run_id = db.start_run(AGENT, kind, git_sha())
+                db.finish_run(run_id, "skipped", stats={"reason": f"{n} drafts already waiting for approval"})
+                print(f"[{run_id}] skipped: {n} drafts already waiting for approval")
+                return 0
     return runner.run_graph(AGENT, kind, builder(), {}, lambda state: summarize(kind, state),
                             prompt_version=PROMPT_VERSION, scores=trace_scores)
 
@@ -60,8 +67,9 @@ def build_style_guide() -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(prog="agents.market_intel")
     ap.add_argument("command", choices=["collect", "draft", "style-guide"])
+    ap.add_argument("--skip-if-pending", type=int, help="draft: do nothing if this many drafts are waiting for approval")
     args = ap.parse_args()
-    return build_style_guide() if args.command == "style-guide" else run(args.command)
+    return build_style_guide() if args.command == "style-guide" else run(args.command, args.skip_if_pending)
 
 
 if __name__ == "__main__":

@@ -61,7 +61,7 @@ export default function Agents() {
       {msg && <p className="text-sm text-ink-2">{msg}</p>}
 
       <AgentHeader name="Market intel" agent="market_intel" runs={runsOf("market_intel")}
-        blurb="Daily: collects and scores AI news. Weekly (Fri): one LinkedIn post, critic loop, one-pager. Configured in code."
+        blurb="Daily: collects and scores AI news. Weekdays: one LinkedIn post (skipped when 2 are already waiting), critic loop, one-pager. Configured in code."
         action={session ? () => start("weekly.yml") : undefined} actionLabel="Draft now" />
 
       <AgentHeader name="Substack newsroom" agent="substack" runs={runsOf("substack")}
@@ -109,7 +109,7 @@ function NewsroomDiagram({ run, disabled }: { run?: Run; disabled: string[] }) {
 
 function AgentHeader({ name, agent, runs, blurb, action, actionLabel, live }:
   { name: string; agent: string; runs: Run[]; blurb: string; action?: () => void; actionLabel: string; live?: Run }) {
-  const finished = runs.filter((r) => r.status !== "running");
+  const finished = runs.filter((r) => r.status !== "running" && r.status !== "skipped");
   const ok = finished.filter((r) => r.status === "succeeded").length;
   const last = runs[0];
   return (

@@ -23,6 +23,7 @@ const STATUS: Record<string, { icon: string; cls: string; label: string }> = {
   approved: { icon: "✓", cls: "text-good", label: "Approved" },
   rejected: { icon: "✕", cls: "text-bad", label: "Rejected" },
   published: { icon: "✓", cls: "text-good", label: "Published" },
+  skipped: { icon: "–", cls: "text-muted", label: "Skipped" },
 };
 
 export function Status({ status }: { status: string }) {

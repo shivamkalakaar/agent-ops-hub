@@ -142,3 +142,34 @@ def test_keeps_more_human_version_when_rewrite_is_worse():
 def test_overall_weights_humanizer_40_percent():
     assert graph.overall_score({"hook": 5, "voice": 5}, 1) == 0.4 * 1 + 0.6 * 5
     assert graph.overall_score({"hook": 3, "voice": 3}, 5) == 0.4 * 5 + 0.6 * 3
+
+
+def test_weekday_drafts_skip_used_stories_and_use_a_date_key():
+    assert cli.run("collect") == 0 and cli.run("draft") == 0
+    from core.db import connect
+    with connect() as db:
+        first = db.one("select * from drafts")
+    assert first["week"] == datetime.now(timezone.utc).date().isoformat()
+    assert cli.run("draft") == 0  # next run: story "a" is used, so it must build on "b"
+    with connect() as db:
+        second = db.one("select * from drafts where id != %s", (first["id"],))
+    assert first["sources"][0]["url"] == "https://example.com/a" and second["sources"][0]["url"] == "https://example.com/b"
+
+
+def test_scheduled_run_skips_when_two_drafts_are_waiting():
+    assert cli.run("collect") == 0 and cli.run("draft") == 0 and cli.run("draft") == 0
+    assert cli.run("draft", skip_if_pending=2) == 0
+    from core.db import connect
+    with connect() as db:
+        runs = db.all("select status, stats from runs where kind='draft' order by started_at")
+        assert db.pending_drafts() == 2
+    assert runs[-1]["status"] == "skipped" and "2 drafts already waiting" in runs[-1]["stats"]["reason"]
+
+
+def test_window_starts_at_last_draft_within_bounds():
+    from datetime import timedelta
+    now = datetime(2026, 10, 26, 15, tzinfo=timezone.utc)                      # a Monday
+    friday = (now - timedelta(days=3)).isoformat()
+    assert graph.window_start(friday, now) == now - timedelta(days=3)          # covers the weekend
+    assert graph.window_start((now - timedelta(hours=2)).isoformat(), now) == now - timedelta(days=1)
+    assert graph.window_start(None, now) == now - timedelta(days=4)

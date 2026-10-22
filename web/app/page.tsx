@@ -22,9 +22,9 @@ export default async function Overview() {
   const monthSpend = C.filter((c) => c.created_at >= monthStart).reduce((s, c) => s + Number(c.cost_usd), 0);
   const okCalls = C.filter((c) => c.ok);
   const lat = okCalls.map((c) => c.latency_ms ?? 0);
-  const finished = R.filter((r) => r.status !== "running");
+  const finished = R.filter((r) => r.status !== "running" && r.status !== "skipped");
   const successRate = finished.length ? finished.filter((r) => r.status === "succeeded").length / finished.length : 0;
-  const draftRuns = R.filter((r) => r.kind === "draft" && r.status === "succeeded");
+  const draftRuns = R.filter((r) => r.agent === "market_intel" && r.kind === "draft" && r.status === "succeeded");
   const costPerDraft = draftRuns.length ? draftRuns.reduce((s, r) => s + Number(r.cost_usd), 0) / draftRuns.length : 0;
   const lastEval = R.find((r) => r.kind === "eval" && r.status === "succeeded");
 
@@ -50,7 +50,7 @@ export default async function Overview() {
         <h1 className="text-2xl font-semibold">Agent operations</h1>
         <p className="mt-1 max-w-2xl text-ink-2">
           Two agents. A market-intel agent reads ~12 AI feeds and my daily AI brief, scores what matters and drafts one
-          short LinkedIn post a week. A Substack newsroom (a super agent running six specialists) turns the same news into
+          short LinkedIn post every weekday. A Substack newsroom (a super agent running six specialists) turns the same news into
           two long posts a week with images. Every call is budget-checked, traced and evaluated; nothing ships without
           human approval.
         </p>
@@ -69,7 +69,7 @@ export default async function Overview() {
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatTile label="Run success rate" value={`${Math.round(successRate * 100)}%`} note={`last ${finished.length} runs`} />
-        <StatTile label="Cost per weekly draft" value={usd(costPerDraft)} note={`${draftRuns.length} drafts`} />
+        <StatTile label="Cost per LinkedIn draft" value={usd(costPerDraft)} note={`${draftRuns.length} drafts`} />
         <StatTile label="LLM latency p50 / p95" value={`${ms(percentile(lat, 50))}`} note={`p95 ${ms(percentile(lat, 95))}`} />
         <StatTile label="Eval score (critic, 1–5)"
           value={lastEval?.stats?.mean != null ? String(lastEval.stats.mean) : "–"}
@@ -147,7 +147,7 @@ function Architecture() {
         </div>
       </div>
       <div>
-        <div className="mb-1 text-xs uppercase tracking-wide text-muted">Weekly · LangGraph</div>
+        <div className="mb-1 text-xs uppercase tracking-wide text-muted">Weekdays · LangGraph</div>
         <div className="flex flex-wrap items-center gap-2">
           <span className={box}>Pick one angle</span>{arrow}<span className={box}>Write post</span>{arrow}
           <span className={box}>Critic (other model family)</span>{arrow}<span className={box}>Guardrails</span>{arrow}

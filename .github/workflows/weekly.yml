@@ -1,7 +1,7 @@
-name: draft (weekly)
+name: linkedin draft (weekdays)   # file name kept: the dashboard dispatches weekly.yml
 on:
   schedule:
-    - cron: "0 15 * * 5"   # Fri 08:00 PT (PDT)
+    - cron: "0 15 * * 1-5"   # Mon-Fri 08:00 PT (PDT)
   workflow_dispatch:
 concurrency: { group: market-intel, cancel-in-progress: false }
 jobs:
@@ -19,4 +19,5 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --frozen --no-dev
       - run: uv run python -m agents.market_intel collect   # scores stories pushed from that morning's brief
-      - run: uv run python -m agents.market_intel draft
+      # a scheduled run skips when 2 drafts are already waiting; "Generate a new draft" in the queue always drafts
+      - run: uv run python -m agents.market_intel draft ${{ github.event_name == 'schedule' && '--skip-if-pending 2' || '' }}
