@@ -9,6 +9,7 @@ import { Card } from "@/components/ui";
 const ROLE: Record<string, string> = {
   supervisor: "Super agent", research: "Research", writer: "Writer", editor: "Editor",
   fact_checker: "Fact-checker", illustrator: "Illustrator", final_check: "Final check",
+  fetch_feeds: "Fetch feeds", push_to_hub: "Send stories to the hub", send: "Email", inbox: "Read inbox",
 };
 
 /** Live run timeline: the block diagram on top, then every supervisor decision and specialist turn. */
@@ -27,7 +28,7 @@ export function Timeline({ runId, running }: { runId: string; running: boolean }
         {live && <span className="inline-flex items-center gap-1.5 text-sm text-accent"><span className="h-2 w-2 animate-pulse rounded-full bg-accent" />live</span>}
         <span className="ml-auto text-sm text-ink-2 num">{steps.filter((s) => s.kind === "work").length} turns · {usd(total)}</span>
       </div>
-      <div className="mt-4"><AgentGraph steps={steps} runFinished={!running && !live} /></div>
+      {steps[0]?.agent === "substack" && <div className="mt-4"><AgentGraph steps={steps} runFinished={!running && !live} /></div>}
       <ol className="mt-6 space-y-0">
         {steps.map((s) => s.kind === "decision" ? (
           <li key={s.id} className="ml-[7px] border-l border-line py-1 pl-5 text-xs text-ink-2">
@@ -38,13 +39,14 @@ export function Timeline({ runId, running }: { runId: string; running: boolean }
         ) : (
           <li key={s.id} className="relative ml-[7px] border-l border-line pb-3 pl-5">
             <span aria-hidden className={`absolute -left-[7px] top-1.5 h-3.5 w-3.5 rounded-full border-2 border-card ${
-              s.status === "running" ? "animate-pulse bg-accent" : s.status === "failed" ? "bg-bad" : "bg-good"}`} />
+              s.status === "running" ? "animate-pulse bg-accent" : s.status === "failed" ? "bg-bad"
+              : s.status === "blocked" || s.status === "degraded" ? "bg-warn" : "bg-good"}`} />
             <button onClick={() => setOpen(open === s.id ? null : s.id)} className="w-full text-left">
               <div className="flex flex-wrap items-baseline gap-x-3">
                 <span className="font-medium">{ROLE[s.specialist] ?? s.specialist}</span>
                 <span className="text-xs text-muted num">{when(s.started_at)} · {ms(s.latency_ms)} · {usd(Number(s.cost_usd))}</span>
               </div>
-              <p className={`text-sm ${s.status === "failed" ? "text-bad" : "text-ink-2"}`}>{s.summary ?? "working…"}</p>
+              <p className={`text-sm ${s.status === "failed" ? "text-bad" : s.status === "blocked" || s.status === "degraded" ? "text-warn" : "text-ink-2"}`}>{s.summary ?? "working…"}</p>
               {s.reason && s.specialist !== "supervisor" && <p className="text-xs text-muted">asked: {s.reason}</p>}
             </button>
             {open === s.id && s.output && <StepOutput step={s} />}

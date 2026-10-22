@@ -60,6 +60,9 @@ export default function Agents() {
       {!session && <p className="text-sm text-ink-2">Read-only. <Link href="/queue" className="text-accent hover:underline">Sign in</Link> to change settings or edit prompts.</p>}
       {msg && <p className="text-sm text-ink-2">{msg}</p>}
 
+      <AgentHeader name="AI Stack Brief" agent="ai_brief" runs={runsOf("ai_brief")}
+        blurb="On your Mac, every morning: reads 20 feeds, researches and writes the brief, sends its stories to the LinkedIn and Substack agents, emails it at 10:00. If sending needs approval, type /brief in Claude Code." />
+
       <AgentHeader name="Market intel" agent="market_intel" runs={runsOf("market_intel")}
         blurb="Daily: collects and scores AI news. Weekdays: one LinkedIn post (skipped when 2 are already waiting), critic loop, one-pager. Configured in code."
         action={session ? () => start("weekly.yml") : undefined} actionLabel="Draft now" />
@@ -108,10 +111,14 @@ function NewsroomDiagram({ run, disabled }: { run?: Run; disabled: string[] }) {
 }
 
 function AgentHeader({ name, agent, runs, blurb, action, actionLabel, live }:
-  { name: string; agent: string; runs: Run[]; blurb: string; action?: () => void; actionLabel: string; live?: Run }) {
+  { name: string; agent: string; runs: Run[]; blurb: string; action?: () => void; actionLabel?: string; live?: Run }) {
   const finished = runs.filter((r) => r.status !== "running" && r.status !== "skipped");
   const ok = finished.filter((r) => r.status === "succeeded").length;
   const last = runs[0];
+  // the most recent problem, if it's newer than the last success: what failed and why, without opening the run
+  const lastOk = runs.find((r) => r.status === "succeeded");
+  const problem = runs.find((r) => ["failed", "blocked", "budget_exceeded"].includes(r.status));
+  const showProblem = problem && (!lastOk || problem.started_at > lastOk.started_at);
   return (
     <Card>
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
@@ -129,6 +136,12 @@ function AgentHeader({ name, agent, runs, blurb, action, actionLabel, live }:
         {live && <Link href={`/runs/${live.id}`} className="inline-flex items-center gap-1.5 text-sm text-accent hover:underline"><span className="h-2 w-2 animate-pulse rounded-full bg-accent" />Watch live</Link>}
         {action && <button onClick={action} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-bg">{actionLabel}</button>}
       </div>
+      {showProblem && (
+        <Link href={`/runs/${problem.id}`} className={`mt-3 block rounded-lg border px-3 py-2 text-sm hover:underline ${
+          problem.status === "blocked" ? "border-warn text-warn" : "border-bad text-bad"}`}>
+          <b>{problem.status === "blocked" ? "Blocked" : "Failed"} {when(problem.started_at)}:</b> {problem.error ?? "see the run for details"}
+        </Link>
+      )}
     </Card>
   );
 }

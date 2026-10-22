@@ -120,7 +120,7 @@ export default async function Overview() {
             {R.slice(0, 15).map((r) => (
               <tr key={r.id} className="border-t border-line">
                 <td className="py-1.5">{when(r.started_at)}</td>
-                <td className="text-ink-2">{r.agent === "substack" ? "Substack" : "Market intel"}</td>
+                <td className="text-ink-2">{({ substack: "Substack", ai_brief: "AI brief", market_intel: "Market intel" } as Record<string, string>)[r.agent] ?? r.agent}</td>
                 <td><Link className="hover:underline" href={`/runs/${r.id}`}>{r.kind}</Link></td>
                 <td><Status status={r.status} /></td>
                 <td className="text-right num">{usd(Number(r.cost_usd))}</td>
