@@ -373,3 +373,12 @@ def test_monthly_cap_override_applies_only_to_its_month():
     assert budget.monthly_cap(cfg, datetime(2026, 10, 21, tzinfo=timezone.utc)) == 10.0
     assert budget.monthly_cap(cfg, datetime(2026, 11, 1, tzinfo=timezone.utc)) == 6.0
     assert budget.monthly_cap({"monthly_cap_usd": 6.0}, datetime(2026, 10, 21, tzinfo=timezone.utc)) == 6.0
+
+
+def test_substack_gate_allows_one_flagged_post_in_three(tmp_path):
+    from evals import run_evals
+    base = {"mean": 4.2, "humanizer_mean": 4.3}
+    ok = run_evals.gate({**base, "guardrail_pass_rate": 2 / 3}, tmp_path / "b.json", False, run_evals.SUBSTACK_MIN_GUARDRAIL_PASS)
+    bad = run_evals.gate({**base, "guardrail_pass_rate": 1 / 3}, tmp_path / "b.json", False, run_evals.SUBSTACK_MIN_GUARDRAIL_PASS)
+    strict = run_evals.gate({**base, "guardrail_pass_rate": 2 / 3}, tmp_path / "b.json", False)
+    assert (ok, bad, strict) == (0, 1, 1)

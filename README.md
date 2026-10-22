@@ -4,7 +4,7 @@
 
 Agents run like production systems: **budget-capped, traced, evaluated and human-approved**, for about **$3–4 a month** (the LinkedIn agent alone is ~$1).
 
-Two agents run here today. Agent #1 is a **market-intelligence agent**. Every day it collects AI-industry news from two places: 12 RSS feeds, and the stories in my daily AI Stack Brief email (a separate agent). Once a week it drafts **one short LinkedIn post** plus a sourced one-pager. Nothing goes out until I approve it in the dashboard. Then one click publishes it to my LinkedIn profile as the next post in the **AI Musing** series.
+Two agents run here today. Agent #1 is a **market-intelligence agent**. Every day it collects AI-industry news from two places: 12 RSS feeds, and the stories in my daily AI Stack Brief email (a separate agent). Every weekday it drafts **one short LinkedIn post** plus a sourced one-pager (a scheduled run skips if 2 drafts are already waiting for approval). Nothing goes out until I approve it in the dashboard. Then one click publishes it to my LinkedIn profile as the next post in the **AI Musing** series.
 
 Agent #2 is a **Substack newsroom**: a super agent that manages six specialists (research, writer, editor, fact-checker, illustrator, final check). Twice a week it turns the same news into one 800–1,200 word post with a cover, inline images and a chart. Substack has no API, so an approved draft is copied into the editor with one click. One dashboard page shows every agent live and lets me switch specialists on or off, change their models and edit their prompts.
 
@@ -24,7 +24,7 @@ daily   RSS feeds ─┐
                    ├→ dedupe (Postgres) → score importance [free model] → store
         AI brief ──┘   (pushed from the Mac right after the brief is built)
 
-weekly  top stories (15 from the brief + 10 from RSS) → pick ONE angle → fetch the full articles
+weekday stories since the last draft, minus ones already used (15 from the brief + 10 from RSS) → pick ONE angle → fetch the full articles
         → write post → critic + humanizer + guardrails ─┬─ rewrite ↺ (max 2)
                                                         └─ keep the best version → one-pager → pending
         → human approval → Publish → LinkedIn post "AI Musing #N" + one-pager link as the first comment
@@ -87,11 +87,11 @@ The newsroom has its own eval (`--agent substack`): 3 cases of 3 merged brief da
 | Workflow | Calls | Models | Cost/run |
 |---|---|---|---|
 | Daily collect | 1–5 scoring batches | Gemma 4 31B (free), DeepSeek v4.1 Flash fallback | under $0.001 |
-| Weekly draft | 5–9 | free Nemotron to plan, Sonnet 5.5 to write, DeepSeek critic | $0.02–0.05 |
+| LinkedIn draft (weekdays) | 5–9 | free Nemotron to plan, Sonnet 5.5 to write, DeepSeek critic | $0.02–0.05 |
 | Substack post (Wed, Sat) | ~20 | free models for everything but the writer (Sonnet) and images (Nano Banana 2.1) | $0.47 on the first run; ~$0.20–0.30 expected now (each Sonnet draft ~$0.06, images ~$0.12) |
 | PR evals | ~30 (+~45 for the newsroom) | same, images off | ~$0.15–0.25 (+~$0.30–0.50) |
 
-Caps are $2/day and $6/month (`config/budget.yaml`) to make room for two illustrated posts a week.
+Caps are $3/day and $10/month (`config/budget.yaml`): weekday LinkedIn posts (~$1/month) plus two illustrated Substack posts a week (~$4/month) and PR evals.
 
 ## Run it locally
 

@@ -161,6 +161,18 @@ class DB:
                         " order by approved_at desc limit %s", (limit,))
         return [r["post"] for r in rows]
 
+    def last_draft_at(self) -> str | None:
+        row = self.one("select max(created_at) as t from drafts")
+        return str(row["t"]) if row and row["t"] else None
+
+    def used_draft_urls(self, since_iso: str) -> set[str]:
+        """Source URLs of LinkedIn drafts since a date, in any status, so a daily run doesn't reuse a story."""
+        rows = self.all("select sources from drafts where created_at >= %s", (since_iso,))
+        return {s["url"] for r in rows if isinstance(r["sources"], list) for s in r["sources"]}
+
+    def pending_drafts(self) -> int:
+        return int(self.one("select count(*) as n from drafts where status='pending'")["n"])
+
     def recent_angles(self, limit: int = 5) -> list[str]:
         """Angles of the latest drafts in any status, so a pending or rejected topic isn't picked again."""
         rows = self.all("select angle from drafts order by created_at desc limit %s", (limit,))

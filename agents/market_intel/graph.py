@@ -1,7 +1,7 @@
 """Market-intel agent: two LangGraph workflows.
 
 collect (daily):  fetch → dedupe → score → store
-draft (weekly):   load_items → pick_angle → write_post → critic → guardrails ─┬→ revise → critic …  (max 2 revisions)
+draft (weekdays): load_items → pick_angle → write_post → critic → guardrails ─┬→ revise → critic …  (max 2 revisions)
                                                                               └→ onepager → save (pending approval)
 """
 import json
@@ -29,6 +29,8 @@ MAX_REVISIONS = 2
 MAX_CHARS = 1300
 MAX_LIST_ITEMS = 8
 WORDS = (60, 200)  # guardrail band; the prompt targets 80–180
+WINDOW_DAYS = (1, 4)
+USED_DAYS = 21  # don't reuse a story that a draft from the last 3 weeks was built on
 
 
 def ctx_of(config: RunnableConfig) -> llm.RunContext:
@@ -124,13 +126,26 @@ class DraftState(TypedDict, total=False):
     draft_id: str
 
 
+def window_start(last_draft: str | None, now: datetime) -> datetime:
+    """Stories since the last draft (Monday's run covers the weekend), at least 1 and at most 4 days back."""
+    t = datetime.fromisoformat(last_draft) if last_draft else now - timedelta(days=WINDOW_DAYS[1])
+    t = t if t.tzinfo else t.replace(tzinfo=timezone.utc)
+    return max(now - timedelta(days=WINDOW_DAYS[1]), min(t, now - timedelta(days=WINDOW_DAYS[0])))
+
+
 def load_items(state: DraftState, config: RunnableConfig) -> DraftState:
     db = ctx_of(config).db
-    since = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
-    items = state.get("items") or db.top_items(since)  # evals inject items directly
+    now = datetime.now(timezone.utc)
+    items = state.get("items")  # evals inject items directly
     if not items:
-        raise RuntimeError("no scored items in the last 7 days; run collect first")
-    week = state.get("week") or "{}-W{:02d}".format(*datetime.now(timezone.utc).isocalendar()[:2])
+        used = db.used_draft_urls((now - timedelta(days=USED_DAYS)).isoformat())
+        for since in (window_start(db.last_draft_at(), now), now - timedelta(days=7)):  # a quiet day falls back to the week
+            items = [i for i in db.top_items(since.isoformat()) if i["url"] not in used]
+            if items:
+                break
+    if not items:
+        raise RuntimeError("no unused scored items in the last 7 days; run collect first")
+    week = state.get("week") or now.date().isoformat()  # one draft per weekday: the date is the key (and the one-pager URL)
     return {"items": items, "week": week, "recent_posts": db.approved_posts(3),
             "recent_angles": state["recent_angles"] if "recent_angles" in state else db.recent_angles(5), "revisions": 0}
 

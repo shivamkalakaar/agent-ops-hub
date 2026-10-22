@@ -1,0 +1,8 @@
+{
+ "mean": 4.22,
+ "cases": 3,
+ "humanizer_mean": 4.33,
+ "guardrail_pass_rate": 0.6667,
+ "final_pass_rate": 0.3333,
+ "source": "CI eval of PR #2 (run 39691858798, 2026-10-22): cases 2026-10-11..13, 10-14..16, 10-17..19"
+}

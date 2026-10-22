@@ -46,7 +46,7 @@ export default function Queue() {
   if (!session) return <SignIn />;
 
   const regenerate = async () => {
-    setMsg("Starting the weekly workflow…");
+    setMsg("Starting the LinkedIn workflow…");
     const res = await fetch("/api/regenerate", { method: "POST", headers: { Authorization: `Bearer ${session.access_token}` } });
     setMsg(res.ok ? "Workflow started. The new draft shows up here in ~2 minutes." : `Failed: ${(await res.json()).error}`);
   };
@@ -95,7 +95,7 @@ export default function Queue() {
         </div>
       )}
       {msg && <p className="text-sm text-ink-2">{msg}</p>}
-      {tab === "linkedin" && drafts.length === 0 && <Card><p className="text-ink-2">No drafts yet. The weekly run creates one every Friday.</p></Card>}
+      {tab === "linkedin" && drafts.length === 0 && <Card><p className="text-ink-2">No drafts yet. A new one arrives every weekday morning (skipped while 2 are waiting).</p></Card>}
       {tab === "linkedin" && drafts.map((d) => <DraftCard key={d.id} draft={d} onChange={load} token={session.access_token} canPublish={!!li?.connected}
         nextSeries={Math.max(0, ...drafts.map((x) => x.series_no ?? 0)) + 1} onExpand={expand} />)}
     </div>
