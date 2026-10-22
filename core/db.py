@@ -234,6 +234,22 @@ class DB:
              self.json(d["fact_report"]), self.json(d["final_report"]), d["revisions"], now(), run_id))
         return draft_id
 
+    def substack_draft(self, draft_id: str) -> dict | None:
+        return self.one("select * from substack_drafts where id=%s", (draft_id,))
+
+    def update_substack_draft(self, draft_id: str, d: dict):
+        """A revision replaces the post in place; the owner's earlier edits are folded in, so they're cleared."""
+        self.execute(
+            "update substack_drafts set title=%s, subtitle=%s, body_md=%s, body_html=%s, judge_scores=%s, fact_report=%s,"
+            " final_report=%s, revisions=revisions+%s, status='pending', edited_title=null, edited_subtitle=null,"
+            " edited_body_md=null, approved_at=null where id=%s",
+            (d["title"], d["subtitle"], d["body_md"], d["body_html"], self.json(d["judge_scores"]), self.json(d["fact_report"]),
+             self.json(d["final_report"]), d["rewrites"], draft_id))
+
+    def item_summary(self, url: str) -> str | None:
+        row = self.one("select summary from items where url=%s", (url,))
+        return row["summary"] if row else None
+
     def last_substack_at(self) -> str | None:
         row = self.one("select max(created_at) as t from substack_drafts")
         return str(row["t"]) if row and row["t"] else None

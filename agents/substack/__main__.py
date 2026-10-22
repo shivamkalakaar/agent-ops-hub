@@ -1,11 +1,11 @@
-"""CLI: uv run python -m agents.substack {draft [--seed DRAFT_ID] | style-guide | export DRAFT_ID}"""
+"""CLI: uv run python -m agents.substack {draft [--seed DRAFT_ID] | revise DRAFT_ID | style-guide | export DRAFT_ID}"""
 import argparse
 import sys
 
 from core import drafting, llm, runner
 from core.config import CONFIG, ROOT, git_sha
 from core.db import connect
-from agents.substack import graph, render
+from agents.substack import graph, render, revise
 from agents.substack.roster import AGENT, PROMPTS
 
 PROMPT_VERSION = "v1"
@@ -30,6 +30,11 @@ def trace_scores(state: dict) -> dict:
 def draft(seed: str | None) -> int:
     init = {"seed_draft_id": seed} if seed else {}
     return runner.run_graph(AGENT, "draft", graph.build(), init, summarize, prompt_version=PROMPT_VERSION, scores=trace_scores)
+
+
+def revise_draft(draft_id: str) -> int:
+    return runner.run_graph(AGENT, "revise", revise.build(), {"revise_draft_id": draft_id}, summarize,
+                            prompt_version=PROMPT_VERSION, scores=trace_scores)
 
 
 def build_style_guide() -> int:
@@ -75,12 +80,16 @@ def main() -> int:
     sub = ap.add_subparsers(dest="command", required=True)
     d = sub.add_parser("draft")
     d.add_argument("--seed", help="id of a published LinkedIn musing to expand")
+    r = sub.add_parser("revise")
+    r.add_argument("draft_id")
     sub.add_parser("style-guide")
     e = sub.add_parser("export")
     e.add_argument("draft_id")
     args = ap.parse_args()
     if args.command == "draft":
         return draft(args.seed or None)
+    if args.command == "revise":
+        return revise_draft(args.draft_id)
     return build_style_guide() if args.command == "style-guide" else export(args.draft_id)
 
 

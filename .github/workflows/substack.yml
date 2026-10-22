@@ -8,6 +8,10 @@ on:
         description: "Expand this published LinkedIn musing (drafts.id). Leave empty to let research pick."
         required: false
         default: ""
+      revise_draft_id:
+        description: "Fix this saved Substack draft's blockers instead of writing a new post (substack_drafts.id)."
+        required: false
+        default: ""
 concurrency: { group: market-intel, cancel-in-progress: false }   # shares the items table with collect
 jobs:
   draft:
@@ -22,6 +26,7 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}                   # image uploads (Storage)
       SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
       SEED: ${{ inputs.seed_draft_id }}
+      REVISE: ${{ inputs.revise_draft_id }}
     steps:
       - name: Check image storage
         run: |
@@ -31,5 +36,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --frozen --no-dev
-      - run: uv run python -m agents.market_intel collect   # scores stories pushed from that morning's brief
-      - run: uv run python -m agents.substack draft ${SEED:+--seed "$SEED"}
+      - if: ${{ !inputs.revise_draft_id }}
+        run: uv run python -m agents.market_intel collect   # scores stories pushed from that morning's brief
+      - if: ${{ !inputs.revise_draft_id }}
+        run: uv run python -m agents.substack draft ${SEED:+--seed "$SEED"}
+      - if: ${{ inputs.revise_draft_id }}
+        run: uv run python -m agents.substack revise "$REVISE"

@@ -16,9 +16,15 @@ def check(db) -> dict:
     month = db.spend_since(now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat())
     if day >= cfg["daily_cap_usd"]:
         raise BudgetExceeded(f"daily cap ${cfg['daily_cap_usd']:.2f} reached (spent ${day:.4f})")
-    if month >= cfg["monthly_cap_usd"]:
-        raise BudgetExceeded(f"monthly cap ${cfg['monthly_cap_usd']:.2f} reached (spent ${month:.4f})")
+    cap = monthly_cap(cfg, now)
+    if month >= cap:
+        raise BudgetExceeded(f"monthly cap ${cap:.2f} reached (spent ${month:.4f})")
     return {"day_usd": day, "month_usd": month}
+
+
+def monthly_cap(cfg: dict, now: datetime) -> float:
+    """This month's cap: a one-off override for the month if there is one, else the standing cap."""
+    return float((cfg.get("monthly_cap_overrides") or {}).get(now.strftime("%Y-%m"), cfg["monthly_cap_usd"]))
 
 
 def estimate_cost(prompt_tokens: int, completion_tokens: int) -> float:
