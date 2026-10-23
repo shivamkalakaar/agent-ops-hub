@@ -173,3 +173,25 @@ def test_window_starts_at_last_draft_within_bounds():
     assert graph.window_start(friday, now) == now - timedelta(days=3)          # covers the weekend
     assert graph.window_start((now - timedelta(hours=2)).isoformat(), now) == now - timedelta(days=1)
     assert graph.window_start(None, now) == now - timedelta(days=4)
+
+
+def test_flags_the_recap_template_and_repeated_endings():
+    templated = ("Your Notion seat just became a usage bucket.\n\nNotion says it matched Opus at 90% lower cost. "
+                 "That's their own benchmark, so read it that way.\n\nI'd stop pricing seats and start pricing usage.\n\n"
+                 "Next time a vendor pitches you, ask what the last finished job cost.")
+    v = " | ".join(graph.guardrail_violations(templated, set()))
+    for needle in ["just became", "read it that way", "I'd stop X and start Y", "next time a vendor"]:
+        assert needle in v
+    recent = ["Some post.\n\nWhen a vendor demos an agent, how often does it stop?"]
+    again = GOOD_POST.replace("#AI", "When a vendor demos it, ask for the bill.")
+    assert any("ends the same way" in x for x in graph.guardrail_violations(again, set(), recent=recent))
+    assert graph.guardrail_violations(GOOD_POST, set(), recent=recent) == []
+
+
+def test_voice_examples_rotate_by_seed():
+    a = graph.style_examples(n=4, short_only=False, max_words=graph.EXAMPLE_MAX_WORDS, seed="2026-10-22")
+    b = graph.style_examples(n=4, short_only=False, max_words=graph.EXAMPLE_MAX_WORDS, seed="2026-10-23")
+    assert a == graph.style_examples(n=4, short_only=False, max_words=graph.EXAMPLE_MAX_WORDS, seed="2026-10-22")
+    assert all(len(p.split()) <= graph.EXAMPLE_MAX_WORDS for p in a + b)
+    if len(graph.style_examples(n=99, short_only=False, max_words=graph.EXAMPLE_MAX_WORDS)) > 4:
+        assert a != b

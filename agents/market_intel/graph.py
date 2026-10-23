@@ -29,6 +29,15 @@ MAX_REVISIONS = 2
 MAX_CHARS = 1300
 MAX_LIST_ITEMS = 8
 WORDS = (60, 200)  # guardrail band; the prompt targets 80–180
+EXAMPLE_MAX_WORDS = 550  # voice examples: short and mid-length posts, not the long essays
+# Moves the agent kept reusing until every post had the same shape. Any of them sends a draft back for a rewrite.
+TEMPLATE_MOVES = [
+    (r"\bnext time (?:a|your) vendor\b", "the \"next time a vendor pitches you\" closer"),
+    (r"\bbefore your next (?:renewal|contract|demo|pitch|meeting|vendor)\b", "the \"before your next renewal\" closer"),
+    (r"\bI'd stop \w+.{0,80}?\band start\b", "the \"I'd stop X and start Y\" line"),
+    (r"\bjust became an?\b", "the \"X just became Y\" hook"),
+    (r"\bread it that way\b", "\"read it that way\""),
+]
 WINDOW_DAYS = (1, 4)
 USED_DAYS = 21  # don't reuse a story that a draft from the last 3 weeks was built on
 
@@ -169,8 +178,8 @@ def pick_angle(state: DraftState, config: RunnableConfig) -> DraftState:
     return {"angle": angle, "sources": [state["items"][i] for i in ids]}
 
 
-def _post_system() -> str:
-    examples = style_examples()
+def _post_system(seed: str | None = None) -> str:
+    examples = style_examples(n=4, short_only=False, max_words=EXAMPLE_MAX_WORDS, seed=seed)
     return prompt("write_post", AUTHOR=AUTHOR, STYLE_GUIDE=style_guide(), HUMANIZER=humanizer.rules(),
                   EXAMPLES="\n\n---\n\n".join(examples) or "(no examples yet; follow the style guide)")
 
@@ -180,8 +189,9 @@ def write_post(state: DraftState, config: RunnableConfig) -> DraftState:
     user = (f"Angle: {state['angle'].get('angle')}\nCandidate hook: {state['angle'].get('hook')}\n"
             f"Why now: {state['angle'].get('why_now')}\n\n# Source items\n{_sources_block(state['sources'])}")
     if recent:
-        user += f"\n\n# {AUTHOR}'s recent approved posts (match this voice; they include the author's own edits)\n{recent}"
-    return {"post": _clean_post(llm.call(ctx_of(config), "voice", "write_post", _post_system(), user))}
+        user += (f"\n\n# {AUTHOR}'s last few posts (already published: don't reuse their hook pattern, structure, "
+                 f"stance line or closing move; this post should feel different)\n{recent}")
+    return {"post": _clean_post(llm.call(ctx_of(config), "voice", "write_post", _post_system(state.get("week")), user))}
 
 
 def _clean_post(text: str) -> str:
@@ -197,10 +207,22 @@ def critic(state: DraftState, config: RunnableConfig) -> DraftState:
             "unsupported": [c for c in review.get("unsupported_claims", []) if isinstance(c, str)]}
 
 
-def guardrail_violations(post: str, source_urls: set[str], sources_text: str | None = None) -> list[str]:
+def _closer(post: str) -> str:
+    lines = [l for l in post.strip().splitlines() if l.strip() and not l.strip().startswith("#")]
+    return " ".join(re.findall(r"[a-z']+", lines[-1].lower())[:3]) if lines else ""
+
+
+def guardrail_violations(post: str, source_urls: set[str], sources_text: str | None = None,
+                         recent: list[str] | None = None) -> list[str]:
     """Deterministic checks that run on every draft, independent of the LLM critic.
-    Includes the humanizer skill's accent scanner and, when sources are given, its fact guard."""
+    Includes the humanizer skill's accent scanner, when sources are given its fact guard, and when recent posts
+    are given a check that this one doesn't end the way one of them did."""
     v, words = drafting.common_violations(post, sources_text), len(post.split())
+    for pattern, name in TEMPLATE_MOVES:
+        if re.search(pattern, post, flags=re.I):
+            v.append(f"template move: {name}; say it a different way or drop it")
+    if (c := _closer(post)) and c in {_closer(r) for r in recent or []}:
+        v.append(f"ends the same way as a recent post (\"{c} …\"); find a different ending")
     if len(post) > MAX_CHARS:
         v.append(f"{len(post)} characters; the cap is {MAX_CHARS}")
     if not WORDS[0] <= words <= WORDS[1]:
@@ -219,7 +241,8 @@ def guardrails(state: DraftState) -> DraftState:
     """Deterministic checks, then the weighted score. Keeps the best version seen so far: a rewrite can
     make a post worse, and the more human version wins (fewest violations, then overall, then humanizer)."""
     sources_text = _sources_block(state["sources"])
-    violations = guardrail_violations(state["post"], {s["url"] for s in state["sources"]}, sources_text)
+    violations = guardrail_violations(state["post"], {s["url"] for s in state["sources"]}, sources_text,
+                                      state.get("recent_posts"))
     accent = humanizer.scan(state["post"])
     overall = overall_score(state["scores"], accent["score"])
     current = {"post": state["post"], "scores": state["scores"], "critique": state.get("critique", ""),
@@ -250,7 +273,7 @@ def revise(state: DraftState, config: RunnableConfig) -> DraftState:
     user = (f"# Source items\n{_sources_block(state['sources'])}\n\n# Current post\n{state['post']}\n\n"
             f"# Editor scores\n{json.dumps(state['scores'])}\n\n# Editor notes\n{state['critique']}\n\n"
             f"# Rule violations (must fix)\n{issues}")
-    text = llm.call(ctx_of(config), "voice", "revise", _post_system() + "\n\n" + prompt("revise"), user)
+    text = llm.call(ctx_of(config), "voice", "revise", _post_system(state.get("week")) + "\n\n" + prompt("revise"), user)
     return {"post": _clean_post(text), "revisions": state["revisions"] + 1}
 
 
