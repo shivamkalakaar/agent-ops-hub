@@ -21,7 +21,7 @@ ITEMS = [
 ]
 GOOD_POST = ("An open-weight model just scored 88 on X.\n\n"
              "It costs $0.20 per million tokens. I had to read that twice.\n\n"
-             "Last year you paid frontier prices for that score, so most teams I talk to rationed their agent calls. "
+             "Last year you paid frontier prices for that score, so teams rationed their agent calls. "
              "They'd run one pass, check it by hand, and move on.\n\n"
              "At this price you can run ten passes and let the model check itself. That changes what's worth building, "
              "especially for agent workflows with a lot of retries.\n\n"
@@ -41,6 +41,7 @@ def offline(monkeypatch, tmp_path):
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.delenv("LANGFUSE_PUBLIC_KEY", raising=False)
     monkeypatch.setattr(graph, "fetch_all", lambda feeds: ([dict(i) for i in ITEMS], []))
+    monkeypatch.setattr("core.drafting.candidates", lambda tier, override, n=None: [override])  # one writer call per draft
     monkeypatch.setattr(graph, "fetch_article", lambda url: "The model scores 88 on X and costs $0.20 per million tokens.")
     critic_calls = {"n": 0}
 
@@ -395,3 +396,35 @@ def test_rejected_drafts_become_eval_cases(monkeypatch, tmp_path):
         ctx = llm.RunContext(db=db, run_id=db.start_run("market_intel", "eval", "t"))
         r = run_evals.run_rejection_case(ctx, cases[0])
     assert r["rejected"]["repeats"] and any("repeats what was rejected (Sounds like AI)" in v for v in r["violations"])
+
+
+
+def test_writer_keeps_the_best_of_several_candidates(monkeypatch):
+    from agents.market_intel import specialists
+    from agents.market_intel.roster import PROMPTS, SPECIALISTS
+    from core import settings
+    from core.db import connect
+    monkeypatch.setattr("core.drafting.candidates", lambda tier, override, n=None: ["z-ai/glm-5.3", "z-ai/glm-5.3", "deepseek/deepseek-v4.1-flash"][:n])
+    invented = GOOD_POST.replace("$0.20", "$0.07")  # a number that isn't in the sources
+    templated = GOOD_POST.replace("I had to read that twice.", "My read: this just became a bucket.")
+    replies = iter([invented, templated, GOOD_POST])
+    llm.FAKE_RESPONSES["writer"] = lambda m: next(replies)
+    state = {"angle": {"angle": "a"}, "sources": [{"url": "https://example.com/a", "title": "t", "source": "s",
+             "summary": "An open-weight model scores 88 on X at $0.20 per million tokens."}], "facts": [], "week": "2026-10-23"}
+    with connect() as db:
+        ctx = llm.RunContext(db=db, run_id=db.start_run("market_intel", "draft", "t"))
+        update, summary, out = specialists.writer(state, ctx, settings.from_files(SPECIALISTS, PROMPTS)["writer"])
+    assert update["drafts"][-1]["post"] == GOOD_POST and out["model"] == "deepseek/deepseek-v4.1-flash"
+    flags = [c["flags"] for c in out["candidates"]]
+    assert flags[2] < flags[0] and flags[2] < flags[1] and "best of 3" in summary
+
+
+def test_rejection_cases_are_reported_not_gated(tmp_path):
+    from evals import run_evals
+    results = [{"case": "2026-10-19", "mean": 4.5, "humanizer": 5, "violations": [], "scores": {"hook": 5}},
+               {"case": "rejected x", "mean": 4.1, "humanizer": 4, "violations": ["repeats what was rejected"], "scores": {"hook": 4},
+                "rejected": {"id": "x", "reasons": ["Sounds like AI"], "repeats": True}}]
+    s = run_evals.summarize("market_intel", results)
+    assert s["guardrail_pass_rate"] == 1.0 and s["rejection_repeats"] == 1 and s["golden_cases"] == 1
+    assert run_evals.check(s, tmp_path / "none.json") == ([], None)
+    assert "repeats a rejected problem: 1 of 1 (reported, not gated)" in run_evals.comment("market_intel", "r", s, results, [], None)

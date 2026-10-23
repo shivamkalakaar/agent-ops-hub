@@ -140,11 +140,14 @@ def _clean(text: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", text)
 
 
+TARGET_WORDS = 130
+
+
 def writer(state, ctx, cfg):
+    """Best of N: the draft is written by each candidate model (repeats get different voice examples), and the code's
+    own checks pick one: fewest guardrail flags (invented facts, template moves, repeats), then the more human one,
+    then the length closest to TARGET_WORDS. First drafts use every candidate; rewrites use two."""
     g = _g()
-    examples = drafting.style_examples(n=4, short_only=False, max_words=g.EXAMPLE_MAX_WORDS, seed=state.get("week"))
-    system = drafting.fill(cfg.prompt, AUTHOR=AUTHOR, STYLE_GUIDE=g.style_guide(), HUMANIZER=humanizer.rules(),
-                           EXAMPLES="\n\n---\n\n".join(examples) or "(no examples yet; follow the style guide)")
     a = state["angle"]
     user = (f"Angle: {a.get('angle')}\nCandidate hook: {a.get('hook')}\nWhy now: {a.get('why_now')}\n\n"
             f"# Fact sheet\n{fact_sheet(state)}\n\n# Source items\n{drafting.sources_block(state['sources'])}")
@@ -157,10 +160,32 @@ def writer(state, ctx, cfg):
         user += f"\n\n# Current draft (v{draft['version']})\n{draft['post']}\n\n{_feedback(state)}\n\nRewrite the whole post."
     if state.get("instructions"):
         user += f"\n\n# Coordinator's note\n{state['instructions']}"
-    post = _clean(llm.call(ctx, _tier(cfg, "voice"), "writer", system, user, model=cfg.model))
-    n = version(state) + 1
-    summary = f"{'Rewrote' if draft else 'Wrote'} v{n}: {len(post.split())} words, {len(post)} characters"
-    return {"drafts": (state.get("drafts") or []) + [{"version": n, "post": post}]}, summary, {"version": n, "post": post}
+    tier, outs = _tier(cfg, "voice"), []
+    models = drafting.candidates(tier, cfg.model, n=2 if draft else None)
+    for i, model in enumerate(models):
+        examples = drafting.style_examples(n=4, short_only=False, max_words=g.EXAMPLE_MAX_WORDS, seed=f"{state.get('week')}-{i}")
+        system = drafting.fill(cfg.prompt, AUTHOR=AUTHOR, STYLE_GUIDE=g.style_guide(), HUMANIZER=humanizer.rules(),
+                               EXAMPLES="\n\n---\n\n".join(examples) or "(no examples yet; follow the style guide)")
+        try:
+            outs.append({"model": model or "default", "text": _clean(llm.call(ctx, tier, "writer", system, user, model=model))})
+        except Exception:  # noqa: BLE001 - one candidate failing is fine while another came back
+            if i == len(models) - 1 and not outs:
+                raise
+    urls, text = {s["url"] for s in state["sources"]}, sources_text(state)
+
+    def score(post: str) -> tuple:
+        flags = g.guardrail_violations(post, urls, text, state.get("recent_posts"))
+        return len(flags), -humanizer.scan(post)["score"], abs(len(post.split()) - TARGET_WORDS)
+    best, scored = drafting.pick(outs, score)
+    post, n = best["text"], version(state) + 1
+    short = lambda m: m.split("/")[-1]  # noqa: E731
+    summary = (f"{'Rewrote' if draft else 'Wrote'} v{n}: {len(post.split())} words"
+               + (f", best of {len(scored)} ({', '.join(short(d['model']) for d in scored)}): kept {short(best['model'])}"
+                  if len(scored) > 1 else ""))
+    out = {"version": n, "post": post, "model": best["model"],
+           "candidates": [{"model": d["model"], "flags": d["score"][0], "humanizer": -d["score"][1], "words": len(d["text"].split())}
+                          for d in scored]}
+    return {"drafts": (state.get("drafts") or []) + [{"version": n, "post": post}]}, summary, out
 
 
 # --------------------------------------------------------------------------- editor
