@@ -173,7 +173,7 @@ def test_forced_seed_and_used_stories_are_skipped():
 
 
 def test_budget_guard_stops_newsroom(monkeypatch):
-    cfg = dict(load_yaml("budget.yaml"), daily_cap_usd=0.0)
+    cfg = dict(load_yaml("budget.yaml"), daily_cap_usd=0.0, daily_cap_overrides={})
     monkeypatch.setattr("core.budget.load_yaml", lambda name: cfg)
     assert cli.draft(None) == 0
     with connect() as db:
