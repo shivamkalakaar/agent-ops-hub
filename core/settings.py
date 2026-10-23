@@ -38,11 +38,12 @@ class Resolved:
     max_calls: int
     prompt: str                # template with {{VARS}}
     prompt_version: str        # "file" or "v<N>"
+    tier: str = ""             # the specialist's default tier, for specialists that read it from here
 
 
 def from_files(specialists: list[Specialist], prompts: Path) -> dict[str, Resolved]:
     """Repo defaults only: what evals and offline tests run against."""
-    return {s.name: Resolved(True, None, s.max_calls, _file(prompts, s.name), "file") for s in specialists}
+    return {s.name: Resolved(True, None, s.max_calls, _file(prompts, s.name), "file", s.tier) for s in specialists}
 
 
 def _file(prompts: Path, name: str) -> str:
@@ -73,5 +74,5 @@ def load(db, agent: str, specialists: list[Specialist], prompts: Path) -> dict[s
             enabled=True if s.required else bool(o.get("enabled", True)),
             model=o.get("model") if allowed(o.get("model"), s.kind) else None,
             max_calls=max(1, min(int(cap), MAX_CALLS_CEILING)) if isinstance(cap, int) else s.max_calls,
-            prompt=body, prompt_version=version)
+            prompt=body, prompt_version=version, tier=s.tier)
     return out

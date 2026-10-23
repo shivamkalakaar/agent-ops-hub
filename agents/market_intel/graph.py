@@ -1,32 +1,31 @@
-"""Market-intel agent: two LangGraph workflows.
+"""LinkedIn agent: two LangGraph workflows.
 
 collect (daily):  fetch → dedupe → score → store
-draft (weekdays): load_items → pick_angle → write_post → critic → guardrails ─┬→ revise → critic …  (max 2 revisions)
-                                                                              └→ onepager → save (pending approval)
+draft (weekdays): a coordinator and seven specialists (core/orchestrator.py, agents/market_intel/supervisor.py):
+                  load_items → coordinator ⇄ {scout, researcher, writer, editor, fact_checker, final_check, onepager}
+                  → finish (pending approval). Every decision and turn is a row in agent_steps: the live timeline.
 """
 import json
 import re
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from typing import TypedDict
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 
-from core import drafting, humanizer, lessons, llm
+from core import drafting, humanizer, lessons, llm, novelty, orchestrator, settings as settings_mod
+from core.steps import step
 from core.config import CONFIG, load_json
 from core.drafting import (BANNED, HUMANIZER_WEIGHT, MIN_SCORE, SHORT_POST_WORDS, overall_score,  # noqa: F401 (re-exported)
                            style_examples)
 from core.feeds import fetch_all, fetch_article
 from agents.market_intel.render import render_onepager
+from agents.market_intel import specialists, supervisor
+from agents.market_intel.roster import AGENT, AUTHOR, PROMPTS, SPECIALISTS
 
-PROMPTS = Path(__file__).parent / "prompts"
 prompt = drafting.prompt_loader(PROMPTS)
 _sources_block = drafting.sources_block
-AUTHOR = "Shivam"
-AGENT = "market_intel"
 SCORE_BATCH = 20
-MAX_REVISIONS = 2
 MAX_CHARS = 1300
 MAX_LIST_ITEMS = 8
 WORDS = (60, 200)  # guardrail band; the prompt targets 80–180
@@ -38,6 +37,13 @@ TEMPLATE_MOVES = [
     (r"\bI'd stop \w+.{0,80}?\band start\b", "the \"I'd stop X and start Y\" line"),
     (r"\bjust became an?\b", "the \"X just became Y\" hook"),
     (r"\bread it that way\b", "\"read it that way\""),
+    (r"(?:^|\n|\. )(?:my read|my bet|my guess|here's my take|the real story)\s*(?::|is that)", "a labelled pivot (\"My read:\", \"The real story is…\")"),
+    (r"(?:^|\n)\s*(?:why [\w' ]{1,30}|the (?:catch|kicker|twist|takeaway|upshot|point|bottom line)|here's (?:why|what|the thing))\s*:",
+     "a labelled lead-in (\"Why it matters:\", \"The catch:\")"),
+    (r"\bthat's the (?:part|number|thing|detail|bit|line|question|real \w+) (?:that matters|to (?:sit with|watch|remember|notice))",
+     "a punchline frame (\"That's the number to sit with\")"),
+    (r"\b(?:most|many|every|all|the) [\w ]{0,30}\bI (?:see|talk to|work with|know|meet|advise)\b",
+     "claims first-hand experience the author never gave (\"most teams I talk to\"); cut it or attribute it"),
 ]
 WINDOW_DAYS = (1, 4)
 USED_DAYS = 21  # don't reuse a story that a draft from the last 3 weeks was built on
@@ -117,27 +123,48 @@ def build_collect():
 # --------------------------------------------------------------------------- draft
 
 class DraftState(TypedDict, total=False):
+    # inputs
     week: str
     items: list[dict]
     recent_posts: list[str]
+    recent_angles: list[str]
     lessons: str          # what the owner's past decisions taught the agent (core/lessons.py)
     learn: bool           # False in evals: don't consume the owner's queue decisions
     learned: dict
     take: str             # the owner's own one-line take, when they asked for a rewrite around it
     redraft_id: str       # rewrite this saved draft in place instead of saving a new one
-    recent_angles: list[str]
+    # specialists' work
     angle: dict
     sources: list[dict]
+    researched: bool
+    facts: list[dict]
+    context: list[str]
+    drafts: list[dict]    # [{"version", "post"}]
+    edit_report: dict
+    fact_report: dict
+    final_report: dict
+    candidates: dict      # str(version) -> editor + fact-check results, for picking the best version
+    onepager: dict
+    onepager_for: str
+    # orchestration
+    settings: dict
+    seq: int
+    work_steps: int
+    calls: dict
+    history: list[dict]
+    next: str
+    instructions: str
+    finish_reason: str
+    # what was saved (also what evals and the run summary read)
     post: str
     scores: dict
     critique: str
     violations: list[str]
-    revisions: int
-    onepager: dict
-    accent: dict
     unsupported: list[str]
+    accent: dict
     overall: float
-    best: dict
+    revisions: int
+    passed: bool
     draft_id: str
 
 
@@ -152,104 +179,45 @@ def load_items(state: DraftState, config: RunnableConfig) -> DraftState:
     ctx = ctx_of(config)
     db = ctx.db
     now = datetime.now(timezone.utc)
-    # first, learn from what the owner decided since the last run (evals pass learn=False and frozen lessons)
-    learned = lessons.learn(db, ctx, AGENT, AUTHOR) if state.get("learn", True) else {"read": 0}
-    items = state.get("items")  # evals inject items directly
-    if not items:
-        used = db.used_draft_urls((now - timedelta(days=USED_DAYS)).isoformat())
-        for since in (window_start(db.last_draft_at(), now), now - timedelta(days=7)):  # a quiet day falls back to the week
-            items = [i for i in db.top_items(since.isoformat()) if i["url"] not in used]
-            if items:
-                break
-    if not items:
-        raise RuntimeError("no unused scored items in the last 7 days; run collect first")
-    week = state.get("week") or now.date().isoformat()  # one draft per weekday: the date is the key (and the one-pager URL)
-    base, n = week, 2
-    while not state.get("week") and db.week_taken(week):  # never take over another post's one-pager URL
-        week, n = f"{base}-{n}", n + 1
-    return {"items": items, "week": week, "learned": learned,
+    cfg = config["configurable"].get("settings") or settings_mod.load(db, AGENT, SPECIALISTS, PROMPTS)
+    with step(ctx, AGENT, "supervisor", "work", 1, reason="load context") as s:
+        # first, learn from what the owner decided since the last run (evals pass learn=False and frozen lessons)
+        learned = lessons.learn(db, ctx, AGENT, AUTHOR) if state.get("learn", True) else {"read": 0}
+        items = state.get("items")  # evals and redrafts inject items directly
+        if not items:
+            used = db.used_draft_urls((now - timedelta(days=USED_DAYS)).isoformat())
+            for since in (window_start(db.last_draft_at(), now), now - timedelta(days=7)):  # a quiet day falls back to the week
+                items = [i for i in db.top_items(since.isoformat()) if i["url"] not in used]
+                if items:
+                    break
+        if not items:
+            raise RuntimeError("no unused scored items in the last 7 days; run collect first")
+        week = state.get("week") or now.date().isoformat()  # one draft per weekday: the date is the key (and the one-pager URL)
+        base, n = week, 2
+        while not state.get("week") and db.week_taken(week):  # never take over another post's one-pager URL
+            week, n = f"{base}-{n}", n + 1
+        s.summary = (f"Loaded {len(items)} stories ({sum(i.get('origin') == 'brief' for i in items)} from the AI brief)"
+                     + (f"; learned from {learned['read']} of your decisions" if learned.get("read") else "")
+                     + ("; rewriting around your take" if state.get("take") else ""))
+        s.output = {"items": len(items), "learned": learned, "prompt_versions": {k: v.prompt_version for k, v in cfg.items()},
+                    "disabled": [k for k, v in cfg.items() if not v.enabled]}
+    return {"items": items, "week": week, "learned": learned, "settings": cfg,
             "recent_posts": state["recent_posts"] if "recent_posts" in state else db.approved_posts(3),
             "lessons": state["lessons"] if "lessons" in state else lessons.block(db, AGENT, AUTHOR),
-            "recent_angles": state["recent_angles"] if "recent_angles" in state else db.recent_angles(5), "revisions": 0}
-
-
-def _take(state: DraftState) -> str:
-    return (f"\n\n# {AUTHOR}'s own take (build the post around this: it's their opinion in their words, so keep its "
-            f"meaning and as much of its phrasing as fits)\n{state['take']}") if state.get("take") else ""
-
-
-def _lessons(state: DraftState) -> str:
-    return f"\n\n{state['lessons']}" if state.get("lessons") else ""
-
-
-def _listing(items: list[dict]) -> str:
-    return "\n".join(json.dumps({"id": n, "source": i["source"], "layer": i.get("layer"), "importance": i.get("importance"),
-                                 "title": i["title"], "summary": (i.get("summary") or "")[:400], "why": i.get("why")},
-                                ensure_ascii=False) for n, i in enumerate(items))
-
-
-def read_sources(state: DraftState) -> DraftState:
-    """Fetch the full text of the chosen stories so the post can be specific and grounded (free: plain HTTP)."""
-    return {"sources": drafting.read_sources(state["sources"], fetch=fetch_article)}
-
-
-def pick_angle(state: DraftState, config: RunnableConfig) -> DraftState:
-    recent = "\n".join(f"- {a}" for a in state["recent_angles"]) or "(none yet)"
-    angle = llm.call_json(ctx_of(config), "writer", "pick_angle", prompt("pick_angle", AUTHOR=AUTHOR, RECENT=recent),
-                          _listing(state["items"]) + _take(state) + _lessons(state))
-    ids = [i for i in angle.get("item_ids", []) if isinstance(i, int) and 0 <= i < len(state["items"])][:3] or [0]
-    return {"angle": angle, "sources": [state["items"][i] for i in ids]}
-
-
-def _post_system(seed: str | None = None) -> str:
-    examples = style_examples(n=4, short_only=False, max_words=EXAMPLE_MAX_WORDS, seed=seed)
-    return prompt("write_post", AUTHOR=AUTHOR, STYLE_GUIDE=style_guide(), HUMANIZER=humanizer.rules(),
-                  EXAMPLES="\n\n---\n\n".join(examples) or "(no examples yet; follow the style guide)")
-
-
-def write_post(state: DraftState, config: RunnableConfig) -> DraftState:
-    recent = "\n\n---\n\n".join(state["recent_posts"])
-    user = (f"Angle: {state['angle'].get('angle')}\nCandidate hook: {state['angle'].get('hook')}\n"
-            f"Why now: {state['angle'].get('why_now')}\n\n# Source items\n{_sources_block(state['sources'])}")
-    if recent:
-        user += (f"\n\n# {AUTHOR}'s last few posts (already published: don't reuse their hook pattern, structure, "
-                 f"stance line or closing move; this post should feel different)\n{recent}")
-    user += _take(state) + _lessons(state)
-    return {"post": _clean_post(llm.call(ctx_of(config), "voice", "write_post", _post_system(state.get("week")), user))}
-
-
-def _clean_post(text: str) -> str:
-    text = text.strip().strip('"').strip()
-    return re.sub(r"\n{3,}", "\n\n", text)
-
-
-def critic(state: DraftState, config: RunnableConfig) -> DraftState:
-    user = f"# Source items\n{_sources_block(state['sources'])}\n\n# Post\n{state['post']}"
-    if state.get("lessons"):
-        user += (f"\n\n{state['lessons']}\nA draft that breaks one of these lessons loses a point on voice or human, "
-                 "and the critique must name the lesson.")
-    review = llm.call_json(ctx_of(config), "judge", "critic", prompt("critic", STYLE_GUIDE=style_guide()), user)
-    scores = {k: int(v) for k, v in (review.get("scores") or {}).items() if str(v).isdigit()}
-    return {"scores": scores, "critique": review.get("critique", ""),
-            "unsupported": [c for c in review.get("unsupported_claims", []) if isinstance(c, str)]}
-
-
-def _closer(post: str) -> str:
-    lines = [l for l in post.strip().splitlines() if l.strip() and not l.strip().startswith("#")]
-    return " ".join(re.findall(r"[a-z']+", lines[-1].lower())[:3]) if lines else ""
+            "recent_angles": state["recent_angles"] if "recent_angles" in state else db.recent_angles(5),
+            "seq": 1, "work_steps": 0, "calls": {}, "history": [], "drafts": [], "candidates": {}}
 
 
 def guardrail_violations(post: str, source_urls: set[str], sources_text: str | None = None,
                          recent: list[str] | None = None) -> list[str]:
-    """Deterministic checks that run on every draft, independent of the LLM critic.
+    """Deterministic checks that run on every draft, independent of the LLM reviewers.
     Includes the humanizer skill's accent scanner, when sources are given its fact guard, and when recent posts
-    are given a check that this one doesn't end the way one of them did."""
+    are given the novelty check (same ground, same hook or same ending as one of them)."""
     v, words = drafting.common_violations(post, sources_text), len(post.split())
     for pattern, name in TEMPLATE_MOVES:
         if re.search(pattern, post, flags=re.I):
             v.append(f"template move: {name}; say it a different way or drop it")
-    if (c := _closer(post)) and c in {_closer(r) for r in recent or []}:
-        v.append(f"ends the same way as a recent post (\"{c} …\"); find a different ending")
+    v += novelty.check(post, recent)
     if len(post) > MAX_CHARS:
         v.append(f"{len(post)} characters; the cap is {MAX_CHARS}")
     if not WORDS[0] <= words <= WORDS[1]:
@@ -264,90 +232,59 @@ def guardrail_violations(post: str, source_urls: set[str], sources_text: str | N
     return v
 
 
-def guardrails(state: DraftState) -> DraftState:
-    """Deterministic checks, then the weighted score. Keeps the best version seen so far: a rewrite can
-    make a post worse, and the more human version wins (fewest violations, then overall, then humanizer)."""
-    sources_text = _sources_block(state["sources"])
-    violations = guardrail_violations(state["post"], {s["url"] for s in state["sources"]}, sources_text,
-                                      state.get("recent_posts"))
-    accent = humanizer.scan(state["post"])
-    overall = overall_score(state["scores"], accent["score"])
-    current = {"post": state["post"], "scores": state["scores"], "critique": state.get("critique", ""),
-               "unsupported": state.get("unsupported", []), "violations": violations, "accent": accent, "overall": overall}
-    return {"violations": violations, "accent": accent, "overall": overall,
-            "best": drafting.keep_best(state.get("best"), current)}
-
-
 weak_scores = drafting.weak_scores
 
 
-def needs_revision(state: DraftState) -> str:
-    weak = weak_scores(state["scores"], state["accent"]["score"])
-    if (weak or state["violations"]) and state["revisions"] < MAX_REVISIONS:
-        return "revise"
-    return "use_best"
+def best(state: DraftState) -> dict | None:
+    """The version to save when none passed: fact-checked beats unchecked, then fewest problems, then the weighted
+    score, then the more human one (core.drafting.rank). Same rule as the Substack agent (agents/substack/ranking.py)."""
+    on = state["settings"]["fact_checker"].enabled
+    entries = [{**e, "violations": e["violations"] + e.get("fact_issues", []) + ([] if e.get("fact_checked") or not on else ["not fact-checked"])}
+               for e in state.get("candidates", {}).values()]
+    return max(entries, key=lambda e: (bool(e.get("fact_checked")) or not on, drafting.rank(e))) if entries else None
 
 
-def use_best(state: DraftState) -> DraftState:
-    """Publish the best-ranked version, not necessarily the last rewrite."""
-    b = state["best"]
-    return {"post": b["post"], "scores": b["scores"], "critique": b["critique"], "unsupported": b["unsupported"],
-            "violations": b["violations"], "accent": b["accent"], "overall": b["overall"]}
-
-
-def revise(state: DraftState, config: RunnableConfig) -> DraftState:
-    issues = "\n".join(f"- {v}" for v in state["violations"]) or "- none"
-    user = (f"# Source items\n{_sources_block(state['sources'])}\n\n# Current post\n{state['post']}\n\n"
-            f"# Editor scores\n{json.dumps(state['scores'])}\n\n# Editor notes\n{state['critique']}\n\n"
-            f"# Rule violations (must fix)\n{issues}") + _take(state) + _lessons(state)
-    text = llm.call(ctx_of(config), "voice", "revise", _post_system(state.get("week")) + "\n\n" + prompt("revise"), user)
-    return {"post": _clean_post(text), "revisions": state["revisions"] + 1}
-
-
-def onepager(state: DraftState, config: RunnableConfig) -> DraftState:
-    user = f"# Post\n{state['post']}\n\n# Source items\n{_sources_block(state['sources'])}"
-    return {"onepager": llm.call_json(ctx_of(config), "writer", "onepager", prompt("onepager"), user)}
-
-
-def save(state: DraftState, config: RunnableConfig) -> DraftState:
-    ctx = ctx_of(config)
-    sources = [{"url": s["url"], "title": s["title"], "source": s["source"], "origin": s.get("origin", "rss")}
-               for s in state["sources"]]
-    draft = {
-        "week": state["week"], "angle": state["angle"], "post_md": state["post"],
-        "onepager_html": render_onepager(state["onepager"], sources, state["week"], AUTHOR),
-        "sources": sources, "revisions": state["revisions"],
-        "judge_scores": {**state["scores"], "violations": state["violations"], "humanizer": state["accent"]["score"],
-                         "critique": state.get("critique", ""), "unsupported_claims": state.get("unsupported", []),
-                         "overall": state["overall"],
-                         "passed_review": not state["violations"] and not weak_scores(state["scores"], state["accent"]["score"])},
-    }
-    if state.get("redraft_id"):
-        ctx.db.replace_draft(state["redraft_id"], draft, ctx.run_id)
-        return {"draft_id": state["redraft_id"]}
-    return {"draft_id": ctx.db.insert_draft(draft, ctx.run_id)}
+def finish_node(persist: bool):
+    def finish(state: DraftState, config: RunnableConfig) -> DraftState:
+        ctx, seq = ctx_of(config), state["seq"] + 1
+        with step(ctx, AGENT, "supervisor", "work", seq, reason=state.get("finish_reason")) as s:
+            cur, fr = specialists.current(state), state.get("final_report") or {}
+            passed = bool(cur and fr.get("version") == cur["version"] and fr.get("passed"))
+            chosen = state["candidates"].get(str(cur["version"])) if passed else best(state)
+            if not chosen:  # the editor never ran (step limit): score what there is
+                chosen = {"post": cur["post"], "scores": {}, "critique": "", "unsupported": [], "violations": [],
+                          "accent": humanizer.scan(cur["post"]), "version": cur["version"]}
+                chosen["overall"] = drafting.overall_score({}, chosen["accent"]["score"])
+            update = {}
+            if state.get("onepager_for") != chosen["post"]:  # the one-pager must describe the saved version
+                update, _, _ = specialists.onepager(state, ctx, state["settings"]["onepager"], post=chosen["post"])
+            page = update.get("onepager") or state.get("onepager") or {}
+            out = {"post": chosen["post"], "scores": chosen["scores"], "critique": chosen.get("critique", ""),
+                   "violations": chosen["violations"], "unsupported": chosen.get("unsupported", []), "accent": chosen["accent"],
+                   "overall": chosen["overall"], "revisions": len(state["drafts"]) - 1, "passed": passed, "seq": seq, **update}
+            draft_id = None
+            if persist:
+                sources = [{"url": x["url"], "title": x["title"], "source": x["source"], "origin": x.get("origin", "rss")}
+                           for x in state["sources"]]
+                draft = {"week": state["week"], "angle": state["angle"], "post_md": chosen["post"],
+                         "onepager_html": render_onepager(page, sources, state["week"], AUTHOR),
+                         "sources": sources, "revisions": out["revisions"],
+                         "judge_scores": {**chosen["scores"], "violations": chosen["violations"], "humanizer": chosen["accent"]["score"],
+                                          "critique": out["critique"], "unsupported_claims": out["unsupported"],
+                                          "overall": chosen["overall"], "passed_review": passed, "version": chosen.get("version"),
+                                          "final_blockers": fr.get("blockers", []) if not passed else [],
+                                          "finish_reason": state.get("finish_reason", "")}}
+                if state.get("redraft_id"):
+                    ctx.db.replace_draft(state["redraft_id"], draft, ctx.run_id)
+                    draft_id = state["redraft_id"]
+                else:
+                    draft_id = ctx.db.insert_draft(draft, ctx.run_id)
+            s.summary = (f"Saved v{chosen.get('version')} for approval" if persist else f"Finished with v{chosen.get('version')}") + \
+                        (" (passed every check)" if passed else " (didn't pass review: flagged in the queue)")
+            s.output = {"draft_id": draft_id, "version": chosen.get("version"), "passed": passed}
+        return {**out, "draft_id": draft_id}
+    return finish
 
 
 def build_draft(persist: bool = True):
-    g = StateGraph(DraftState)
-    nodes = [("load_items", load_items), ("pick_angle", pick_angle), ("read_sources", read_sources), ("write_post", write_post), ("critic", critic),
-             ("guardrails", guardrails), ("revise", revise), ("use_best", use_best), ("onepager", onepager)]
-    if persist:
-        nodes.append(("save", save))
-    for name, fn in nodes:
-        g.add_node(name, fn)
-    g.add_edge(START, "load_items")
-    g.add_edge("load_items", "pick_angle")
-    g.add_edge("pick_angle", "read_sources")
-    g.add_edge("read_sources", "write_post")
-    g.add_edge("write_post", "critic")
-    g.add_edge("critic", "guardrails")
-    g.add_conditional_edges("guardrails", needs_revision, {"revise": "revise", "use_best": "use_best"})
-    g.add_edge("use_best", "onepager")
-    g.add_edge("revise", "critic")
-    if persist:
-        g.add_edge("onepager", "save")
-        g.add_edge("save", END)
-    else:
-        g.add_edge("onepager", END)
-    return g.compile()
+    return orchestrator.build(supervisor.TEAM, DraftState, specialists.RUNNERS, load_items, finish_node(persist))

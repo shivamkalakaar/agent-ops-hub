@@ -1,9 +1,8 @@
 # Model tiers, routed through OpenRouter. If the primary model fails or is rate
 # limited, OpenRouter tries the fallbacks in order (its `models` array).
 # Prices are $/M tokens (prompt/completion) from openrouter.ai/api/v1/models, 2026-10-19.
-# Free models first everywhere except `voice` (2026-10-21 bake-off on a real brief: free writers wrote half-length
-# drafts with humanizer 2/5 and invented links; Sonnet 806 words, 4/5, 0 flags). Free pools get rate-limited
-# upstream, so each free primary falls back to a free model, then to a cheap paid one (~$0.001/call).
+# Open-weight models everywhere. Free pools get rate-limited upstream, so each free primary falls back to a free
+# model, then to a cheap paid one (~$0.001/call).
 tiers:
   cheap:   # bulk work: scoring ~100 items/day
     primary: google/gemma-4-31b-it:free                 # $0
@@ -16,9 +15,15 @@ tiers:
     temperature: 0.7
     reasoning: {enabled: false}
     max_tokens: 6000   # research facts with evidence quotes ran past 4,000
-  voice:   # write_post + revise only: the text a human reads under their own name. ~5 calls/week, ~$0.05/draft.
-    primary: anthropic/claude-sonnet-5.5                # $2/$10
-    fallbacks: [deepseek/deepseek-v4.1-flash]
+  voice:   # the writers (LinkedIn + Substack): the text a human reads under their own name.
+    # 2026-10-23 bake-off, same LinkedIn prompt + fact sheet on 2 golden days, scored by the editor + scanner:
+    # GLM-5.3 4.74 / 4.40 (scanner 5/5, $0.0007/post), DeepSeek V4.1 Flash 4.74 (invented a number), Kimi K3 4.49
+    # ($0.03/post), Sonnet 5.5 3.26 / 4.26 ($0.025/post), DeepSeek V4 Pro 3.89, MiMo 2.6 Pro 3.66-3.97, Qwen3.8 27B 2.6.
+    primary: z-ai/glm-5.3                               # $0.079/$1.40, open weights
+    fallbacks: [deepseek/deepseek-v4.1-flash, deepseek/deepseek-v4-pro-0813]
+    # Best of N: each first draft is written once per entry (repeats get different voice examples), and the code's
+    # own checks (invented facts, template moves, humanizer) pick one before the editor sees it.
+    candidates: [z-ai/glm-5.3, z-ai/glm-5.3, deepseek/deepseek-v4.1-flash]
     temperature: 0.8
     max_tokens: 6000    # a 1,200-word post is ~1,800 tokens; rewrites ran ~2.7-3.8k
   judge:   # critic + evals. Different model family from the writer to limit self-preference.
@@ -57,6 +62,11 @@ allowed_overrides:
     - dots-studio/dots-3-note-preview:free
     - qwen/qwen3.7-flash
     - deepseek/deepseek-v4.1-flash
+    - deepseek/deepseek-v4-pro-0813
+    - z-ai/glm-5.3
+    - xiaomi/mimo-v2.6-pro
+    - moonshotai/kimi-k3
+    - qwen/qwen3.8-27b
     - anthropic/claude-haiku-5.5
     - anthropic/claude-sonnet-5.5
     - openai/gpt-6-luna

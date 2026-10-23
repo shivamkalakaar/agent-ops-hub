@@ -9,7 +9,9 @@ from langgraph.graph import END, START, StateGraph
 from core import drafting, lessons, settings as settings_mod
 from core.steps import step
 from agents.substack import checks, ranking, render
-from agents.substack.graph import ctx_of, review_of, worker
+from core.orchestrator import worker_node
+from agents.substack.graph import RUNNERS, ctx_of, review_of
+from agents.substack.supervisor import TEAM
 from agents.substack.roster import AGENT, AUTHOR, PROMPTS, SPECIALISTS, Workspace
 from agents.substack.specialists import current, research
 
@@ -112,7 +114,7 @@ def build():
     g.add_node("load_draft", load_draft)
     g.add_node("count_attempt", count_attempt)
     for name in ("writer", "editor", "fact_checker", "final_check"):
-        g.add_node(name, worker(name))
+        g.add_node(name, worker_node(TEAM, name, RUNNERS[name]))
     g.add_node("save", save)
     g.add_edge(START, "load_draft")
     g.add_edge("load_draft", "count_attempt")

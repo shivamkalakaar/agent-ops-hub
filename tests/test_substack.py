@@ -41,6 +41,7 @@ def offline(monkeypatch, tmp_path):
         monkeypatch.delenv(var, raising=False)
     monkeypatch.setattr(storage, "put", lambda path, data, content_type: f"https://img.example.com/{path}")
     monkeypatch.setattr(research, "fetch_article", lambda url: ARTICLE)
+    monkeypatch.setattr("core.drafting.candidates", lambda tier, override, n=None: [override])  # one writer call per draft
     llm.FAKE_RESPONSES.update({
         "supervisor": lambda m: json.dumps({"next": supervisor.canonical(_allowed(m)), "reason": "next in line",
                                             "instructions": "Focus on the price."}),

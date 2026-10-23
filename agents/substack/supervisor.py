@@ -8,24 +8,15 @@
 """
 import json
 
-from core import drafting, llm
+from core import orchestrator
+from core.orchestrator import FINISH, done_or_off as _done_or_off, on as _on
 from agents.substack import checks
-from agents.substack.roster import AUTHOR, MAX_STEPS
+from agents.substack.roster import AGENT, AUTHOR, MAX_STEPS, WORKERS
 from agents.substack.specialists import version
 from agents.substack.specialists.editor import weak
 
-FINISH = "FINISH"
 ORDER = ["research", "writer", "editor", "fact_checker", "illustrator", "final_check", FINISH]
 PREFERENCE = ["editor", "writer", "fact_checker", "illustrator", "final_check", FINISH, "research"]
-
-
-def _on(state, settings, name) -> bool:
-    return settings[name].enabled and state.get("calls", {}).get(name, 0) < settings[name].max_calls
-
-
-def _done_or_off(state, settings, name, done: bool) -> bool:
-    """A step counts as satisfied when it ran on this version, or when it's switched off or out of calls."""
-    return done or not _on(state, settings, name)
 
 
 def allowed(state, settings) -> list[str]:
@@ -92,27 +83,11 @@ def _workspace(state) -> str:
     return "\n".join(lines)
 
 
+TEAM = orchestrator.Team(AGENT, AUTHOR, MAX_STEPS, allowed=lambda state, settings: allowed(state, settings),
+                         canonical=lambda opts: canonical(opts), workspace=lambda state: _workspace(state),
+                         specialists=tuple(WORKERS))
+
+
 def decide(state, ctx, settings) -> dict:
     """Returns {"next", "reason", "instructions", "options", "by"}."""
-    if state.get("work_steps", 0) >= MAX_STEPS:
-        return {"next": FINISH, "reason": f"step limit ({MAX_STEPS}) reached; saving the best version",
-                "instructions": "", "options": [FINISH], "by": "limit"}
-    opts = allowed(state, settings)
-    if len(opts) == 1:
-        return {"next": opts[0], "reason": "only allowed move", "instructions": "", "options": opts, "by": "rule"}
-    cfg = settings["supervisor"]
-    calls = ", ".join(f"{k} {state.get('calls', {}).get(k, 0)}/{settings[k].max_calls}" for k in ORDER[:-1])
-    history = "\n".join(f"- {h['who']}: {h['summary']}" for h in state.get("history", [])[-8:])
-    user = (f"# Workspace\n{_workspace(state)}\n\n# Recent steps\n{history}\n\n# Calls used\n{calls}; "
-            f"steps {state.get('work_steps', 0)}/{MAX_STEPS}\n\n# Allowed now\n{', '.join(opts)}")
-    try:
-        r = llm.call_json(ctx, "writer", "supervisor", drafting.fill(cfg.prompt, AUTHOR=AUTHOR), user, model=cfg.model)
-    except ValueError:
-        r = {}
-    choice = r.get("next")
-    if choice in opts:
-        return {"next": choice, "reason": str(r.get("reason", ""))[:300], "instructions": str(r.get("instructions", ""))[:600],
-                "options": opts, "by": "llm"}
-    fallback = canonical(opts)
-    return {"next": fallback, "reason": f"fallback: supervisor chose {choice!r}, not in {opts}", "instructions": "",
-            "options": opts, "by": "fallback"}
+    return orchestrator.decide(TEAM, state, ctx, settings)
