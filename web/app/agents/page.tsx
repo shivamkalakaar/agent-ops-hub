@@ -73,7 +73,7 @@ export default function Agents() {
           Both writing agents, the specialists inside each one, and what they&apos;ve learned from your feedback. Numbers cover the last 30 days.
         </PageTitle>
         <div className="flex flex-wrap gap-4 text-sm">
-          {AGENTS.map((a) => <a key={a.agent} href={`#${a.agent}`} className="text-ink-2 underline underline-offset-4 hover:text-ink">{a.name}</a>)}
+          {[...AGENTS, { agent: "ai_brief", name: "AI Stack Brief" }].map((a) => <a key={a.agent} href={`#${a.agent}`} className="text-ink-2 underline underline-offset-4 hover:text-ink">{a.name}</a>)}
         </div>
         {!session && <p className="text-sm text-ink-2">Read-only. <Link href="/queue" className="underline underline-offset-4">Sign in</Link> to change settings or edit prompts.</p>}
         {msg && <p className="text-sm text-ink-2">{msg}</p>}
@@ -111,6 +111,11 @@ export default function Agents() {
           </section>
         );
       })}
+
+      <section id="ai_brief" className="scroll-mt-6 space-y-4">
+        <AgentHeader name="AI Stack Brief" runs={runs.filter((r) => r.agent === "ai_brief")}
+          blurb="Runs on your Mac every morning: reads 20 feeds, researches and writes the brief, sends its stories to both writing agents, and emails it at 10:00. When sending needs your approval, type /brief in Claude Code." />
+      </section>
     </div>
   );
 }
@@ -144,10 +149,14 @@ function LatestEval({ run }: { run?: Run }) {
 }
 
 function AgentHeader({ name, runs, blurb, kept, action, actionLabel, live }:
-  { name: string; runs: Run[]; blurb: string; kept?: { kept: number; decided: number }; action?: () => void; actionLabel: string; live?: Run }) {
+  { name: string; runs: Run[]; blurb: string; kept?: { kept: number; decided: number }; action?: () => void; actionLabel?: string; live?: Run }) {
   const finished = runs.filter((r) => r.status !== "running" && r.status !== "skipped");
   const drafts = runs.filter((r) => r.kind === "draft" && r.status === "succeeded");
   const last = runs[0];
+  // the most recent problem, if it's newer than the last success: what failed and why, without opening the run
+  const lastOk = runs.find((r) => r.status === "succeeded");
+  const problem = runs.find((r) => ["failed", "blocked", "budget_exceeded"].includes(r.status));
+  const showProblem = problem && (!lastOk || problem.started_at > lastOk.started_at);
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
@@ -170,6 +179,12 @@ function AgentHeader({ name, runs, blurb, kept, action, actionLabel, live }:
           {last && <div className="mt-1"><Status status={last.status} /></div>}
         </div>
       </div>
+      {showProblem && (
+        <Link href={`/runs/${problem.id}`} className="block rounded-lg border-2 border-ink px-4 py-2 text-sm hover:underline">
+          <b>! {problem.status === "blocked" ? "Blocked" : problem.status === "budget_exceeded" ? "Stopped by the budget cap" : "Failed"} {when(problem.started_at)}:</b>{" "}
+          {problem.error ?? "see the run for details"}
+        </Link>
+      )}
     </div>
   );
 }
