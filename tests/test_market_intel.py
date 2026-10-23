@@ -6,11 +6,13 @@ from datetime import datetime, timezone
 
 import pytest
 
-from core import llm
+from core import drafting as _drafting, llm
 from core.config import load_yaml
 from agents.market_intel import graph
 from agents.market_intel import __main__ as cli
 from agents.market_intel import supervisor
+
+REAL_CANDIDATES = _drafting.candidates  # the fixture pins one candidate; one test needs the real list
 
 NOW = datetime.now(timezone.utc).isoformat(timespec="minutes")
 ITEMS = [
@@ -428,3 +430,19 @@ def test_rejection_cases_are_reported_not_gated(tmp_path):
     assert s["guardrail_pass_rate"] == 1.0 and s["rejection_repeats"] == 1 and s["golden_cases"] == 1
     assert run_evals.check(s, tmp_path / "none.json") == ([], None)
     assert "repeats a rejected problem: 1 of 1 (reported, not gated)" in run_evals.comment("market_intel", "r", s, results, [], None)
+
+
+def test_rewrites_keep_model_variety_and_a_runaway_or_empty_draft_is_rescued(monkeypatch):
+    from core import drafting
+    monkeypatch.setattr(drafting, "candidates", REAL_CANDIDATES)
+    monkeypatch.setattr("core.config.load_yaml", lambda name: {"tiers": {"voice": {
+        "candidates": ["glm", "glm", "ds"], "fallbacks": ["ds"]}}})
+    assert drafting.candidates("voice", None, n=2) == ["glm", "ds"] and drafting.candidates("voice", None) == ["glm", "glm", "ds"]
+    assert drafting.candidates("voice", "sonnet", n=2) == ["sonnet"]
+    replies = iter(["", "loop " * 2000, "A real post."])
+    llm.FAKE_RESPONSES["writer"] = lambda m: next(replies)
+    from core.db import connect
+    with connect() as db:
+        ctx = llm.RunContext(db=db, run_id=db.start_run("market_intel", "draft", "t"))
+        outs = drafting.write_candidates(ctx, "voice", "writer", ["glm", "glm"], lambda i: "s", "u", str.strip, max_words=600)
+    assert outs == [{"model": "ds", "text": "A real post."}]  # both candidates unusable: the rescue model's draft

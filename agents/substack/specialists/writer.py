@@ -3,7 +3,7 @@ applies the editor's notes, the fact check and the final check's blockers togeth
 import json
 import re
 
-from core import drafting, humanizer, llm
+from core import drafting, humanizer
 from agents.substack import checks
 from agents.substack.roster import AUTHOR
 from agents.substack.specialists import allowed_links, brief_block, current, numbered_sources, sources_text, style_guide, version
@@ -62,14 +62,8 @@ def run(state, ctx, cfg):
     if state.get("lessons"):
         user += f"\n\n{state['lessons']}"
     # Best of N (config/models.yaml voice.candidates): repeats get different essay examples; the code's checks pick one.
-    outs, models = [], drafting.candidates("voice", cfg.model, n=2 if draft else None)
-    for i, model in enumerate(models):
-        try:
-            outs.append({"model": model or "default",
-                         "text": clean(llm.call(ctx, "voice", "writer", system(state, cfg, seed=f"{state.get('slot')}-{i}"), user, model=model))})
-        except Exception:  # noqa: BLE001 - one candidate failing is fine while another came back
-            if i == len(models) - 1 and not outs:
-                raise
+    outs = drafting.write_candidates(ctx, "voice", "writer", drafting.candidates("voice", cfg.model, n=2 if draft else None),
+                                     lambda i: system(state, cfg, seed=f"{state.get('slot')}-{i}"), user, clean, max_words=3 * 1200)
     urls, text = {s["url"] for s in state["sources"]}, sources_text(state)
 
     def score(md: str) -> tuple:
