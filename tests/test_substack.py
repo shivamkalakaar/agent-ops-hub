@@ -382,3 +382,11 @@ def test_substack_gate_allows_one_flagged_post_in_three(tmp_path):
     bad = run_evals.gate({**base, "guardrail_pass_rate": 1 / 3}, tmp_path / "b.json", False, run_evals.SUBSTACK_MIN_GUARDRAIL_PASS)
     strict = run_evals.gate({**base, "guardrail_pass_rate": 2 / 3}, tmp_path / "b.json", False)
     assert (ok, bad, strict) == (0, 1, 1)
+
+
+def test_daily_cap_override_applies_only_to_its_date():
+    from core import budget
+    cfg = {"daily_cap_usd": 3.0, "daily_cap_overrides": {"2026-10-23": 7.0}}
+    assert budget.daily_cap(cfg, datetime(2026, 10, 23, 23, 59, tzinfo=timezone.utc)) == 7.0
+    assert budget.daily_cap(cfg, datetime(2026, 10, 24, tzinfo=timezone.utc)) == 3.0
+    assert budget.daily_cap({"daily_cap_usd": 3.0}, datetime(2026, 10, 23, tzinfo=timezone.utc)) == 3.0
