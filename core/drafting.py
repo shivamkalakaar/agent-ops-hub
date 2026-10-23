@@ -1,6 +1,7 @@
 """Drafting helpers every writing agent shares: prompt files, source blocks for prompts, article fetching,
 style examples, the weighted score (humanizer 40%), keep-best ranking and the guardrails that apply to any text
 published under the author's name. Format rules (length, hashtags, sections) stay with each agent."""
+import random
 import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -48,7 +49,10 @@ def read_sources(sources: list[dict], words: int = ARTICLE_WORDS, fetch: Callabl
     return [{**s, "body": " ".join(b.split(" ")[:per])} if b else s for s, b in zip(sources, bodies)]
 
 
-def style_examples(n: int = 3, short_only: bool = True, min_words: int = 0) -> list[str]:
+def style_examples(n: int = 3, short_only: bool = True, min_words: int = 0, max_words: int | None = None,
+                   seed: str | None = None) -> list[str]:
+    """Posts from config/style/examples.md. With a seed, a different sample each run (stable for the same seed),
+    so the writer doesn't lock onto the first few examples' shape."""
     path = CONFIG / "style" / "examples.md"
     if not path.exists():
         return []
@@ -56,7 +60,10 @@ def style_examples(n: int = 3, short_only: bool = True, min_words: int = 0) -> l
     posts = [p.strip() for p in re.split(r"^---\s*$", body, flags=re.M) if p.strip()]
     if short_only:
         posts = [p for p in posts if len(p.split()) <= SHORT_POST_WORDS]
-    return [p for p in posts if len(p.split()) >= min_words][:n]
+    posts = [p for p in posts if min_words <= len(p.split()) <= (max_words or 10**9)]
+    if seed is not None:
+        random.Random(seed).shuffle(posts)
+    return posts[:n]
 
 
 def overall_score(scores: dict, human: int) -> float:

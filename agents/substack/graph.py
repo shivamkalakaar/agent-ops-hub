@@ -10,10 +10,10 @@ from datetime import datetime, timedelta, timezone
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 
-from core import settings as settings_mod
+from core import lessons, settings as settings_mod
 from core.steps import step
 from agents.substack import checks, ranking, render, supervisor
-from agents.substack.roster import AGENT, PROMPTS, SPECIALISTS, WORKERS, Workspace
+from agents.substack.roster import AUTHOR, AGENT, PROMPTS, SPECIALISTS, WORKERS, Workspace
 from agents.substack.specialists import current, editor, fact_checker, final_check, illustrator, research, writer
 
 RUNNERS = {"research": research.run, "writer": writer.run, "editor": editor.run, "fact_checker": fact_checker.run,
@@ -40,6 +40,7 @@ def load_context(state: Workspace, config: RunnableConfig) -> Workspace:
     db = ctx.db
     cfg = config["configurable"].get("settings") or settings_mod.load(db, AGENT, SPECIALISTS, PROMPTS)
     with step(ctx, AGENT, "supervisor", "work", 1, reason="load context") as s:
+        learned = lessons.learn(db, ctx, AGENT, AUTHOR)  # first, learn from what the owner decided since the last run
         since = _since(db.last_substack_at())
         used = db.used_substack_urls()
         items = state.get("items") or [i for i in db.top_items(since, {"brief": 18, "rss": 12}) if i["url"] not in used]
@@ -52,11 +53,13 @@ def load_context(state: Workspace, config: RunnableConfig) -> Workspace:
                 musings = [m, *musings]
         voice = [" ".join(p.split()[:VOICE_WORDS]) for p in db.approved_posts(3) + db.approved_substack_posts(1)]
         s.summary = (f"Loaded {len(items)} stories since {since[:10]} "
-                     f"({sum(i.get('origin') == 'brief' for i in items)} from the AI brief), {len(musings)} unexpanded musings")
+                     f"({sum(i.get('origin') == 'brief' for i in items)} from the AI brief), {len(musings)} unexpanded musings"
+                     + (f"; learned from {learned['read']} of your decisions" if learned.get("read") else ""))
         s.output = {"since": since, "items": len(items), "musings": [m["id"] for m in musings],
                     "prompt_versions": {k: v.prompt_version for k, v in cfg.items()},
-                    "disabled": [k for k, v in cfg.items() if not v.enabled]}
+                    "disabled": [k for k, v in cfg.items() if not v.enabled], "learned": learned}
     return {"items": items, "musings": musings, "voice_posts": state.get("voice_posts") or voice,
+            "lessons": state["lessons"] if "lessons" in state else lessons.block(db, AGENT, AUTHOR), "learned": learned,
             "recent_titles": state.get("recent_titles", db.recent_substack_angles()),
             "slot": state.get("slot") or datetime.now(timezone.utc).date().isoformat(),
             "settings": cfg, "seq": 1, "work_steps": 0, "calls": {}, "history": [], "drafts": [], "images": []}

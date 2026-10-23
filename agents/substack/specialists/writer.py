@@ -58,6 +58,8 @@ def run(state, ctx, cfg):
         user += "\n\nRewrite the whole post. Fix everything marked must-fix; keep what already works."
     if state.get("instructions"):
         user += f"\n\n# Managing editor's note\n{state['instructions']}"
+    if state.get("lessons"):
+        user += f"\n\n{state['lessons']}"
     md = clean(llm.call(ctx, "voice", "writer", system(state, cfg), user, model=cfg.model))
     n = version(state) + 1
     p = checks.parse(md)

@@ -37,6 +37,8 @@ class Workspace(TypedDict, total=False):
     seed_draft_id: str | None          # forced from the dashboard ("Expand to Substack")
     recent_titles: list[str]
     voice_posts: list[str]
+    lessons: str                       # what the owner's past decisions taught the newsroom (core/lessons.py)
+    learned: dict
     # specialists' work
     brief: dict
     sources: list[dict]
