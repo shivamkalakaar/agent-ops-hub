@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { supabase, configured } from "@/lib/supabase";
 import type { LlmCall, Run } from "@/lib/types";
-import { MONTHLY_CAP, ms, percentile, usd, when } from "@/lib/format";
+import { ms, percentile, usd, when } from "@/lib/format";
+import { caps as loadCaps, spendRows, sum } from "@/lib/budget";
 import { BudgetMeter, Card, NotConfigured, PageTitle, StatTile, Status } from "@/components/ui";
 import { SpendChart } from "@/components/SpendChart";
 
@@ -10,17 +11,19 @@ export const revalidate = 300;
 export default async function Overview() {
   if (!configured) return <NotConfigured />;
   const since = new Date(Date.now() - 30 * 864e5).toISOString();
-  const monthStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)).toISOString();
-  const [{ data: runs }, { data: calls }] = await Promise.all([
+  const month = new Date().toISOString().slice(0, 7);
+  // Totals come from the spend_by_day view (Postgres sums every call); llm_calls is read only for latency, and
+  // PostgREST returns at most 1,000 of its rows, so the latest 1,000 calls are the sample.
+  const [{ data: runs }, { data: calls }, rows, cap] = await Promise.all([
     supabase.from("runs").select("*").order("started_at", { ascending: false }).limit(40),
-    supabase.from("llm_calls").select("*").gte("created_at", since).limit(10000),
+    supabase.from("llm_calls").select("latency_ms,ok").gte("created_at", since).order("created_at", { ascending: false }).limit(1000),
+    spendRows(since.slice(0, 10)), loadCaps(),
   ]);
   const R = (runs ?? []) as Run[];
-  const C = (calls ?? []) as LlmCall[];
+  const C = (calls ?? []) as Pick<LlmCall, "latency_ms" | "ok">[];
 
-  const monthSpend = C.filter((c) => c.created_at >= monthStart).reduce((s, c) => s + Number(c.cost_usd), 0);
-  const okCalls = C.filter((c) => c.ok);
-  const lat = okCalls.map((c) => c.latency_ms ?? 0);
+  const monthSpend = sum(rows.filter((r) => r.day.startsWith(month)));
+  const lat = C.filter((c) => c.ok).map((c) => c.latency_ms ?? 0);
   const finished = R.filter((r) => r.kind !== "eval" && r.status !== "running" && r.status !== "skipped");
   const successRate = finished.length ? finished.filter((r) => r.status === "succeeded").length / finished.length : 0;
   const draftRuns = R.filter((r) => r.agent === "market_intel" && r.kind === "draft" && r.status === "succeeded");
@@ -29,19 +32,19 @@ export default async function Overview() {
 
   const days = Array.from({ length: 30 }, (_, i) => {
     const day = new Date(Date.now() - (29 - i) * 864e5).toISOString().slice(0, 10);
-    const dc = C.filter((c) => c.created_at.slice(0, 10) === day);
-    return { day, cost: dc.reduce((s, c) => s + Number(c.cost_usd), 0), calls: dc.length };
+    const d = rows.filter((r) => r.day === day);
+    return { day, cost: sum(d), calls: d.reduce((s, r) => s + r.calls, 0) };
   });
   const byTier = Object.entries(
-    C.reduce<Record<string, { cost: number; calls: number; tokens: number }>>((acc, c) => {
-      const t = (acc[c.tier] ??= { cost: 0, calls: 0, tokens: 0 });
-      t.cost += Number(c.cost_usd); t.calls += 1; t.tokens += (c.prompt_tokens ?? 0) + (c.completion_tokens ?? 0);
+    rows.reduce<Record<string, { cost: number; calls: number; tokens: number }>>((acc, r) => {
+      const t = (acc[r.tier] ??= { cost: 0, calls: 0, tokens: 0 });
+      t.cost += r.cost_usd; t.calls += r.calls; t.tokens += r.tokens;
       return acc;
     }, {}),
-  );
+  ).sort((a, b) => b[1].cost - a[1].cost);
   const byModel = Object.entries(
-    okCalls.reduce<Record<string, number>>((acc, c) => ((acc[c.model ?? "?"] = (acc[c.model ?? "?"] ?? 0) + 1), acc), {}),
-  ).sort((a, b) => b[1] - a[1]);
+    rows.reduce<Record<string, number>>((acc, r) => ((acc[r.model] = (acc[r.model] ?? 0) + r.calls - r.failed), acc), {}),
+  ).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
 
   return (
     <div className="space-y-8">
@@ -58,9 +61,10 @@ export default async function Overview() {
             <div className="text-sm text-ink-2">Spend this month</div>
             <div className="mt-1 text-5xl font-semibold">{usd(monthSpend)}</div>
           </div>
-          <div className="text-right text-sm text-ink-2">cap {usd(MONTHLY_CAP)} · enforced before every call</div>
+          <div className="text-right text-sm text-ink-2">cap {usd(cap.monthly)}{cap.monthly !== cap.standingMonthly && ` this month (normally ${usd(cap.standingMonthly)})`} · enforced before every call
+            <div><Link href="/spend" className="underline underline-offset-4">Spending details</Link></div></div>
         </div>
-        <div className="mt-4"><BudgetMeter spent={monthSpend} cap={MONTHLY_CAP} /></div>
+        <div className="mt-4"><BudgetMeter spent={monthSpend} cap={cap.monthly} /></div>
       </Card>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -81,7 +85,7 @@ export default async function Overview() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <h2 className="font-semibold">Cost by model tier</h2>
+          <h2 className="font-semibold">Cost by model tier, last 30 days</h2>
           <table className="mt-3 w-full text-sm">
             <thead className="text-left text-ink-2"><tr><th className="py-1 font-normal">Tier</th><th className="font-normal text-right">Calls</th><th className="font-normal text-right">Tokens</th><th className="font-normal text-right">Cost</th></tr></thead>
             <tbody className="num">

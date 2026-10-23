@@ -191,3 +191,12 @@ create table if not exists lessons (
   updated_at timestamptz not null
 );
 create index if not exists lessons_agent_idx on lessons (agent, active);
+
+-- Spending dashboard: model spend per day, agent, run kind, tier and model. The web app reads this instead of
+-- llm_calls, which PostgREST caps at 1,000 rows per request. security_invoker keeps the caller's RLS.
+create or replace view spend_by_day with (security_invoker = true) as
+select (c.created_at at time zone 'utc')::date as day, coalesce(r.agent, 'unknown') as agent, coalesce(r.kind, 'unknown') as kind,
+       c.tier, coalesce(c.model, 'unknown') as model, count(*) as calls, count(*) filter (where not c.ok) as failed,
+       sum(coalesce(c.prompt_tokens, 0) + coalesce(c.completion_tokens, 0)) as tokens, sum(c.cost_usd) as cost_usd
+from llm_calls c left join runs r on r.id = c.run_id
+group by 1, 2, 3, 4, 5;
