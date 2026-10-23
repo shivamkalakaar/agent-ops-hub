@@ -38,6 +38,7 @@ class Workspace(TypedDict, total=False):
     recent_titles: list[str]
     voice_posts: list[str]
     lessons: str                       # what the owner's past decisions taught the newsroom (core/lessons.py)
+    learn: bool                        # False in evals: don't consume the owner's queue decisions
     learned: dict
     # specialists' work
     brief: dict

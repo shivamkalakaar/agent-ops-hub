@@ -17,6 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/" className="text-ink-2 hover:text-ink">Overview</Link>
             <Link href="/agents" className="text-ink-2 hover:text-ink">Agents</Link>
             <Link href="/queue" className="text-ink-2 hover:text-ink">Approval queue</Link>
+            <Link href="/evals" className="text-ink-2 hover:text-ink">Evals</Link>
             <a href="https://github.com/shivamkalakaar/agent-ops-hub" className="ml-auto text-ink-2 hover:text-ink">GitHub</a>
           </nav>
         </header>

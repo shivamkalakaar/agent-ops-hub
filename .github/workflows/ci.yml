@@ -10,24 +10,35 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --frozen
       - run: uv run pytest -q
-  evals:   # real models on golden weeks; only when prompts or agent logic change
-    if: github.event_name == 'pull_request'
+  # Real models on golden weeks, only for the agent whose prompts or code changed: on every PR, and again on main
+  # after a merge so the dashboard's /evals page tracks what's live. Results: the PR comment, the job summary,
+  # an artifact, and the eval run on the dashboard.
+  evals:
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     needs: tests
     runs-on: ubuntu-latest
-    timeout-minutes: 50   # newsroom cases take ~5-8 min each
+    timeout-minutes: 50   # Substack cases take ~5-8 min each
+    permissions: { contents: read, pull-requests: write }
     env:
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
       LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
       LANGFUSE_BASE_URL: ${{ secrets.LANGFUSE_BASE_URL }}
+      DASHBOARD_URL: ${{ vars.DASHBOARD_URL }}
+      EVAL_TRIGGER: ${{ github.event_name == 'pull_request' && 'pr' || 'main' }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
       - name: Skip unless prompts, config or agent code changed
         id: changed
         run: |
-          files=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            files=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          else
+            files=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+          fi
           if echo "$files" | grep -qE '^(agents/market_intel/|config/style/guide|config/models.yaml|core/|evals/)'; then
             echo "market_intel=true" >> "$GITHUB_OUTPUT"; fi
           if echo "$files" | grep -qE '^(agents/substack/|config/style/substack_guide|config/models.yaml|core/|evals/)'; then
@@ -36,7 +47,26 @@ jobs:
         if: steps.changed.outputs.market_intel == 'true' || steps.changed.outputs.substack == 'true'
       - if: steps.changed.outputs.market_intel == 'true' || steps.changed.outputs.substack == 'true'
         run: uv sync --frozen --no-dev
-      - if: steps.changed.outputs.market_intel == 'true'
+      - id: linkedin
+        if: steps.changed.outputs.market_intel == 'true'
+        continue-on-error: true
         run: uv run python -m evals.run_evals --cases 5
-      - if: steps.changed.outputs.substack == 'true'   # 3 cases, images off: ~$0.25-0.40
+      - id: substack
+        if: steps.changed.outputs.substack == 'true'   # 3 cases, images off: ~$0.25-0.40
+        continue-on-error: true
         run: uv run python -m evals.run_evals --agent substack --cases 3
+      - name: Report
+        if: always() && (steps.changed.outputs.market_intel == 'true' || steps.changed.outputs.substack == 'true')
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          cat evals/results/*.md > report.md 2>/dev/null || echo "Evals didn't produce results; see the job log." > report.md
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$PR_NUMBER" ]; then
+            gh pr comment "$PR_NUMBER" --edit-last --body-file report.md 2>/dev/null || gh pr comment "$PR_NUMBER" --body-file report.md
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always() && (steps.changed.outputs.market_intel == 'true' || steps.changed.outputs.substack == 'true')
+        with: { name: eval-results, path: evals/results/, if-no-files-found: ignore }
+      - name: Fail if an eval failed
+        if: steps.linkedin.outcome == 'failure' || steps.substack.outcome == 'failure'
+        run: exit 1

@@ -1,5 +1,6 @@
 """Offline end-to-end tests: fake LLM, temp SQLite, stubbed feeds. No network, no keys."""
 import json
+from pathlib import Path
 from datetime import datetime, timezone
 
 import pytest
@@ -117,11 +118,35 @@ def test_parse_json_tolerates_preamble():
 
 def test_evals_offline(monkeypatch, tmp_path):
     from evals import run_evals
-    monkeypatch.setattr(run_evals, "BASELINE", tmp_path / "baseline.json")
+    monkeypatch.setattr(run_evals, "BASELINES", {"market_intel": tmp_path / "baseline.json"})
+    monkeypatch.setattr(run_evals, "HERE", tmp_path)
+    golden = tmp_path / "golden"
+    golden.mkdir()
+    for p in sorted((Path(run_evals.__file__).parent / "golden").glob("*.json"))[-2:]:
+        (golden / p.name).write_text(p.read_text())
     # the fake writer's canned post can't match real golden sources, so skip the fact guard here
     monkeypatch.setattr("core.humanizer.invented_facts", lambda sources, post: [])
+    monkeypatch.setenv("EVAL_TRIGGER", "pr")
+    monkeypatch.setenv("PR_NUMBER", "7")
+    learned = []
+    monkeypatch.setattr("core.lessons.learn", lambda *a, **k: learned.append(a) or {"read": 0})
+    prompts = []
+    write = llm.FAKE_RESPONSES["write_post"]
+    monkeypatch.setitem(llm.FAKE_RESPONSES, "write_post", lambda m: (prompts.append(m[-1].content), write(m))[1])
     monkeypatch.setattr("sys.argv", ["run_evals", "--cases", "2"])
     assert run_evals.main() == 0
+    assert learned == []  # evals never consume the owner's queue decisions
+    assert all(run_evals.LESSONS in p for p in prompts)  # and always read the same frozen lessons
+    from core.db import connect
+    with connect() as db:
+        run = db.one("select * from runs where kind='eval'")
+        steps = db.all("select * from agent_steps where run_id=%s order by seq", (run["id"],))
+    s = run["stats"]
+    assert run["status"] == "succeeded" and s["trigger"] == "pr" and s["pr"] == "7" and s["passed"] is True
+    assert len(s["results"]) == 2 and s["results"][0]["post"] and s["gate"] == []
+    assert [x["specialist"] for x in steps] == ["eval_case", "eval_case"] and steps[0]["summary"].startswith("2026-")
+    md = (tmp_path / "results" / "market_intel.md").read_text()
+    assert "Evals: LinkedIn agent passed" in md and "| Case |" in md
 
 
 def test_keeps_more_human_version_when_rewrite_is_worse():

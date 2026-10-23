@@ -121,6 +121,7 @@ class DraftState(TypedDict, total=False):
     items: list[dict]
     recent_posts: list[str]
     lessons: str          # what the owner's past decisions taught the agent (core/lessons.py)
+    learn: bool           # False in evals: don't consume the owner's queue decisions
     learned: dict
     take: str             # the owner's own one-line take, when they asked for a rewrite around it
     redraft_id: str       # rewrite this saved draft in place instead of saving a new one
@@ -151,7 +152,8 @@ def load_items(state: DraftState, config: RunnableConfig) -> DraftState:
     ctx = ctx_of(config)
     db = ctx.db
     now = datetime.now(timezone.utc)
-    learned = lessons.learn(db, ctx, AGENT, AUTHOR)  # first, learn from what the owner decided since the last run
+    # first, learn from what the owner decided since the last run (evals pass learn=False and frozen lessons)
+    learned = lessons.learn(db, ctx, AGENT, AUTHOR) if state.get("learn", True) else {"read": 0}
     items = state.get("items")  # evals inject items directly
     if not items:
         used = db.used_draft_urls((now - timedelta(days=USED_DAYS)).isoformat())
@@ -165,7 +167,8 @@ def load_items(state: DraftState, config: RunnableConfig) -> DraftState:
     base, n = week, 2
     while not state.get("week") and db.week_taken(week):  # never take over another post's one-pager URL
         week, n = f"{base}-{n}", n + 1
-    return {"items": items, "week": week, "recent_posts": db.approved_posts(3), "learned": learned,
+    return {"items": items, "week": week, "learned": learned,
+            "recent_posts": state["recent_posts"] if "recent_posts" in state else db.approved_posts(3),
             "lessons": state["lessons"] if "lessons" in state else lessons.block(db, AGENT, AUTHOR),
             "recent_angles": state["recent_angles"] if "recent_angles" in state else db.recent_angles(5), "revisions": 0}
 

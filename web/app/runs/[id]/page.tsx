@@ -60,12 +60,56 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
         </table>
       </Card>
 
+      {r.kind === "eval" && Array.isArray(r.stats?.results) && <EvalCases stats={r.stats} />}
+
       {r.stats && (
         <Card>
-          <h2 className="font-semibold">Run output</h2>
-          <pre className="mt-2 overflow-x-auto text-xs text-ink-2">{JSON.stringify(r.stats, null, 2)}</pre>
+          <details>
+            <summary className="cursor-pointer font-semibold">Run output (raw)</summary>
+            <pre className="mt-2 overflow-x-auto text-xs text-ink-2">{JSON.stringify(r.stats, null, 2)}</pre>
+          </details>
         </Card>
       )}
     </div>
+  );
+}
+
+type EvalCase = { case: string; mean: number; humanizer: number; scores?: Record<string, number>; violations?: string[];
+  post?: string; title?: string; passed_final?: boolean };
+
+/** One eval run's cases: the post each one produced, its scores and its flags. */
+function EvalCases({ stats }: { stats: Record<string, unknown> }) {
+  const cases = stats.results as EvalCase[];
+  const gate = (stats.gate as string[] | undefined) ?? [];
+  return (
+    <Card>
+      <h2 className="font-semibold">Eval cases</h2>
+      <p className="mt-1 text-sm text-ink-2">
+        Mean {String(stats.mean ?? "–")}{stats.baseline != null && ` against a baseline of ${String(stats.baseline)}`}.{" "}
+        {stats.passed === false ? `Failed: ${gate.join("; ")}.` : stats.passed ? "Passed." : ""}
+        {typeof stats.ci_url === "string" && <> <a href={stats.ci_url} className="underline">CI job</a></>}
+      </p>
+      <ul className="mt-3 divide-y divide-line">
+        {cases.map((c) => (
+          <li key={c.case} className="py-3">
+            <details>
+              <summary className="cursor-pointer">
+                <span className="font-medium">{c.case}</span>
+                <span className="num ml-3 text-sm text-ink-2">overall {c.mean} · humanizer {c.humanizer}/5
+                  {c.passed_final != null && ` · final check ${c.passed_final ? "passed" : "failed"}`}
+                  {c.violations?.length ? ` · ${c.violations.length} flag${c.violations.length === 1 ? "" : "s"}` : ""}</span>
+              </summary>
+              {c.violations && c.violations.length > 0 && (
+                <ul className="mt-2 list-disc pl-5 text-sm">{c.violations.map((v) => <li key={v}>{v}</li>)}</ul>
+              )}
+              {c.scores && (
+                <p className="num mt-2 text-xs text-ink-2">{Object.entries(c.scores).map(([k, v]) => `${k} ${v}`).join(" · ")}</p>
+              )}
+              {c.post && <pre className="mt-2 whitespace-pre-wrap rounded-lg border border-line bg-bg p-3 text-sm">{c.title ? `# ${c.title}\n\n` : ""}{c.post}</pre>}
+            </details>
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }
