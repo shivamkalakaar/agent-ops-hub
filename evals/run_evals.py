@@ -3,41 +3,49 @@
 uv run python -m evals.run_evals [--agent market_intel|substack] [--cases 5] [--update-baseline] [--images]
 
 Fails (exit 1) if the mean critic score drops more than TOLERANCE below the baseline,
-or if any final post still breaks a deterministic guardrail. For the Substack newsroom it also checks
+or if any final post still breaks a deterministic guardrail. For the Substack agent it also checks
 each run's trajectory: within the step limit, and the fact-checker and final check both ran.
+
+Each eval is one `runs` row (kind 'eval') with one step per case, so the dashboard's /evals page and the run's
+timeline show it live. The row's stats carry the trigger (pr / main / local), PR number, commit, baseline, gate
+result and every case's post and scores. evals/results/<agent>.md is a summary for the PR comment.
+
+Evals never learn from the queue and read a frozen set of lessons (evals/lessons.fixture.md), so the same
+code and prompts always get the same inputs.
 """
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from statistics import mean
+from typing import Callable
 
 from core import humanizer, llm, tracing
 from core.budget import BudgetExceeded
 from core.config import git_sha
 from core.db import connect
+from core.steps import step
 from agents.market_intel import graph
 
 HERE = Path(__file__).parent
-BASELINE = HERE / "baseline.json"
-SUBSTACK_BASELINE = HERE / "baseline.substack.json"
+BASELINES = {"market_intel": HERE / "baseline.json", "substack": HERE / "baseline.substack.json"}
+LESSONS = (HERE / "lessons.fixture.md").read_text().strip()
 TOLERANCE = 0.3
-# The newsroom saves its best version even when nothing passes, flagged for the owner, so one flagged post in a
-# 3-case run isn't a regression; two are. The LinkedIn agent still needs every final post clean.
-SUBSTACK_MIN_GUARDRAIL_PASS = 2 / 3
+# The Substack agent saves its best version even when nothing passes, flagged for the owner, so one flagged post in
+# a 3-case run isn't a regression; two are. The LinkedIn agent still needs every final post clean.
+MIN_GUARDRAIL_PASS = {"market_intel": 1.0, "substack": 2 / 3}
 DAYS_PER_SUBSTACK_CASE = 3  # a Wed/Sat post covers 3-4 days of news
 
 
 def run_case(ctx, name: str, items: list[dict]) -> dict:
     state = graph.build_draft(persist=False).invoke(
-        {"items": items, "week": name, "recent_angles": []}, config={"configurable": {"ctx": ctx}, "callbacks": ctx.callbacks,
-                                                "run_name": f"eval.{name}"})
+        {"items": items, "week": name, "recent_angles": [], "recent_posts": [], "learn": False, "lessons": LESSONS},
+        config={"configurable": {"ctx": ctx}, "callbacks": ctx.callbacks, "run_name": f"eval.{name}"})
     scores = state["scores"]
     return {"case": name, "mean": state["overall"], "critic_mean": round(mean(scores.values()), 2) if scores else 0.0,
-            "scores": scores,
-            "violations": state["violations"], "revisions": state["revisions"], "chars": len(state["post"]),
-            "humanizer": humanizer.scan(state["post"])["score"],
-            "post": state["post"]}
+            "scores": scores, "violations": state["violations"], "revisions": state["revisions"], "chars": len(state["post"]),
+            "humanizer": humanizer.scan(state["post"])["score"], "post": state["post"]}
 
 
 def substack_cases(n: int) -> list[tuple[str, list[dict]]]:
@@ -65,7 +73,7 @@ def run_substack_case(ctx, name: str, items: list[dict], images: bool) -> dict:
     if not images:
         cfg["illustrator"] = replace(cfg["illustrator"], enabled=False)  # images cost ~$0.13/post; --images opts in
     state = newsroom.build().invoke(
-        {"items": items, "musings": [], "recent_titles": [], "slot": name},
+        {"items": items, "musings": [], "recent_titles": [], "slot": name, "learn": False, "lessons": LESSONS},
         config={"configurable": {"ctx": ctx, "settings": cfg, "persist": False}, "callbacks": ctx.callbacks,
                 "run_name": f"eval.{name}", "recursion_limit": 60})
     judge, calls = state["judge"], state["calls"]
@@ -78,6 +86,107 @@ def run_substack_case(ctx, name: str, items: list[dict], images: bool) -> dict:
             "steps": state["work_steps"], "calls": calls, "title": state["final"]["title"], "post": state["final"]["body_md"]}
 
 
+def meta() -> dict:
+    """Where this eval ran: set by CI (EVAL_TRIGGER, PR_NUMBER) and GitHub's own env vars."""
+    return {"trigger": os.environ.get("EVAL_TRIGGER") or "local", "pr": os.environ.get("PR_NUMBER") or None,
+            "branch": os.environ.get("GITHUB_HEAD_REF") or os.environ.get("GITHUB_REF_NAME") or None,
+            "commit": (os.environ.get("GITHUB_SHA") or git_sha() or "")[:12] or None,
+            "ci_url": (f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+                       if os.environ.get("GITHUB_RUN_ID") else None)}
+
+
+def summarize(agent: str, results: list[dict]) -> dict:
+    s = {"mean": round(mean(r["mean"] for r in results), 2), "cases": len(results),
+         "humanizer_mean": round(mean(r["humanizer"] for r in results), 2),
+         "guardrail_pass_rate": round(sum(not r["violations"] for r in results) / len(results), 3),
+         "per_dimension": {k: round(mean(r["scores"].get(k, 0) for r in results), 2) for k in results[0]["scores"]}}
+    if agent == "substack":
+        s |= {"final_pass_rate": round(sum(r["passed_final"] for r in results) / len(results), 3),
+              "mean_steps": round(mean(r["steps"] for r in results), 1)}
+    return s
+
+
+def check(summary: dict, baseline: Path, min_guardrail_pass: float = 1.0) -> tuple[list[str], float | None]:
+    """Reasons the gate fails (empty = pass), and the baseline mean it compared against."""
+    base = json.loads(baseline.read_text())["mean"] if baseline.exists() else None
+    reasons = []
+    if base is not None and summary["mean"] < base - TOLERANCE:
+        reasons.append(f"mean {summary['mean']} is below baseline {base} - {TOLERANCE}")
+    if summary["humanizer_mean"] < humanizer.MIN_HUMAN:
+        reasons.append(f"mean humanizer {summary['humanizer_mean']}/5 is below {humanizer.MIN_HUMAN}")
+    if summary["guardrail_pass_rate"] < min_guardrail_pass - 1e-9:
+        reasons.append(f"guardrail pass rate {summary['guardrail_pass_rate']:.2f} is below {min_guardrail_pass:.2f}")
+    return reasons, base
+
+
+def gate(summary: dict, baseline: Path, update: bool, min_guardrail_pass: float = 1.0) -> int:
+    if update:
+        baseline.write_text(json.dumps(summary, indent=1) + "\n")
+        print("baseline updated")
+        return 0
+    reasons, _ = check(summary, baseline, min_guardrail_pass)
+    for r in reasons:
+        print(f"REGRESSION: {r}", file=sys.stderr)
+    return 1 if reasons else 0
+
+
+def comment(agent: str, run_id: str, summary: dict, results: list[dict], reasons: list[str], base: float | None) -> str:
+    """Markdown for the PR comment and the Actions job summary."""
+    name = {"market_intel": "LinkedIn agent", "substack": "Substack agent"}[agent]
+    head = f"### Evals: {name} {'passed' if not reasons else 'failed'}"
+    line = (f"Mean **{summary['mean']}**" + (f" (baseline {base}, allowed drop {TOLERANCE})" if base is not None else "")
+            + f" · humanizer {summary['humanizer_mean']}/5 · guardrails clean on {round(summary['guardrail_pass_rate'] * summary['cases'])}"
+            f"/{summary['cases']} cases")
+    rows = "\n".join(f"| {r['case']} | {r['mean']} | {r['humanizer']}/5 | {'; '.join(r['violations'])[:160] or '–'} |" for r in results)
+    url = os.environ.get("DASHBOARD_URL", "").rstrip("/")
+    link = f"\n\n[Posts and scores for each case]({url}/runs/{run_id})" if url else f"\n\nDashboard run `{run_id}`"
+    why = "\n\n" + "\n".join(f"- {r}" for r in reasons) if reasons else ""
+    return f"{head}\n\n{line}{why}\n\n| Case | Overall | Humanizer | Flags |\n|---|---|---|---|\n{rows}{link}\n"
+
+
+def run_suite(agent: str, cases: list[tuple[str, Callable]], describe: Callable[[dict], str], update: bool) -> int:
+    """Run each case as a step of one eval run, then record the summary and gate result on the run."""
+    results, info = [], meta()
+    baseline = BASELINES[agent] if agent in BASELINES else HERE / f"baseline.{agent}.json"
+    with connect() as db:
+        run_id = db.start_run(agent, "eval", info["commit"])
+        with tracing.trace(f"{agent}.eval", run_id=run_id, tags=[agent, "eval", info["trigger"]], metadata=info) as t:
+            ctx = llm.RunContext(db=db, run_id=run_id, callbacks=t.callbacks)
+            # Case steps sit after the agent's own steps on the timeline (the Substack agent logs its own, from seq 1)
+            first = 1 if agent == "market_intel" else 900
+            try:
+                for n, (name, fn) in enumerate(cases):
+                    with step(ctx, agent, "eval_case", "work", first + n, reason=f"case {n + 1} of {len(cases)}: {name}") as s:
+                        r = fn(ctx)
+                        results.append(r)
+                        s.summary = describe(r)
+                        s.status = "degraded" if r["violations"] else "ok"
+                        s.output = {"case": name, "mean": r["mean"], "humanizer": r["humanizer"], "violations": r["violations"]}
+                    print(describe(r))
+            except BudgetExceeded as ex:
+                db.finish_run(run_id, "budget_exceeded", trace_url=t.url, error=str(ex), stats={**info, "results": results})
+                print(f"stopped: {ex}", file=sys.stderr)
+                return 1
+            if not results:
+                db.finish_run(run_id, "failed", trace_url=t.url, error="no golden cases", stats=info)
+                print("no golden cases", file=sys.stderr)
+                return 1
+            summary = summarize(agent, results)
+            reasons, base = check(summary, baseline, MIN_GUARDRAIL_PASS[agent])
+            t.score("eval.mean", summary["mean"])
+            t.score("eval.humanizer_mean", summary["humanizer_mean"])
+            db.finish_run(run_id, "succeeded" if not reasons else "failed", trace_url=t.url,
+                          error="; ".join(reasons) or None,
+                          stats={**summary, **info, "baseline": base, "passed": not reasons, "gate": reasons, "results": results})
+
+    results_dir = HERE / "results"
+    results_dir.mkdir(exist_ok=True)
+    (results_dir / f"{agent}.json").write_text(json.dumps({"summary": summary, **info, "results": results}, indent=1))
+    (results_dir / f"{agent}.md").write_text(comment(agent, run_id, summary, results, reasons, base))
+    print(json.dumps(summary, indent=1))
+    return gate(summary, baseline, update, MIN_GUARDRAIL_PASS[agent])
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--agent", choices=["market_intel", "substack"], default="market_intel")
@@ -86,93 +195,17 @@ def main() -> int:
     ap.add_argument("--images", action="store_true", help="substack: keep the illustrator on (adds ~$0.13 per case)")
     args = ap.parse_args()
     if args.agent == "substack":
-        return substack_main(args)
-
-    cases = sorted((HERE / "golden").glob("*.json"))[-args.cases:]
-    results, sha = [], git_sha()
-    with connect() as db:
-        run_id = db.start_run("market_intel", "eval", sha)
-        with tracing.trace("market_intel.eval", run_id=run_id, tags=["market_intel", "eval"],
-                           metadata={"git_sha": sha}) as t:
-            ctx = llm.RunContext(db=db, run_id=run_id, callbacks=t.callbacks)
-            try:
-                for path in cases:
-                    r = run_case(ctx, path.stem, json.loads(path.read_text())["items"])
-                    results.append(r)
-                    print(f"{r['case']}: mean {r['mean']}  humanizer {r['humanizer']}/5  chars {r['chars']}  revisions {r['revisions']}"
-                          f"{'  VIOLATIONS ' + str(r['violations']) if r['violations'] else ''}")
-            except BudgetExceeded as ex:
-                db.finish_run(run_id, "budget_exceeded", trace_url=t.url, error=str(ex))
-                print(f"stopped: {ex}", file=sys.stderr)
-                return 1
-            overall = round(mean(r["mean"] for r in results), 2)
-            summary = {"mean": overall, "cases": len(results),
-                       "humanizer_mean": round(mean(r["humanizer"] for r in results), 2),
-                       "guardrail_pass_rate": sum(not r["violations"] for r in results) / len(results),
-                       "per_dimension": {k: round(mean(r["scores"].get(k, 0) for r in results), 2)
-                                         for k in results[0]["scores"]}}
-            t.score("eval.mean", overall)
-            t.score("eval.humanizer_mean", summary["humanizer_mean"])
-            db.finish_run(run_id, "succeeded", trace_url=t.url, stats=summary)
-
-    (HERE / "results").mkdir(exist_ok=True)
-    (HERE / "results" / "latest.json").write_text(json.dumps({"summary": summary, "results": results}, indent=1))
-    print(json.dumps(summary, indent=1))
-    return gate(summary, BASELINE, args.update_baseline)
-
-
-def substack_main(args) -> int:
-    results, sha = [], git_sha()
-    with connect() as db:
-        run_id = db.start_run("substack", "eval", sha)
-        with tracing.trace("substack.eval", run_id=run_id, tags=["substack", "eval"], metadata={"git_sha": sha}) as t:
-            ctx = llm.RunContext(db=db, run_id=run_id, callbacks=t.callbacks)
-            try:
-                for name, items in substack_cases(args.cases):
-                    r = run_substack_case(ctx, name, items, args.images)
-                    results.append(r)
-                    print(f"{r['case']}: overall {r['mean']}  humanizer {r['humanizer']}/5  steps {r['steps']}  "
-                          f"final {'PASS' if r['passed_final'] else 'FAIL'}  \"{r['title']}\""
-                          f"{'  VIOLATIONS ' + str(r['violations']) if r['violations'] else ''}")
-            except BudgetExceeded as ex:
-                db.finish_run(run_id, "budget_exceeded", trace_url=t.url, error=str(ex))
-                print(f"stopped: {ex}", file=sys.stderr)
-                return 1
-            if not results:
-                print("no golden cases", file=sys.stderr)
-                return 1
-            summary = {"mean": round(mean(r["mean"] for r in results), 2), "cases": len(results),
-                       "humanizer_mean": round(mean(r["humanizer"] for r in results), 2),
-                       "guardrail_pass_rate": sum(not r["violations"] for r in results) / len(results),
-                       "final_pass_rate": sum(r["passed_final"] for r in results) / len(results),
-                       "mean_steps": round(mean(r["steps"] for r in results), 1),
-                       "per_dimension": {k: round(mean(r["scores"].get(k, 0) for r in results), 2) for k in results[0]["scores"]}}
-            t.score("eval.mean", summary["mean"])
-            t.score("eval.humanizer_mean", summary["humanizer_mean"])
-            db.finish_run(run_id, "succeeded", trace_url=t.url, stats=summary)
-    (HERE / "results").mkdir(exist_ok=True)
-    (HERE / "results" / "substack.json").write_text(json.dumps({"summary": summary, "results": results}, indent=1))
-    print(json.dumps(summary, indent=1))
-    return gate(summary, SUBSTACK_BASELINE, args.update_baseline, min_guardrail_pass=SUBSTACK_MIN_GUARDRAIL_PASS)
-
-
-def gate(summary: dict, baseline: Path, update: bool, min_guardrail_pass: float = 1.0) -> int:
-    if update:
-        baseline.write_text(json.dumps(summary, indent=1) + "\n")
-        print("baseline updated")
-        return 0
-    if baseline.exists():
-        base = json.loads(baseline.read_text())["mean"]
-        if summary["mean"] < base - TOLERANCE:
-            print(f"REGRESSION: mean {summary['mean']} < baseline {base} - {TOLERANCE}", file=sys.stderr)
-            return 1
-    if summary["humanizer_mean"] < humanizer.MIN_HUMAN:
-        print(f"REGRESSION: mean humanizer {summary['humanizer_mean']}/5 < {humanizer.MIN_HUMAN}", file=sys.stderr)
-        return 1
-    if summary["guardrail_pass_rate"] < min_guardrail_pass - 1e-9:
-        print(f"REGRESSION: guardrail pass rate {summary['guardrail_pass_rate']:.2f} < {min_guardrail_pass:.2f}", file=sys.stderr)
-        return 1
-    return 0
+        cases = [(name, lambda ctx, n=name, i=items: run_substack_case(ctx, n, i, args.images))
+                 for name, items in substack_cases(args.cases)]
+        describe = lambda r: (f"{r['case']}: overall {r['mean']}, humanizer {r['humanizer']}/5, {r['steps']} steps, "  # noqa: E731
+                              f"final check {'passed' if r['passed_final'] else 'failed'}: \"{r['title']}\""
+                              + (f". Flags: {'; '.join(r['violations'])}" if r["violations"] else ""))
+    else:
+        cases = [(p.stem, lambda ctx, p=p: run_case(ctx, p.stem, json.loads(p.read_text())["items"]))
+                 for p in sorted((HERE / "golden").glob("*.json"))[-args.cases:]]
+        describe = lambda r: (f"{r['case']}: overall {r['mean']}, humanizer {r['humanizer']}/5, {r['chars']} chars, "  # noqa: E731
+                              f"{r['revisions']} rewrites" + (f". Flags: {'; '.join(r['violations'])}" if r["violations"] else ""))
+    return run_suite(args.agent, cases, describe, args.update_baseline)
 
 
 if __name__ == "__main__":

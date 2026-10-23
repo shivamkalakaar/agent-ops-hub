@@ -40,7 +40,8 @@ def load_context(state: Workspace, config: RunnableConfig) -> Workspace:
     db = ctx.db
     cfg = config["configurable"].get("settings") or settings_mod.load(db, AGENT, SPECIALISTS, PROMPTS)
     with step(ctx, AGENT, "supervisor", "work", 1, reason="load context") as s:
-        learned = lessons.learn(db, ctx, AGENT, AUTHOR)  # first, learn from what the owner decided since the last run
+        # first, learn from what the owner decided since the last run (evals pass learn=False and frozen lessons)
+        learned = lessons.learn(db, ctx, AGENT, AUTHOR) if state.get("learn", True) else {"read": 0}
         since = _since(db.last_substack_at())
         used = db.used_substack_urls()
         items = state.get("items") or [i for i in db.top_items(since, {"brief": 18, "rss": 12}) if i["url"] not in used]

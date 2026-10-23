@@ -22,11 +22,11 @@ export default async function Overview() {
   const monthSpend = C.filter((c) => c.created_at >= monthStart).reduce((s, c) => s + Number(c.cost_usd), 0);
   const okCalls = C.filter((c) => c.ok);
   const lat = okCalls.map((c) => c.latency_ms ?? 0);
-  const finished = R.filter((r) => r.status !== "running" && r.status !== "skipped");
+  const finished = R.filter((r) => r.kind !== "eval" && r.status !== "running" && r.status !== "skipped");
   const successRate = finished.length ? finished.filter((r) => r.status === "succeeded").length / finished.length : 0;
   const draftRuns = R.filter((r) => r.agent === "market_intel" && r.kind === "draft" && r.status === "succeeded");
   const costPerDraft = draftRuns.length ? draftRuns.reduce((s, r) => s + Number(r.cost_usd), 0) / draftRuns.length : 0;
-  const lastEval = R.find((r) => r.kind === "eval" && r.status === "succeeded");
+  const lastEval = R.find((r) => r.kind === "eval" && r.stats?.mean != null);
 
   const days = Array.from({ length: 30 }, (_, i) => {
     const day = new Date(Date.now() - (29 - i) * 864e5).toISOString().slice(0, 10);
@@ -71,9 +71,11 @@ export default async function Overview() {
         <StatTile label="Run success rate" value={`${Math.round(successRate * 100)}%`} note={`last ${finished.length} runs`} />
         <StatTile label="Cost per LinkedIn draft" value={usd(costPerDraft)} note={`${draftRuns.length} drafts`} />
         <StatTile label="LLM latency p50 / p95" value={`${ms(percentile(lat, 50))}`} note={`p95 ${ms(percentile(lat, 95))}`} />
-        <StatTile label="Eval score (critic, 1–5)"
-          value={lastEval?.stats?.mean != null ? String(lastEval.stats.mean) : "–"}
-          note={`${approved ?? 0} posts approved`} />
+        <Link href="/evals" className="block hover:opacity-80">
+          <StatTile label="Latest eval score (1–5)"
+            value={lastEval?.stats?.mean != null ? String(lastEval.stats.mean) : "–"}
+            note={lastEval ? `${lastEval.agent === "substack" ? "Substack" : "LinkedIn"} · ${lastEval.stats?.passed === false ? "failed" : "passed"} · all evals` : "no evals yet"} />
+        </Link>
       </div>
 
       <Card>

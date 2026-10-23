@@ -47,7 +47,7 @@ export default function Agents() {
   };
 
   const newsroom = registry.filter((r) => r.agent === "substack");
-  const runsOf = (agent: string) => runs.filter((r) => r.agent === agent);
+  const runsOf = (agent: string) => runs.filter((r) => r.agent === agent && r.kind !== "eval");  // evals live on /evals
   const live = runsOf("substack").find((r) => r.status === "running");
   const shown = live ?? runsOf("substack").find((r) => r.kind === "draft") ?? runsOf("substack")[0];
   const disabled = Object.values(settings).filter((x) => x.agent === "substack" && !x.enabled).map((x) => x.specialist);

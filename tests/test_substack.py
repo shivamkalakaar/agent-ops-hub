@@ -195,7 +195,7 @@ def test_render_escapes_model_html_and_draws_charts():
 
 def test_substack_evals_offline(monkeypatch, tmp_path):
     from evals import run_evals
-    monkeypatch.setattr(run_evals, "SUBSTACK_BASELINE", tmp_path / "baseline.json")
+    monkeypatch.setattr(run_evals, "BASELINES", {"substack": tmp_path / "baseline.json"})
     monkeypatch.setattr(run_evals, "HERE", tmp_path)
     golden = tmp_path / "golden"
     golden.mkdir()
@@ -378,7 +378,7 @@ def test_monthly_cap_override_applies_only_to_its_month():
 def test_substack_gate_allows_one_flagged_post_in_three(tmp_path):
     from evals import run_evals
     base = {"mean": 4.2, "humanizer_mean": 4.3}
-    ok = run_evals.gate({**base, "guardrail_pass_rate": 2 / 3}, tmp_path / "b.json", False, run_evals.SUBSTACK_MIN_GUARDRAIL_PASS)
-    bad = run_evals.gate({**base, "guardrail_pass_rate": 1 / 3}, tmp_path / "b.json", False, run_evals.SUBSTACK_MIN_GUARDRAIL_PASS)
+    ok = run_evals.gate({**base, "guardrail_pass_rate": 2 / 3}, tmp_path / "b.json", False, run_evals.MIN_GUARDRAIL_PASS["substack"])
+    bad = run_evals.gate({**base, "guardrail_pass_rate": 1 / 3}, tmp_path / "b.json", False, run_evals.MIN_GUARDRAIL_PASS["substack"])
     strict = run_evals.gate({**base, "guardrail_pass_rate": 2 / 3}, tmp_path / "b.json", False)
     assert (ok, bad, strict) == (0, 1, 1)
