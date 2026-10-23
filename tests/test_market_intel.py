@@ -267,3 +267,14 @@ def test_redraft_rewrites_in_place_around_the_take():
     with connect() as db:
         rows = db.all("select * from drafts")
         assert len(rows) == 1 and rows[0]["status"] == "pending" and rows[0]["run_id"] != d["run_id"]
+
+
+def test_a_second_draft_on_the_same_day_gets_its_own_one_pager_key():
+    from core.db import connect
+    assert cli.run("collect") == 0 and cli.run("draft") == 0
+    with connect() as db:
+        first = db.one("select week from drafts")["week"]
+        db.execute("update drafts set sources=%s", (db.json([]),))  # free the stories for a second draft
+    assert cli.run("draft") == 0
+    with connect() as db:
+        assert sorted(r["week"] for r in db.all("select week from drafts")) == [first, f"{first}-2"]

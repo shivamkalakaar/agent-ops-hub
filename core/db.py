@@ -164,6 +164,9 @@ class DB:
             (self.json(d["angle"]), d["post_md"], d["onepager_html"], self.json(d["sources"]), self.json(d["judge_scores"]),
              d["revisions"], run_id, draft_id))
 
+    def week_taken(self, week: str) -> bool:
+        return self.one("select 1 as x from drafts where week=%s", (week,)) is not None
+
     def draft(self, draft_id: str) -> dict | None:
         return self.one("select * from drafts where id=%s", (draft_id,))
 

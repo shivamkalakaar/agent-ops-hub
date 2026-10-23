@@ -162,6 +162,9 @@ def load_items(state: DraftState, config: RunnableConfig) -> DraftState:
     if not items:
         raise RuntimeError("no unused scored items in the last 7 days; run collect first")
     week = state.get("week") or now.date().isoformat()  # one draft per weekday: the date is the key (and the one-pager URL)
+    base, n = week, 2
+    while not state.get("week") and db.week_taken(week):  # never take over another post's one-pager URL
+        week, n = f"{base}-{n}", n + 1
     return {"items": items, "week": week, "recent_posts": db.approved_posts(3), "learned": learned,
             "lessons": state["lessons"] if "lessons" in state else lessons.block(db, AGENT, AUTHOR),
             "recent_angles": state["recent_angles"] if "recent_angles" in state else db.recent_angles(5), "revisions": 0}
