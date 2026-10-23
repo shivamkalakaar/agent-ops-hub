@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/agents", label: "Agents" },
   { href: "/queue", label: "Approval queue" },
   { href: "/evals", label: "Evals" },
+  { href: "/spend", label: "Spending" },
 ];
 
 export function Nav() {

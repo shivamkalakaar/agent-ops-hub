@@ -13,4 +13,4 @@ export function percentile(values: number[], p: number) {
   return s[Math.min(s.length - 1, Math.floor((p / 100) * s.length))];
 }
 
-export const MONTHLY_CAP = Number(process.env.NEXT_PUBLIC_MONTHLY_CAP_USD ?? 6);
+
