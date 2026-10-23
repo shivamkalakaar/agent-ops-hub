@@ -14,8 +14,9 @@ def check(db) -> dict:
     now = datetime.now(timezone.utc)
     day = db.spend_since(now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat())
     month = db.spend_since(now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat())
-    if day >= cfg["daily_cap_usd"]:
-        raise BudgetExceeded(f"daily cap ${cfg['daily_cap_usd']:.2f} reached (spent ${day:.4f})")
+    daily = daily_cap(cfg, now)
+    if day >= daily:
+        raise BudgetExceeded(f"daily cap ${daily:.2f} reached (spent ${day:.4f})")
     cap = monthly_cap(cfg, now)
     if month >= cap:
         raise BudgetExceeded(f"monthly cap ${cap:.2f} reached (spent ${month:.4f})")
@@ -25,6 +26,11 @@ def check(db) -> dict:
 def monthly_cap(cfg: dict, now: datetime) -> float:
     """This month's cap: a one-off override for the month if there is one, else the standing cap."""
     return float((cfg.get("monthly_cap_overrides") or {}).get(now.strftime("%Y-%m"), cfg["monthly_cap_usd"]))
+
+
+def daily_cap(cfg: dict, now: datetime) -> float:
+    """Today's cap (UTC): a one-off override for the date if there is one, else the standing cap."""
+    return float((cfg.get("daily_cap_overrides") or {}).get(now.strftime("%Y-%m-%d"), cfg["daily_cap_usd"]))
 
 
 def estimate_cost(prompt_tokens: int, completion_tokens: int) -> float:

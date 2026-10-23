@@ -102,7 +102,7 @@ def test_collect_then_draft_end_to_end():
 
 
 def test_budget_guard_stops_run(monkeypatch):
-    cfg = dict(load_yaml("budget.yaml"), daily_cap_usd=0.0)
+    cfg = dict(load_yaml("budget.yaml"), daily_cap_usd=0.0, daily_cap_overrides={})
     monkeypatch.setattr("core.budget.load_yaml", lambda name: cfg)
     assert cli.run("collect") == 0
     from core.db import connect
