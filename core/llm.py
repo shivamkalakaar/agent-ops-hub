@@ -48,7 +48,7 @@ def _model(tier: str, model: str | None = None):
         max_retries=2,
         default_headers={"HTTP-Referer": "https://github.com/shivamkalakaar/agent-ops-hub", "X-Title": "Agent Ops Hub"},
         extra_body={"models": list(dict.fromkeys([primary, *t.get("fallbacks", [])])), "usage": {"include": True},
-                    **({"reasoning": t["reasoning"]} if "reasoning" in t else {})},
+                    **({"reasoning": r} if (r := (t.get("reasoning_by_model") or {}).get(primary, t.get("reasoning"))) else {})},
     )
 
 
