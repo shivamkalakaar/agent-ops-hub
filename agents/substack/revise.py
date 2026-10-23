@@ -6,11 +6,11 @@ import re
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 
-from core import drafting, settings as settings_mod
+from core import drafting, lessons, settings as settings_mod
 from core.steps import step
 from agents.substack import checks, ranking, render
 from agents.substack.graph import ctx_of, review_of, worker
-from agents.substack.roster import AGENT, PROMPTS, SPECIALISTS, Workspace
+from agents.substack.roster import AGENT, AUTHOR, PROMPTS, SPECIALISTS, Workspace
 from agents.substack.specialists import current, research
 
 MAX_ATTEMPTS = 2
@@ -64,7 +64,10 @@ def load_draft(state: Revision, config: RunnableConfig) -> Revision:
             "final_report": {**(d.get("final_report") or {}), "version": v, "passed": False, "blockers": blockers},
             "fact_report": {**(d.get("fact_report") or {}), "version": v} if d.get("fact_report") else {},
             "images": d.get("images") or [], "candidates": {}, "original": d, "attempts": 0,
-            "seq": 1, "work_steps": 0, "calls": {}, "history": [], "instructions": "Fix every final-check blocker."}
+            "seq": 1, "work_steps": 0, "calls": {}, "history": [], "lessons": lessons.block(db, AGENT, AUTHOR),
+            "instructions": "Fix every final-check blocker." + (
+                f"\n\n{AUTHOR}'s own take, to build the post around (their opinion in their words; keep its meaning and "
+                f"as much of its phrasing as fits):\n{d['my_take']}" if d.get("my_take") else "")}
 
 
 def count_attempt(state: Revision) -> Revision:

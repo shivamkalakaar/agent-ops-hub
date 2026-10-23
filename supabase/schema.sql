@@ -64,8 +64,8 @@ create table if not exists llm_calls (
 create index if not exists llm_calls_created_idx on llm_calls (created_at);
 
 -- LinkedIn publishing (owner-only; see policies.sql)
-alter table drafts add column if not exists published_at timestamptz;
-alter table drafts add column if not exists linkedin_url text;
+alter table drafts add column if not exists published_at timestamptz;  
+alter table drafts add column if not exists linkedin_url text;  
 
 create table if not exists linkedin_auth (
   owner_email  text primary key,
@@ -75,7 +75,7 @@ create table if not exists linkedin_auth (
   expires_at   timestamptz not null,
   updated_at   timestamptz not null
 );
-alter table drafts add column if not exists series_no integer;   -- "AI Musing #N", assigned at publish time
+alter table drafts add column if not exists series_no integer;  -- "AI Musing #N", assigned at publish time
 
 -- Company pages to @mention when a post names them. LinkedIn's lookup API needs partner access,
 -- so the owner adds each company's numeric ID once from the queue.
@@ -171,3 +171,23 @@ create table if not exists prompt_versions (
   created_at  timestamptz not null
 );
 create index if not exists prompt_versions_idx on prompt_versions (agent, specialist, version);
+
+-- Learning loop (core/lessons.py): the owner's feedback in /queue, and what the agents learned from it.
+alter table drafts add column if not exists feedback jsonb;  -- {"reasons": [...], "note": "..."} on reject
+alter table drafts add column if not exists my_take text;  -- the owner's one-line take for a rewrite
+alter table drafts add column if not exists learned_at timestamptz;  
+alter table substack_drafts add column if not exists feedback jsonb;  
+alter table substack_drafts add column if not exists my_take text;  
+alter table substack_drafts add column if not exists learned_at timestamptz;  
+create table if not exists lessons (
+  id         text primary key,
+  agent      text not null,
+  lesson     text not null,
+  kind       text,
+  evidence   integer not null default 1,   -- decisions that back it up
+  draft_ids  jsonb,
+  active     boolean not null default true, -- the owner can switch one off from the dashboard
+  created_at timestamptz not null,
+  updated_at timestamptz not null
+);
+create index if not exists lessons_agent_idx on lessons (agent, active);

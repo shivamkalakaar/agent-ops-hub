@@ -7,6 +7,7 @@ import { Card, NotConfigured, Status } from "@/components/ui";
 import { SERIES } from "@/lib/linkedin";
 import { SignIn, useSession } from "@/components/auth";
 import { SubstackQueue } from "@/components/SubstackQueue";
+import { RejectButton, TakeBox, type Feedback } from "@/components/Feedback";
 
 const MAX_CHARS = 1300;
 
@@ -117,14 +118,25 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
   const violations = (draft.judge_scores?.violations as string[] | undefined) ?? [];
   const onepagerUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${draft.week}` : "";
 
-  const decide = async (status: "approved" | "rejected") => {
+  const decide = async (status: "approved" | "rejected", feedback: Feedback | null = null) => {
     setBusy(true);
     const edited = text !== draft.post_md ? text : null;
     await supabase.from("drafts").update({
-      status, edited_post_md: edited, approved_at: status === "approved" ? new Date().toISOString() : null,
+      status, edited_post_md: edited, approved_at: status === "approved" ? new Date().toISOString() : null, feedback,
     }).eq("id", draft.id);
     setBusy(false);
     onChange();
+  };
+
+  const rewrite = async (take: string) => {
+    setBusy(true);
+    await supabase.from("drafts").update({ my_take: take }).eq("id", draft.id);
+    const res = await fetch("/api/regenerate", {
+      method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ workflow: "weekly.yml", revise_draft_id: draft.id }),
+    });
+    setBusy(false);
+    setPubMsg(res.ok ? "Rewriting around your take. This draft updates in ~2 minutes (refresh)." : `Failed: ${(await res.json()).error}`);
   };
 
   const publish = async () => {
@@ -175,7 +187,8 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
                 <button disabled={busy || text.length > MAX_CHARS} onClick={() => decide("approved")} className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
                   Approve{text !== draft.post_md ? " with edits" : ""}
                 </button>
-                <button disabled={busy} onClick={() => decide("rejected")} className="rounded-lg border border-line px-4 py-2 text-sm">Reject</button>
+                <RejectButton busy={busy} onReject={(fb) => decide("rejected", fb)} />
+                <TakeBox busy={busy} initial={draft.my_take} onRewrite={rewrite} cost="~2 min · about $0.02" />
               </>
             ) : draft.status === "approved" && (
               <>

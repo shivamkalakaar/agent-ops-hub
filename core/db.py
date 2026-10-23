@@ -156,6 +156,20 @@ class DB:
              self.json(d["judge_scores"]), d["revisions"], now(), run_id))
         return draft_id
 
+    def replace_draft(self, draft_id: str, d: dict, run_id: str):
+        """A rewrite of a saved draft (around the owner's take): new text and scores, back to pending."""
+        self.execute(
+            "update drafts set angle=%s, post_md=%s, onepager_html=%s, sources=%s, judge_scores=%s, revisions=%s,"
+            " status='pending', edited_post_md=null, feedback=null, approved_at=null, run_id=%s where id=%s",
+            (self.json(d["angle"]), d["post_md"], d["onepager_html"], self.json(d["sources"]), self.json(d["judge_scores"]),
+             d["revisions"], run_id, draft_id))
+
+    def draft(self, draft_id: str) -> dict | None:
+        return self.one("select * from drafts where id=%s", (draft_id,))
+
+    def item(self, url: str) -> dict | None:
+        return self.one("select * from items where url=%s", (url,))
+
     def approved_posts(self, limit: int = 3) -> list[str]:
         rows = self.all("select coalesce(edited_post_md, post_md) as post from drafts where status='approved'"
                         " order by approved_at desc limit %s", (limit,))

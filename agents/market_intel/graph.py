@@ -13,7 +13,7 @@ from typing import TypedDict
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 
-from core import drafting, humanizer, llm
+from core import drafting, humanizer, lessons, llm
 from core.config import CONFIG, load_json
 from core.drafting import (BANNED, HUMANIZER_WEIGHT, MIN_SCORE, SHORT_POST_WORDS, overall_score,  # noqa: F401 (re-exported)
                            style_examples)
@@ -24,6 +24,7 @@ PROMPTS = Path(__file__).parent / "prompts"
 prompt = drafting.prompt_loader(PROMPTS)
 _sources_block = drafting.sources_block
 AUTHOR = "Shivam"
+AGENT = "market_intel"
 SCORE_BATCH = 20
 MAX_REVISIONS = 2
 MAX_CHARS = 1300
@@ -119,6 +120,10 @@ class DraftState(TypedDict, total=False):
     week: str
     items: list[dict]
     recent_posts: list[str]
+    lessons: str          # what the owner's past decisions taught the agent (core/lessons.py)
+    learned: dict
+    take: str             # the owner's own one-line take, when they asked for a rewrite around it
+    redraft_id: str       # rewrite this saved draft in place instead of saving a new one
     recent_angles: list[str]
     angle: dict
     sources: list[dict]
@@ -143,8 +148,10 @@ def window_start(last_draft: str | None, now: datetime) -> datetime:
 
 
 def load_items(state: DraftState, config: RunnableConfig) -> DraftState:
-    db = ctx_of(config).db
+    ctx = ctx_of(config)
+    db = ctx.db
     now = datetime.now(timezone.utc)
+    learned = lessons.learn(db, ctx, AGENT, AUTHOR)  # first, learn from what the owner decided since the last run
     items = state.get("items")  # evals inject items directly
     if not items:
         used = db.used_draft_urls((now - timedelta(days=USED_DAYS)).isoformat())
@@ -155,8 +162,18 @@ def load_items(state: DraftState, config: RunnableConfig) -> DraftState:
     if not items:
         raise RuntimeError("no unused scored items in the last 7 days; run collect first")
     week = state.get("week") or now.date().isoformat()  # one draft per weekday: the date is the key (and the one-pager URL)
-    return {"items": items, "week": week, "recent_posts": db.approved_posts(3),
+    return {"items": items, "week": week, "recent_posts": db.approved_posts(3), "learned": learned,
+            "lessons": state["lessons"] if "lessons" in state else lessons.block(db, AGENT, AUTHOR),
             "recent_angles": state["recent_angles"] if "recent_angles" in state else db.recent_angles(5), "revisions": 0}
+
+
+def _take(state: DraftState) -> str:
+    return (f"\n\n# {AUTHOR}'s own take (build the post around this: it's their opinion in their words, so keep its "
+            f"meaning and as much of its phrasing as fits)\n{state['take']}") if state.get("take") else ""
+
+
+def _lessons(state: DraftState) -> str:
+    return f"\n\n{state['lessons']}" if state.get("lessons") else ""
 
 
 def _listing(items: list[dict]) -> str:
@@ -173,7 +190,7 @@ def read_sources(state: DraftState) -> DraftState:
 def pick_angle(state: DraftState, config: RunnableConfig) -> DraftState:
     recent = "\n".join(f"- {a}" for a in state["recent_angles"]) or "(none yet)"
     angle = llm.call_json(ctx_of(config), "writer", "pick_angle", prompt("pick_angle", AUTHOR=AUTHOR, RECENT=recent),
-                          _listing(state["items"]))
+                          _listing(state["items"]) + _take(state) + _lessons(state))
     ids = [i for i in angle.get("item_ids", []) if isinstance(i, int) and 0 <= i < len(state["items"])][:3] or [0]
     return {"angle": angle, "sources": [state["items"][i] for i in ids]}
 
@@ -191,6 +208,7 @@ def write_post(state: DraftState, config: RunnableConfig) -> DraftState:
     if recent:
         user += (f"\n\n# {AUTHOR}'s last few posts (already published: don't reuse their hook pattern, structure, "
                  f"stance line or closing move; this post should feel different)\n{recent}")
+    user += _take(state) + _lessons(state)
     return {"post": _clean_post(llm.call(ctx_of(config), "voice", "write_post", _post_system(state.get("week")), user))}
 
 
@@ -201,6 +219,9 @@ def _clean_post(text: str) -> str:
 
 def critic(state: DraftState, config: RunnableConfig) -> DraftState:
     user = f"# Source items\n{_sources_block(state['sources'])}\n\n# Post\n{state['post']}"
+    if state.get("lessons"):
+        user += (f"\n\n{state['lessons']}\nA draft that breaks one of these lessons loses a point on voice or human, "
+                 "and the critique must name the lesson.")
     review = llm.call_json(ctx_of(config), "judge", "critic", prompt("critic", STYLE_GUIDE=style_guide()), user)
     scores = {k: int(v) for k, v in (review.get("scores") or {}).items() if str(v).isdigit()}
     return {"scores": scores, "critique": review.get("critique", ""),
@@ -272,7 +293,7 @@ def revise(state: DraftState, config: RunnableConfig) -> DraftState:
     issues = "\n".join(f"- {v}" for v in state["violations"]) or "- none"
     user = (f"# Source items\n{_sources_block(state['sources'])}\n\n# Current post\n{state['post']}\n\n"
             f"# Editor scores\n{json.dumps(state['scores'])}\n\n# Editor notes\n{state['critique']}\n\n"
-            f"# Rule violations (must fix)\n{issues}")
+            f"# Rule violations (must fix)\n{issues}") + _take(state) + _lessons(state)
     text = llm.call(ctx_of(config), "voice", "revise", _post_system(state.get("week")) + "\n\n" + prompt("revise"), user)
     return {"post": _clean_post(text), "revisions": state["revisions"] + 1}
 
@@ -286,7 +307,7 @@ def save(state: DraftState, config: RunnableConfig) -> DraftState:
     ctx = ctx_of(config)
     sources = [{"url": s["url"], "title": s["title"], "source": s["source"], "origin": s.get("origin", "rss")}
                for s in state["sources"]]
-    draft_id = ctx.db.insert_draft({
+    draft = {
         "week": state["week"], "angle": state["angle"], "post_md": state["post"],
         "onepager_html": render_onepager(state["onepager"], sources, state["week"], AUTHOR),
         "sources": sources, "revisions": state["revisions"],
@@ -294,8 +315,11 @@ def save(state: DraftState, config: RunnableConfig) -> DraftState:
                          "critique": state.get("critique", ""), "unsupported_claims": state.get("unsupported", []),
                          "overall": state["overall"],
                          "passed_review": not state["violations"] and not weak_scores(state["scores"], state["accent"]["score"])},
-    }, ctx.run_id)
-    return {"draft_id": draft_id}
+    }
+    if state.get("redraft_id"):
+        ctx.db.replace_draft(state["redraft_id"], draft, ctx.run_id)
+        return {"draft_id": state["redraft_id"]}
+    return {"draft_id": ctx.db.insert_draft(draft, ctx.run_id)}
 
 
 def build_draft(persist: bool = True):

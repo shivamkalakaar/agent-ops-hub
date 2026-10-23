@@ -5,6 +5,7 @@ import type { SubstackDraft } from "@/lib/types";
 import { when } from "@/lib/format";
 import { previewPage, renderMarkdown, words } from "@/lib/markdown";
 import { Card, Status } from "@/components/ui";
+import { RejectButton, TakeBox, type Feedback } from "@/components/Feedback";
 
 const SUBSTACK = process.env.NEXT_PUBLIC_SUBSTACK_URL?.replace(/\/$/, "");
 const DIMENSIONS = ["hook", "thesis", "structure", "depth", "concreteness", "voice", "human"];
@@ -74,8 +75,8 @@ function SubstackCard({ draft, onChange, token }: { draft: SubstackDraft; onChan
     setBusy(false);
     if (error) setNote(error.message); else onChange();
   };
-  const decide = (status: "approved" | "rejected") => save({
-    status, approved_at: status === "approved" ? new Date().toISOString() : null,
+  const decide = (status: "approved" | "rejected", feedback: Feedback | null = null) => save({
+    status, approved_at: status === "approved" ? new Date().toISOString() : null, feedback,
     edited_title: title !== draft.title ? title : null, edited_subtitle: subtitle !== (draft.subtitle ?? "") ? subtitle : null,
     edited_body_md: body !== draft.body_md ? body : null,
   });
@@ -90,12 +91,14 @@ function SubstackCard({ draft, onChange, token }: { draft: SubstackDraft; onChan
       setNote("This browser blocked rich copy, so the markdown was copied instead.");
     }
   };
-  const fixIt = async () => {
+  const fixIt = async (take?: string) => {
     const n = draft.final_report?.blockers?.length ?? 0;
-    if (!window.confirm(`Send this draft back to the agents to fix ${n} blocker${n === 1 ? "" : "s"}? `
+    if (!window.confirm((take ? "Send this draft back to the agents to rewrite it around your take? "
+      : `Send this draft back to the agents to fix ${n} blocker${n === 1 ? "" : "s"}? `)
       + `${edited ? "Your unsaved edits will be saved first and used as the starting point. " : ""}`
       + "It takes ~3-5 minutes and costs about $0.06-0.12.")) return;
     setBusy(true);
+    if (take) await supabase.from("substack_drafts").update({ my_take: take }).eq("id", draft.id);
     if (edited) await supabase.from("substack_drafts").update({
       edited_title: title !== draft.title ? title : null, edited_subtitle: subtitle !== (draft.subtitle ?? "") ? subtitle : null,
       edited_body_md: body !== draft.body_md ? body : null }).eq("id", draft.id);
@@ -124,7 +127,7 @@ function SubstackCard({ draft, onChange, token }: { draft: SubstackDraft; onChan
       {js.passed_review === false && (
         <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-warn">
           <span><b>! Didn&apos;t pass the final check.</b> Fix the blockers yourself, or send it back to the agents.</span>
-          {pending && <button disabled={busy} onClick={fixIt}
+          {pending && <button disabled={busy} onClick={() => fixIt()}
             className="rounded-lg border border-accent px-3 py-1 font-medium text-accent hover:bg-bg disabled:opacity-50">Let the agents fix this</button>}
         </div>
       )}
@@ -157,7 +160,8 @@ function SubstackCard({ draft, onChange, token }: { draft: SubstackDraft; onChan
                 <button disabled={busy} onClick={() => decide("approved")} className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
                   Approve{edited ? " with edits" : ""}
                 </button>
-                <button disabled={busy} onClick={() => decide("rejected")} className="rounded-lg border border-line px-4 py-2 text-sm">Reject</button>
+                <RejectButton busy={busy} onReject={(fb) => decide("rejected", fb)} />
+                <TakeBox busy={busy} initial={draft.my_take} onRewrite={(t) => fixIt(t)} cost="~3-5 min · about $0.06-0.12" />
               </>
             ) : draft.status !== "rejected" && (
               <>

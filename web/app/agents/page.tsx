@@ -7,6 +7,7 @@ import { ms, usd, when } from "@/lib/format";
 import { Card, NotConfigured, Status } from "@/components/ui";
 import { useSession } from "@/components/auth";
 import { AgentGraph } from "@/components/AgentGraph";
+import { Learning } from "@/components/Learning";
 import { useRunSteps } from "@/lib/useRunSteps";
 
 type StepStat = Pick<AgentStep, "agent" | "specialist" | "kind" | "status" | "cost_usd" | "latency_ms" | "run_id">;
@@ -63,10 +64,12 @@ export default function Agents() {
       <AgentHeader name="Market intel" agent="market_intel" runs={runsOf("market_intel")}
         blurb="Daily: collects and scores AI news. Weekdays: one LinkedIn post (skipped when 2 are already waiting), critic loop, one-pager. Configured in code."
         action={session ? () => start("weekly.yml") : undefined} actionLabel="Draft now" />
+      <Learning agent="market_intel" canEdit={!!session} />
 
       <AgentHeader name="Substack newsroom" agent="substack" runs={runsOf("substack")}
         blurb="Wed + Sat: a super agent runs six specialists to write one 800–1,200 word post with images."
         action={session ? () => start("substack.yml") : undefined} actionLabel="Run now" live={live} />
+      <Learning agent="substack" canEdit={!!session} />
 
       <NewsroomDiagram run={shown} disabled={disabled} />
 

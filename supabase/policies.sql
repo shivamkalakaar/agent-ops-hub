@@ -48,3 +48,8 @@ alter publication supabase_realtime add table agent_steps;
 
 -- Post images: a public bucket (they get published anyway). Uploads use the service key from GitHub Actions.
 insert into storage.buckets (id, name, public) values ('substack-images', 'substack-images', true) on conflict (id) do nothing;
+
+-- Learning loop: lessons are public like the agent roster; only the owner can switch one off or edit it.
+alter table lessons enable row level security;
+create policy "public read lessons"   on lessons for select using (true);
+create policy "owner updates lessons" on lessons for update using (auth.jwt() ->> 'email' = 'owner@example.com');

@@ -11,7 +11,17 @@ AGENT = "market_intel"
 PROMPT_VERSION = "v1"
 
 
-def run(kind: str, skip_if_pending: int | None = None) -> int:
+def redraft_state(draft_id: str) -> dict:
+    """Rewrite a saved draft around the owner's take, on the same stories, in place."""
+    with connect() as db:
+        d = db.draft(draft_id)
+        if not d:
+            raise SystemExit(f"no draft {draft_id}")
+        items = [db.item(s["url"]) or {**s, "summary": "", "importance": 3} for s in d["sources"] or []]
+    return {"items": items, "take": d.get("my_take") or "", "week": d["week"], "redraft_id": draft_id, "recent_angles": []}
+
+
+def run(kind: str, skip_if_pending: int | None = None, redraft: str | None = None) -> int:
     builder = {"collect": graph.build_collect, "draft": graph.build_draft}[kind]
     if kind == "draft" and skip_if_pending:
         with connect() as db:
@@ -20,7 +30,8 @@ def run(kind: str, skip_if_pending: int | None = None) -> int:
                 db.finish_run(run_id, "skipped", stats={"reason": f"{n} drafts already waiting for approval"})
                 print(f"[{run_id}] skipped: {n} drafts already waiting for approval")
                 return 0
-    return runner.run_graph(AGENT, kind, builder(), {}, lambda state: summarize(kind, state),
+    init = redraft_state(redraft) if redraft else {}
+    return runner.run_graph(AGENT, kind, builder(), init, lambda state: summarize(kind, state),
                             prompt_version=PROMPT_VERSION, scores=trace_scores)
 
 
@@ -39,7 +50,8 @@ def summarize(kind: str, state: dict) -> dict:
                 "scored": sum(1 for i in scored if i.get("importance")), "feed_errors": len(state.get("feed_errors", []))}
     return {"draft_id": state.get("draft_id"), "week": state.get("week"), "revisions": state.get("revisions"),
             "chars": len(state.get("post", "")), "overall": state.get("overall"),
-            "humanizer": (state.get("accent") or {}).get("score"), "scores": state.get("scores"), "violations": state.get("violations")}
+            "humanizer": (state.get("accent") or {}).get("score"), "scores": state.get("scores"), "violations": state.get("violations"),
+            "learned": state.get("learned"), "redraft": bool(state.get("redraft_id")), "with_take": bool(state.get("take"))}
 
 
 def build_style_guide() -> int:
@@ -68,8 +80,9 @@ def main() -> int:
     ap = argparse.ArgumentParser(prog="agents.market_intel")
     ap.add_argument("command", choices=["collect", "draft", "style-guide"])
     ap.add_argument("--skip-if-pending", type=int, help="draft: do nothing if this many drafts are waiting for approval")
+    ap.add_argument("--redraft", help="draft: rewrite this saved draft around the owner's take, in place")
     args = ap.parse_args()
-    return build_style_guide() if args.command == "style-guide" else run(args.command, args.skip_if_pending)
+    return build_style_guide() if args.command == "style-guide" else run(args.command, args.skip_if_pending, args.redraft)
 
 
 if __name__ == "__main__":

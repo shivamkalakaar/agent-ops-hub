@@ -195,3 +195,75 @@ def test_voice_examples_rotate_by_seed():
     assert all(len(p.split()) <= graph.EXAMPLE_MAX_WORDS for p in a + b)
     if len(graph.style_examples(n=99, short_only=False, max_words=graph.EXAMPLE_MAX_WORDS)) > 4:
         assert a != b
+
+
+def test_learns_from_edits_and_rejections_then_uses_the_lessons():
+    from core import lessons
+    from core.db import connect
+    assert cli.run("collect") == 0 and cli.run("draft") == 0
+    with connect() as db:
+        d = db.one("select * from drafts")
+        edited = GOOD_POST.replace("I had to read that twice.", "I checked the pricing page myself.")
+        db.execute("update drafts set status='approved', edited_post_md=%s, approved_at=%s where id=%s",
+                   (edited, "2026-10-22T00:00:00+00:00", d["id"]))
+        db.execute("insert into drafts (id, week, angle, post_md, onepager_html, sources, revisions, status, feedback, created_at)"
+                   " values ('r1', 'x', %s, 'A recap post.', '', %s, 0, 'rejected', %s, '2026-10-22T00:00:00+00:00')",
+                   (db.json({}), db.json([]), db.json({"reasons": ["Recap, no real take"], "note": "where am I in this?"})))
+    seen = {}
+
+    def learn(messages):
+        seen["user"] = messages[-1].content
+        return json.dumps({"add": [{"lesson": "Adds a first-hand check of the claim instead of a stock reaction line.",
+                                    "kind": "voice", "from": [d["id"]]},
+                                   {"lesson": "Rejects pure recaps: every post needs Shivam's own position.", "kind": "structure",
+                                    "from": ["r1"]}], "confirm": [], "revise": [], "retire": []})
+    llm.FAKE_RESPONSES["learn"] = learn
+    prompts = []
+    write = llm.FAKE_RESPONSES["write_post"]
+    llm.FAKE_RESPONSES["write_post"] = lambda m: (prompts.append(m[-1].content), write(m))[1]
+    assert cli.run("draft") == 0
+    assert "I checked the pricing page myself" in seen["user"] and "Recap, no real take" in seen["user"]
+    assert "where am I in this?" in seen["user"]
+    assert "own position" in prompts[0] and "feedback has taught you" in prompts[0]
+    with connect() as db:
+        assert db.one("select count(*) as n from drafts where learned_at is null and status != 'pending'")["n"] == 0
+        assert len(lessons.active(db, "market_intel")) == 2
+        assert [r["stats"]["learned"].get("added") for r in db.all("select stats from runs where kind='draft'")
+                if r["stats"]["learned"].get("read")] == [2]
+        # the next run has nothing new to read, so it doesn't call the model again
+        assert lessons.events(db, "market_intel") == [] and lessons.learn(db, None, "market_intel", "Shivam") == {"read": 0}
+
+
+def test_lessons_merge_and_stay_capped():
+    from core import lessons
+    from core.db import connect
+    with connect() as db:
+        lessons.apply(db, "market_intel", {"add": [{"lesson": f"Lesson number {i} is specific.", "from": []} for i in range(5)]}, set())
+        for _ in range(3):
+            lessons.apply(db, "market_intel", {"add": [{"lesson": f"Another specific lesson {i}.", "from": []} for i in range(5)]}, set())
+        rows = lessons.active(db, "market_intel")
+        assert len(rows) == lessons.MAX_ACTIVE
+        top = rows[-1]["id"]
+        lessons.apply(db, "market_intel", {"confirm": [top, "nope"], "revise": [{"id": top, "lesson": "A sharper version of it."}]}, set())
+        rows = lessons.active(db, "market_intel")
+        assert rows[0]["id"] == top and rows[0]["evidence"] == 2 and rows[0]["lesson"] == "A sharper version of it."
+        lessons.apply(db, "market_intel", {"retire": [top]}, set())
+        assert top not in {r["id"] for r in lessons.active(db, "market_intel")}
+        assert "(seen" not in lessons.block(db, "substack", "Shivam") and lessons.block(db, "substack", "Shivam") == ""
+    assert lessons.edit_share("a b c d", None) == 0.0 and 0 < lessons.edit_share("a b c d", "a b x d") < 1
+
+
+def test_redraft_rewrites_in_place_around_the_take():
+    from core.db import connect
+    assert cli.run("collect") == 0 and cli.run("draft") == 0
+    with connect() as db:
+        d = db.one("select * from drafts")
+        db.execute("update drafts set my_take=%s where id=%s", ("Cheap evals matter more than cheap tokens.", d["id"]))
+    prompts = []
+    write = llm.FAKE_RESPONSES["write_post"]
+    llm.FAKE_RESPONSES["write_post"] = lambda m: (prompts.append(m[-1].content), write(m))[1]
+    assert cli.run("draft", redraft=d["id"]) == 0
+    assert "Cheap evals matter more than cheap tokens." in prompts[0]
+    with connect() as db:
+        rows = db.all("select * from drafts")
+        assert len(rows) == 1 and rows[0]["status"] == "pending" and rows[0]["run_id"] != d["run_id"]

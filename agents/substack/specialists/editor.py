@@ -12,7 +12,9 @@ DIMENSIONS = ("hook", "thesis", "structure", "depth", "concreteness", "voice", "
 def run(state, ctx, cfg):
     draft = current(state)
     review = llm.call_json(ctx, "check", "editor", drafting.fill(cfg.prompt, AUTHOR=AUTHOR, STYLE_GUIDE=style_guide()),
-                           f"# Thesis the post should argue\n{state['brief'].get('thesis')}\n\n# Draft\n{draft['md']}",
+                           f"# Thesis the post should argue\n{state['brief'].get('thesis')}\n\n# Draft\n{draft['md']}"
+                           + (f"\n\n{state['lessons']}\nA draft that breaks one of these lessons loses a point on voice or "
+                              "human, and a note must name the lesson." if state.get("lessons") else ""),
                            model=cfg.model)
     raw = review.get("scores") or {}
     scores = {k: max(1, min(5, int(raw[k]))) for k in DIMENSIONS if str(raw.get(k, "")).isdigit()}

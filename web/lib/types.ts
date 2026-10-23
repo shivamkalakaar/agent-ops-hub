@@ -17,6 +17,7 @@ export type Draft = {
   revisions: number; status: "pending" | "approved" | "rejected";
   edited_post_md: string | null; created_at: string; approved_at: string | null; run_id: string;
   published_at: string | null; linkedin_url: string | null; series_no: number | null;
+  feedback: { reasons?: string[]; note?: string } | null; my_take: string | null;
 };
 
 // --- Substack newsroom (agent #2) ---------------------------------------------------------
@@ -51,4 +52,5 @@ export type SubstackDraft = {
   revisions: number; status: "pending" | "approved" | "rejected" | "published";
   edited_title: string | null; edited_subtitle: string | null; edited_body_md: string | null;
   published_url: string | null; created_at: string; approved_at: string | null; run_id: string;
+  feedback: { reasons?: string[]; note?: string } | null; my_take: string | null;
 };
