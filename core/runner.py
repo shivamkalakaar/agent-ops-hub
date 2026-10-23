@@ -20,7 +20,7 @@ def run_graph(agent: str, kind: str, graph, init: dict, summarize: Callable[[dic
             ctx = llm.RunContext(db=db, run_id=run_id, callbacks=t.callbacks)
             try:
                 state = graph.invoke(init, config={"configurable": {"ctx": ctx}, "callbacks": t.callbacks,
-                                                   "run_name": f"{agent}.{kind}", "recursion_limit": 60})
+                                                   "run_name": f"{agent}.{kind}", "recursion_limit": 80})
             except BudgetExceeded as ex:
                 db.finish_run(run_id, "budget_exceeded", trace_url=t.url, error=str(ex))
                 print(f"[{run_id}] stopped: {ex}", file=sys.stderr)

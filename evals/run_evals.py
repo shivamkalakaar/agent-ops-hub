@@ -21,7 +21,7 @@ from pathlib import Path
 from statistics import mean
 from typing import Callable
 
-from core import humanizer, llm, tracing
+from core import drafting, humanizer, llm, tracing
 from core.budget import BudgetExceeded
 from core.config import git_sha
 from core.db import connect
@@ -36,16 +36,49 @@ TOLERANCE = 0.3
 # a 3-case run isn't a regression; two are. The LinkedIn agent still needs every final post clean.
 MIN_GUARDRAIL_PASS = {"market_intel": 1.0, "substack": 2 / 3}
 DAYS_PER_SUBSTACK_CASE = 3  # a Wed/Sat post covers 3-4 days of news
+REJECTION_CASES = 3  # the owner's latest rejected LinkedIn drafts (with a reason) are rerun as "don't do this again" cases
+
+
+def rejections(db, n: int = REJECTION_CASES) -> list[dict]:
+    """Rejected LinkedIn drafts that came with a reason, newest first, with their stories as eval items."""
+    out = []
+    for d in db.all("select * from drafts where status='rejected' and feedback is not null order by created_at desc limit 20"):
+        fb = json.loads(d["feedback"]) if isinstance(d["feedback"], str) else d["feedback"]
+        sources = json.loads(d["sources"]) if isinstance(d["sources"], str) else d["sources"]
+        if not (fb or {}).get("reasons") or not sources:
+            continue
+        items = [db.item(s["url"]) or {**s, "summary": "", "importance": 3} for s in sources]
+        out.append({"id": d["id"], "reasons": fb["reasons"], "note": fb.get("note", ""), "post": d["post_md"], "items": items})
+        if len(out) == n:
+            break
+    return out
+
+
+def run_rejection_case(ctx, case: dict) -> dict:
+    """Rerun the agent on a rejected draft's stories; a judge checks the new post doesn't repeat what was rejected."""
+    r = run_case(ctx, f"rejected {case['id']}", case["items"])
+    verdict = llm.call_json(ctx, "judge", "rejection_check",
+                            drafting.fill((HERE / "rejection_check.md").read_text(), AUTHOR=graph.AUTHOR),
+                            f"# Why {graph.AUTHOR} rejected it\n{', '.join(case['reasons'])}" + (f". {case['note']}" if case["note"] else "")
+                            + f"\n\n# The rejected draft\n{case['post']}\n\n# The new draft\n{r['post']}")
+    if verdict.get("repeats"):
+        r["violations"] = r["violations"] + [f"repeats what was rejected ({', '.join(case['reasons'])}): {str(verdict.get('why', ''))[:160]}"]
+    r["rejected"] = {"id": case["id"], "reasons": case["reasons"], "repeats": bool(verdict.get("repeats"))}
+    return r
 
 
 def run_case(ctx, name: str, items: list[dict]) -> dict:
+    from agents.market_intel.roster import PROMPTS, SPECIALISTS
+    from core import settings
     state = graph.build_draft(persist=False).invoke(
         {"items": items, "week": name, "recent_angles": [], "recent_posts": [], "learn": False, "lessons": LESSONS},
-        config={"configurable": {"ctx": ctx}, "callbacks": ctx.callbacks, "run_name": f"eval.{name}"})
+        config={"configurable": {"ctx": ctx, "settings": settings.from_files(SPECIALISTS, PROMPTS)}, "callbacks": ctx.callbacks,
+                "run_name": f"eval.{name}", "recursion_limit": 60})
     scores = state["scores"]
     return {"case": name, "mean": state["overall"], "critic_mean": round(mean(scores.values()), 2) if scores else 0.0,
             "scores": scores, "violations": state["violations"], "revisions": state["revisions"], "chars": len(state["post"]),
-            "humanizer": humanizer.scan(state["post"])["score"], "post": state["post"]}
+            "humanizer": humanizer.scan(state["post"])["score"], "post": state["post"], "passed_final": state["passed"],
+            "steps": state["work_steps"], "calls": state["calls"]}
 
 
 def substack_cases(n: int) -> list[tuple[str, list[dict]]]:
@@ -152,8 +185,7 @@ def run_suite(agent: str, cases: list[tuple[str, Callable]], describe: Callable[
         run_id = db.start_run(agent, "eval", info["commit"])
         with tracing.trace(f"{agent}.eval", run_id=run_id, tags=[agent, "eval", info["trigger"]], metadata=info) as t:
             ctx = llm.RunContext(db=db, run_id=run_id, callbacks=t.callbacks)
-            # Case steps sit after the agent's own steps on the timeline (the Substack agent logs its own, from seq 1)
-            first = 1 if agent == "market_intel" else 900
+            first = 900  # case steps sit after the agents' own steps on the timeline (each case logs its own from seq 1)
             try:
                 for n, (name, fn) in enumerate(cases):
                     with step(ctx, agent, "eval_case", "work", first + n, reason=f"case {n + 1} of {len(cases)}: {name}") as s:
@@ -203,6 +235,8 @@ def main() -> int:
     else:
         cases = [(p.stem, lambda ctx, p=p: run_case(ctx, p.stem, json.loads(p.read_text())["items"]))
                  for p in sorted((HERE / "golden").glob("*.json"))[-args.cases:]]
+        with connect() as db:
+            cases += [(f"rejected {c['id']}", lambda ctx, c=c: run_rejection_case(ctx, c)) for c in rejections(db)]
         describe = lambda r: (f"{r['case']}: overall {r['mean']}, humanizer {r['humanizer']}/5, {r['chars']} chars, "  # noqa: E731
                               f"{r['revisions']} rewrites" + (f". Flags: {'; '.join(r['violations'])}" if r["violations"] else ""))
     return run_suite(args.agent, cases, describe, args.update_baseline)

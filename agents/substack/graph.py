@@ -8,22 +8,18 @@ Every specialist returns to the supervisor, which picks the next move from the m
 from datetime import datetime, timedelta, timezone
 
 from langchain_core.runnables import RunnableConfig
-from langgraph.graph import END, START, StateGraph
 
-from core import lessons, settings as settings_mod
+from core import lessons, orchestrator, settings as settings_mod
+from core.orchestrator import ctx_of  # noqa: F401 (revise.py imports it from here)
 from core.steps import step
 from agents.substack import checks, ranking, render, supervisor
-from agents.substack.roster import AUTHOR, AGENT, PROMPTS, SPECIALISTS, WORKERS, Workspace
+from agents.substack.roster import AUTHOR, AGENT, PROMPTS, SPECIALISTS, Workspace
 from agents.substack.specialists import current, editor, fact_checker, final_check, illustrator, research, writer
 
 RUNNERS = {"research": research.run, "writer": writer.run, "editor": editor.run, "fact_checker": fact_checker.run,
            "illustrator": illustrator.run, "final_check": final_check.run}
 WINDOW_DAYS = (3, 7)  # a run covers items since the last draft, but at least 3 and at most 7 days back
 VOICE_WORDS = 600
-
-
-def ctx_of(config: RunnableConfig):
-    return config["configurable"]["ctx"]
 
 
 def _since(last: str | None) -> str:
@@ -64,32 +60,6 @@ def load_context(state: Workspace, config: RunnableConfig) -> Workspace:
             "recent_titles": state.get("recent_titles", db.recent_substack_angles()),
             "slot": state.get("slot") or datetime.now(timezone.utc).date().isoformat(),
             "settings": cfg, "seq": 1, "work_steps": 0, "calls": {}, "history": [], "drafts": [], "images": []}
-
-
-def decide(state: Workspace, config: RunnableConfig) -> Workspace:
-    ctx, seq = ctx_of(config), state["seq"] + 1
-    with step(ctx, AGENT, "supervisor", "decision", seq) as s:
-        d = supervisor.decide(state, ctx, state["settings"])
-        s.summary, s.reason = f"→ {d['next']}", d["reason"]
-        s.output = d
-    return {"next": d["next"], "instructions": d["instructions"], "seq": seq,
-            "finish_reason": d["reason"] if d["next"] == supervisor.FINISH else ""}
-
-
-def worker(name: str):
-    def node(state: Workspace, config: RunnableConfig) -> Workspace:
-        ctx, seq = ctx_of(config), state["seq"] + 1
-        with step(ctx, AGENT, name, "work", seq, reason=state.get("instructions") or None) as s:
-            update, s.summary, s.output = RUNNERS[name](state, ctx, state["settings"][name])
-        return {**update, "seq": seq, "work_steps": state["work_steps"] + 1,
-                "calls": {**state["calls"], name: state["calls"].get(name, 0) + 1},
-                "history": state["history"] + [{"who": name, "summary": s.summary}], "instructions": ""}
-    node.__name__ = name
-    return node
-
-
-def route(state: Workspace) -> str:
-    return "finish" if state["next"] == supervisor.FINISH else state["next"]
 
 
 def chosen(state: Workspace) -> tuple[dict, bool]:
@@ -137,15 +107,4 @@ def finish(state: Workspace, config: RunnableConfig) -> Workspace:
 
 
 def build():
-    g = StateGraph(Workspace)
-    g.add_node("load_context", load_context)
-    g.add_node("supervisor", decide)
-    for name in WORKERS:
-        g.add_node(name, worker(name))
-        g.add_edge(name, "supervisor")
-    g.add_node("finish", finish)
-    g.add_edge(START, "load_context")
-    g.add_edge("load_context", "supervisor")
-    g.add_conditional_edges("supervisor", route, {**{n: n for n in WORKERS}, "finish": "finish"})
-    g.add_edge("finish", END)
-    return g.compile()
+    return orchestrator.build(supervisor.TEAM, Workspace, RUNNERS, load_context, finish)

@@ -1,5 +1,6 @@
 """Offline end-to-end tests: fake LLM, temp SQLite, stubbed feeds. No network, no keys."""
 import json
+import re
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -9,6 +10,7 @@ from core import llm
 from core.config import load_yaml
 from agents.market_intel import graph
 from agents.market_intel import __main__ as cli
+from agents.market_intel import supervisor
 
 NOW = datetime.now(timezone.utc).isoformat(timespec="minutes")
 ITEMS = [
@@ -25,6 +27,11 @@ GOOD_POST = ("An open-weight model just scored 88 on X.\n\n"
              "especially for agent workflows with a lot of retries.\n\n"
              "I'd bet most agent workloads move to open models within a year, and the frontier labs compete on the hard 10%.\n\n"
              "#AI")
+
+
+def _allowed(messages) -> list[str]:
+    m = re.search(r"# Allowed now\n(.+)", messages[-1].content)
+    return [o.strip() for o in m.group(1).split(",")] if m else []
 
 
 @pytest.fixture(autouse=True)
@@ -46,10 +53,15 @@ def offline(monkeypatch, tmp_path):
     llm.FAKE_RESPONSES.update({
         "score": lambda m: json.dumps([{"id": 0, "layer": "models", "importance": 5, "why": "price drop"},
                                        {"id": 1, "layer": "compute", "importance": 4, "why": "capex"}]),
-        "pick_angle": lambda m: '```json\n{"item_ids": [0], "angle": "open models win on cost", "hook": "10x cheaper", "why_now": "today"}\n```',
-        "write_post": lambda m: GOOD_POST,
-        "revise": lambda m: GOOD_POST,
-        "critic": critic,
+        "scout": lambda m: '```json\n{"item_ids": [0], "angle": "open models win on cost", "hook": "10x cheaper", "why_now": "today"}\n```',
+        "researcher": lambda m: json.dumps({"facts": [{"claim": "scores 88 on X", "evidence": "The model scores 88 on X", "source_id": 0},
+                                                      {"claim": "made up", "evidence": "a quote that is nowhere", "source_id": 0}],
+                                            "context": ["price only"]}),
+        "writer": lambda m: GOOD_POST,
+        "editor": critic,
+        "fact_checker": lambda m: json.dumps({"claims": [{"claim": "scored 88 on X", "verdict": "supported"}]}),
+        "final_check": lambda m: json.dumps({"passed": True, "blockers": [], "polish": []}),
+        "supervisor": lambda m: json.dumps({"next": supervisor.canonical(_allowed(m)), "reason": "next in line"}),
         "onepager": lambda m: json.dumps({"title": "Open models <script>x</script>", "dek": "d",
                                           "key_numbers": [{"value": "$0.20", "label": "per M tokens"}],
                                           "sections": [{"heading": "h", "body": "b"}] * 3, "takeaway": "t"}),
@@ -76,7 +88,16 @@ def test_collect_then_draft_end_to_end():
         run = db.one("select * from runs where kind='draft'")
         assert run["status"] == "succeeded"
         calls = db.all("select node from llm_calls where run_id=%s order by id", (run["id"],))
-        assert [c["node"] for c in calls] == ["pick_angle", "write_post", "critic", "revise", "critic", "onepager"]
+        # the coordinator is only asked when more than one move is allowed
+        assert [c["node"] for c in calls] == ["scout", "researcher", "writer", "supervisor", "editor", "supervisor", "fact_checker",
+                                              "supervisor", "writer", "supervisor", "editor", "fact_checker", "final_check", "onepager"]
+        steps = db.all("select specialist, kind, status from agent_steps where run_id=%s order by seq", (run["id"],))
+        assert steps[0]["specialist"] == "supervisor" and steps[-1]["specialist"] == "supervisor"
+        assert {s["specialist"] for s in steps if s["kind"] == "work"} == {"supervisor", "scout", "researcher", "writer", "editor",
+                                                                           "fact_checker", "final_check", "onepager"}
+        assert d["judge_scores"]["passed_review"] is True
+        reg = db.all("select specialist from agent_registry where agent='market_intel'")
+        assert len(reg) == 8  # the dashboard sees the whole team
         assert "article_text" in graph._sources_block([{"source": "s", "title": "t", "summary": "x", "body": "b"}])
 
 
@@ -131,8 +152,8 @@ def test_evals_offline(monkeypatch, tmp_path):
     learned = []
     monkeypatch.setattr("core.lessons.learn", lambda *a, **k: learned.append(a) or {"read": 0})
     prompts = []
-    write = llm.FAKE_RESPONSES["write_post"]
-    monkeypatch.setitem(llm.FAKE_RESPONSES, "write_post", lambda m: (prompts.append(m[-1].content), write(m))[1])
+    write = llm.FAKE_RESPONSES["writer"]
+    monkeypatch.setitem(llm.FAKE_RESPONSES, "writer", lambda m: (prompts.append(m[-1].content), write(m))[1])
     monkeypatch.setattr("sys.argv", ["run_evals", "--cases", "2"])
     assert run_evals.main() == 0
     assert learned == []  # evals never consume the owner's queue decisions
@@ -144,7 +165,8 @@ def test_evals_offline(monkeypatch, tmp_path):
     s = run["stats"]
     assert run["status"] == "succeeded" and s["trigger"] == "pr" and s["pr"] == "7" and s["passed"] is True
     assert len(s["results"]) == 2 and s["results"][0]["post"] and s["gate"] == []
-    assert [x["specialist"] for x in steps] == ["eval_case", "eval_case"] and steps[0]["summary"].startswith("2026-")
+    cases = [x for x in steps if x["specialist"] == "eval_case"]
+    assert len(cases) == 2 and cases[0]["summary"].startswith("2026-") and cases[0]["seq"] == 900
     md = (tmp_path / "results" / "market_intel.md").read_text()
     assert "Evals: LinkedIn agent passed" in md and "| Case |" in md
 
@@ -153,7 +175,8 @@ def test_keeps_more_human_version_when_rewrite_is_worse():
     ai = ("Open models aren't a side project anymore. They're the default.\n\n"
           "An open-weight model scores 88 on X at $0.20 per million tokens, and that changes the math. " * 2
           + "\n\nMy take: switch now.")
-    llm.FAKE_RESPONSES["revise"] = lambda m: ai  # the rewrite reintroduces AI patterns
+    drafts = iter([GOOD_POST, ai, ai])
+    llm.FAKE_RESPONSES["writer"] = lambda m: next(drafts)  # the rewrite reintroduces AI patterns
     assert cli.run("collect") == 0 and cli.run("draft") == 0
     from core.db import connect
     with connect() as db:
@@ -244,8 +267,8 @@ def test_learns_from_edits_and_rejections_then_uses_the_lessons():
                                     "from": ["r1"]}], "confirm": [], "revise": [], "retire": []})
     llm.FAKE_RESPONSES["learn"] = learn
     prompts = []
-    write = llm.FAKE_RESPONSES["write_post"]
-    llm.FAKE_RESPONSES["write_post"] = lambda m: (prompts.append(m[-1].content), write(m))[1]
+    write = llm.FAKE_RESPONSES["writer"]
+    llm.FAKE_RESPONSES["writer"] = lambda m: (prompts.append(m[-1].content), write(m))[1]
     assert cli.run("draft") == 0
     assert "I checked the pricing page myself" in seen["user"] and "Recap, no real take" in seen["user"]
     assert "where am I in this?" in seen["user"]
@@ -285,8 +308,8 @@ def test_redraft_rewrites_in_place_around_the_take():
         d = db.one("select * from drafts")
         db.execute("update drafts set my_take=%s where id=%s", ("Cheap evals matter more than cheap tokens.", d["id"]))
     prompts = []
-    write = llm.FAKE_RESPONSES["write_post"]
-    llm.FAKE_RESPONSES["write_post"] = lambda m: (prompts.append(m[-1].content), write(m))[1]
+    write = llm.FAKE_RESPONSES["writer"]
+    llm.FAKE_RESPONSES["writer"] = lambda m: (prompts.append(m[-1].content), write(m))[1]
     assert cli.run("draft", redraft=d["id"]) == 0
     assert "Cheap evals matter more than cheap tokens." in prompts[0]
     with connect() as db:
@@ -303,3 +326,72 @@ def test_a_second_draft_on_the_same_day_gets_its_own_one_pager_key():
     assert cli.run("draft") == 0
     with connect() as db:
         assert sorted(r["week"] for r in db.all("select week from drafts")) == [first, f"{first}-2"]
+
+
+def test_unsupported_claims_go_back_to_the_writer_and_final_check_gates_the_save():
+    from core.db import connect
+    seen, checks = [], iter([{"claims": [{"claim": "costs $0.20", "verdict": "unsupported", "fix": "drop it"}]},
+                             {"claims": [{"claim": "costs $0.20", "verdict": "supported"}]}])
+    llm.FAKE_RESPONSES["editor"] = lambda m: json.dumps({"scores": dict.fromkeys(["hook", "focus", "brevity", "concreteness", "voice", "grounding"], 5),
+                                                          "critique": "Good."})
+    llm.FAKE_RESPONSES["fact_checker"] = lambda m: json.dumps(next(checks, {"claims": [{"claim": "costs $0.20", "verdict": "supported"}]}))
+    llm.FAKE_RESPONSES["writer"] = lambda m: (seen.append(m[-1].content), GOOD_POST)[1]
+    finals = iter([{"passed": False, "blockers": ["2: reads as a recap; say what Shivam thinks"]}, {"passed": True, "blockers": []}])
+    llm.FAKE_RESPONSES["final_check"] = lambda m: json.dumps(next(finals, {"passed": True, "blockers": []}))
+    assert cli.run("collect") == 0 and cli.run("draft") == 0
+    assert len(seen) >= 2 and '"costs $0.20" → drop it' in seen[1] and "Fact check: unsupported (must fix)" in seen[1]
+    assert any("Final check blockers (must fix)" in s and "reads as a recap" in s for s in seen[2:])
+    with connect() as db:
+        d = db.one("select * from drafts")
+        assert d["judge_scores"]["passed_review"] is True and d["revisions"] == 2  # v3 passed the final check
+
+
+def test_a_failing_final_check_is_flagged_not_hidden():
+    from core.db import connect
+    llm.FAKE_RESPONSES["final_check"] = lambda m: json.dumps({"passed": False, "blockers": ["1: breaks the lesson on recaps"]})
+    assert cli.run("collect") == 0 and cli.run("draft") == 0
+    with connect() as db:
+        d = db.one("select * from drafts")
+        assert d["judge_scores"]["passed_review"] is False and "breaks the lesson" in d["judge_scores"]["final_blockers"][0]
+
+
+def test_scout_skips_an_angle_too_close_to_a_recent_post_and_researcher_drops_fake_quotes():
+    from agents.market_intel import specialists
+    from core import settings
+    from agents.market_intel.roster import PROMPTS, SPECIALISTS
+    cfg = settings.from_files(SPECIALISTS, PROMPTS)
+    llm.FAKE_RESPONSES["scout"] = lambda m: json.dumps({"candidates": [
+        {"item_ids": [0], "angle": "neocloud debt costs set the GPU price", "hook": "h"},
+        {"item_ids": [1], "angle": "open models win on cost", "hook": "h"}], "pick": 0, "why": "biggest"})
+    items = [dict(i, importance=5) for i in ITEMS]
+    state = {"items": items, "recent_angles": ["neocloud debt costs set the GPU price for buyers"]}
+    from core.db import connect
+    with connect() as db:
+        ctx = llm.RunContext(db=db, run_id=db.start_run("market_intel", "draft", "t"))
+        update, summary, out = specialists.scout(state, ctx, cfg["scout"])
+        assert update["angle"]["angle"] == "open models win on cost" and out["why"].startswith("switched")
+        update, summary, out = specialists.researcher({**state, **update}, ctx, cfg["researcher"])
+    assert [f["claim"] for f in update["facts"]] == ["scores 88 on X"] and "dropped 1" in summary
+
+
+def test_novelty_flags_same_ground_hook_and_ending():
+    from core import novelty
+    recent = ["Nscale's backlog is 85% two customers.\n\nLenders can see it and the debt costs more.\n\nAsk who else they serve."]
+    assert novelty.check(recent[0], recent) and novelty.check("A fresh post about robots.\n\nAsk who else they serve.", recent) == [
+        "ends the same way as a recent post (\"ask who else …\"); find a different ending"]
+    assert novelty.check(GOOD_POST, recent) == []
+
+
+def test_rejected_drafts_become_eval_cases(monkeypatch, tmp_path):
+    from evals import run_evals
+    from core.db import connect
+    assert cli.run("collect") == 0 and cli.run("draft") == 0
+    with connect() as db:
+        db.execute("update drafts set status='rejected', feedback=%s", (db.json({"reasons": ["Sounds like AI"], "note": "stock"}),))
+        cases = run_evals.rejections(db)
+    assert len(cases) == 1 and cases[0]["reasons"] == ["Sounds like AI"] and cases[0]["items"][0]["url"] == "https://example.com/a"
+    llm.FAKE_RESPONSES["rejection_check"] = lambda m: json.dumps({"repeats": True, "why": "same closer"})
+    with connect() as db:
+        ctx = llm.RunContext(db=db, run_id=db.start_run("market_intel", "eval", "t"))
+        r = run_evals.run_rejection_case(ctx, cases[0])
+    assert r["rejected"]["repeats"] and any("repeats what was rejected (Sounds like AI)" in v for v in r["violations"])
