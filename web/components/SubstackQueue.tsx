@@ -22,22 +22,22 @@ export function SubstackQueue({ token }: { token: string }) {
   useEffect(() => { load(); }, [load]);
 
   const run = async () => {
-    setMsg("Starting the Substack newsroom…");
+    setMsg("Starting the Substack agent…");
     const res = await fetch("/api/regenerate", {
       method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({ workflow: "substack.yml" }),
     });
-    setMsg(res.ok ? "Newsroom started. Watch it live under Agents; the draft lands here in ~5 minutes." : `Failed: ${(await res.json()).error}`);
+    setMsg(res.ok ? "Started. The draft appears here in about 5 minutes; the Agents page shows each step." : `Failed: ${(await res.json()).error}`);
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
-        <p className="text-sm text-ink-2">Two posts a week (Wed + Sat), written by the newsroom. Substack has no API: approve, then copy into the editor.</p>
-        <button onClick={run} className="ml-auto rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-card">Run the newsroom now</button>
+        <p className="text-sm text-ink-2">Two posts a week, Wednesday and Saturday. Substack has no publishing API: approve a draft, then copy it into the Substack editor.</p>
+        <button onClick={run} className="ml-auto rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-card">Write a post now</button>
       </div>
       {msg && <p className="text-sm text-ink-2">{msg}</p>}
-      {drafts.length === 0 && <Card><p className="text-ink-2">No Substack drafts yet. The newsroom runs every Wednesday and Saturday.</p></Card>}
+      {drafts.length === 0 && <Card><p className="text-ink-2">No Substack drafts yet. The agent runs every Wednesday and Saturday.</p></Card>}
       {drafts.map((d) => <SubstackCard key={d.id} draft={d} onChange={load} token={token} />)}
     </div>
   );
@@ -107,7 +107,7 @@ function SubstackCard({ draft, onChange, token }: { draft: SubstackDraft; onChan
       body: JSON.stringify({ workflow: "substack.yml", revise_draft_id: draft.id }),
     });
     setBusy(false);
-    setNote(res.ok ? "The agents are on it. Watch them on the Agents page; this draft updates in ~3-5 minutes (refresh)."
+    setNote(res.ok ? "Rewriting. The draft updates in 3–5 minutes; refresh to see it."
       : `Failed: ${(await res.json()).error}`);
   };
   const markPublished = () => {
@@ -122,22 +122,22 @@ function SubstackCard({ draft, onChange, token }: { draft: SubstackDraft; onChan
         <Status status={draft.status} />
         <span className="text-sm text-muted">{when(draft.created_at)} · {draft.revisions} rewrite{draft.revisions === 1 ? "" : "s"}
           {draft.seed_draft_id && " · expands a LinkedIn musing"}</span>
-        <a href={`/runs/${draft.run_id}`} className="ml-auto text-sm text-accent hover:underline">agent timeline</a>
+        <a href={`/runs/${draft.run_id}`} className="ml-auto text-sm text-ink underline underline-offset-4 hover:underline">agent timeline</a>
       </div>
       {js.passed_review === false && (
-        <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-warn">
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-ink font-semibold">
           <span><b>! Didn&apos;t pass the final check.</b> Fix the blockers yourself, or send it back to the agents.</span>
           {pending && <button disabled={busy} onClick={() => fixIt()}
-            className="rounded-lg border border-accent px-3 py-1 font-medium text-accent hover:bg-bg disabled:opacity-50">Let the agents fix this</button>}
+            className="rounded-lg border border-ink px-3 py-1 font-medium text-ink underline underline-offset-4 hover:bg-bg disabled:opacity-50">Fix with the agent</button>}
         </div>
       )}
 
       <div className="mt-4 grid gap-6 md:grid-cols-[1fr_240px]">
         <div className="min-w-0 space-y-2">
           <input value={title} onChange={(e) => setTitle(e.target.value)} disabled={!pending} aria-label="Title"
-            className="w-full rounded-lg border border-line bg-bg px-3 py-2 text-lg font-semibold outline-none focus:border-accent" />
+            className="w-full rounded-lg border border-line bg-bg px-3 py-2 text-lg font-semibold outline-none focus:border-ink" />
           <input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} disabled={!pending} aria-label="Subtitle"
-            className="w-full rounded-lg border border-line bg-bg px-3 py-2 text-ink-2 outline-none focus:border-accent" />
+            className="w-full rounded-lg border border-line bg-bg px-3 py-2 text-ink-2 outline-none focus:border-ink" />
           {(draft.images ?? []).length > 0 && (
             <div className="flex gap-2 overflow-x-auto py-1">
               {(draft.images ?? []).filter((i) => i.url.startsWith("https://")).map((i) => (
@@ -150,14 +150,14 @@ function SubstackCard({ draft, onChange, token }: { draft: SubstackDraft; onChan
             </div>
           )}
           <textarea value={body} onChange={(e) => setBody(e.target.value)} disabled={!pending} rows={22} aria-label="Post body (markdown)"
-            className="w-full rounded-lg border border-line bg-bg p-3 font-mono text-[13px] leading-relaxed outline-none focus:border-accent" />
-          <div className={`text-xs num ${n < 700 || n > 1350 ? "text-warn" : "text-muted"}`}>
+            className="w-full rounded-lg border border-line bg-bg p-3 font-mono text-[13px] leading-relaxed outline-none focus:border-ink" />
+          <div className={`text-xs num ${n < 700 || n > 1350 ? "text-ink font-semibold" : "text-muted"}`}>
             {n} words · {Math.max(1, Math.round(n / 230))} min read · images are markdown, so you can move or delete them
           </div>
           <div className="flex flex-wrap gap-2">
             {pending ? (
               <>
-                <button disabled={busy} onClick={() => decide("approved")} className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+                <button disabled={busy} onClick={() => decide("approved")} className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-bg disabled:opacity-50">
                   Approve{edited ? " with edits" : ""}
                 </button>
                 <RejectButton busy={busy} onReject={(fb) => decide("rejected", fb)} />
@@ -165,7 +165,7 @@ function SubstackCard({ draft, onChange, token }: { draft: SubstackDraft; onChan
               </>
             ) : draft.status !== "rejected" && (
               <>
-                <button onClick={copyRich} className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white">Copy for Substack</button>
+                <button onClick={copyRich} className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-bg">Copy for Substack</button>
                 <button onClick={() => navigator.clipboard.writeText(title)} className="rounded-lg border border-line px-3 py-2 text-sm">Copy title</button>
                 <button onClick={() => navigator.clipboard.writeText(subtitle)} className="rounded-lg border border-line px-3 py-2 text-sm">Copy subtitle</button>
                 <button onClick={() => download(`${draft.slot}.md`, `# ${title}\n\n*${subtitle}*\n\n${body}\n`, "text/markdown")}
@@ -174,7 +174,7 @@ function SubstackCard({ draft, onChange, token }: { draft: SubstackDraft; onChan
                   className="rounded-lg border border-line px-3 py-2 text-sm">.html</button>
                 {SUBSTACK && <a href={`${SUBSTACK}/publish/post`} target="_blank" rel="noopener" className="rounded-lg border border-line px-3 py-2 text-sm">Open Substack</a>}
                 {draft.status === "published" && draft.published_url
-                  ? <a href={draft.published_url} target="_blank" rel="noopener" className="rounded-lg bg-good px-4 py-2 text-sm font-medium text-white">✓ Live · view post</a>
+                  ? <a href={draft.published_url} target="_blank" rel="noopener" className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-bg">✓ Live · view post</a>
                   : <button onClick={markPublished} className="rounded-lg border border-line px-3 py-2 text-sm">Mark published</button>}
               </>
             )}
@@ -187,7 +187,7 @@ function SubstackCard({ draft, onChange, token }: { draft: SubstackDraft; onChan
           {overall !== null && (
             <div>
               <div className="text-ink-2">Overall</div>
-              <div className={`num text-2xl font-semibold ${overall < 4 ? "text-warn" : ""}`}>{overall.toFixed(1)}/5</div>
+              <div className={`num text-2xl font-semibold ${overall < 4 ? "text-ink font-semibold" : ""}`}>{overall.toFixed(1)}/5</div>
               <div className="text-xs text-muted">humanizer 40% · editor&apos;s rubric 60%</div>
             </div>
           )}
@@ -195,20 +195,20 @@ function SubstackCard({ draft, onChange, token }: { draft: SubstackDraft; onChan
             <div className="mb-1 text-ink-2">Editor <span className="text-muted">(1–5)</span></div>
             {["humanizer", ...DIMENSIONS].filter((k) => typeof js[k] === "number").map((k) => (
               <div key={k} className="flex justify-between border-t border-line py-1">
-                <span>{k}</span><span className={`num font-medium ${(js[k] as number) < 4 ? "text-warn" : ""}`}>{js[k] as number}/5</span>
+                <span>{k}</span><span className={`num font-medium ${(js[k] as number) < 4 ? "text-ink font-semibold" : ""}`}>{js[k] as number}/5</span>
               </div>
             ))}
           </div>
           {draft.fact_report?.claims && (
             <div>
               <div className="mb-1 text-ink-2">Fact check</div>
-              <p className="num">{count("supported")} supported · {count("hedge")} hedged · <span className={count("unsupported") ? "text-bad" : ""}>{count("unsupported")} unsupported</span></p>
+              <p className="num">{count("supported")} supported · {count("hedge")} hedged · <span className={count("unsupported") ? "text-ink font-semibold" : ""}>{count("unsupported")} unsupported</span></p>
             </div>
           )}
           {(draft.final_report?.blockers?.length || violations.length) ? (
-            <div className="text-warn"><div className="font-medium">! Blockers</div>
+            <div className="text-ink font-semibold"><div className="font-medium">! Blockers</div>
               <ul className="list-disc pl-4">{[...new Set([...(draft.final_report?.blockers ?? []), ...violations])].map((b) => <li key={b}>{b}</li>)}</ul></div>
-          ) : draft.final_report?.passed && <p className="text-good">✓ Passed every check</p>}
+          ) : draft.final_report?.passed && <p className="text-ink">✓ Passed every check</p>}
           {(draft.final_report?.polish?.length ?? 0) > 0 && (
             <div><div className="mb-1 text-ink-2">Polish ideas</div><ul className="list-disc pl-4 text-ink-2">{draft.final_report!.polish!.map((p) => <li key={p}>{p}</li>)}</ul></div>
           )}

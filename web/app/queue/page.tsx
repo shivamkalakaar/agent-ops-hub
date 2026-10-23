@@ -49,16 +49,16 @@ export default function Queue() {
   const regenerate = async () => {
     setMsg("Starting the LinkedIn workflow…");
     const res = await fetch("/api/regenerate", { method: "POST", headers: { Authorization: `Bearer ${session.access_token}` } });
-    setMsg(res.ok ? "Workflow started. The new draft shows up here in ~2 minutes." : `Failed: ${(await res.json()).error}`);
+    setMsg(res.ok ? "Started. The new draft appears here in about 3 minutes." : `Failed: ${(await res.json()).error}`);
   };
 
   const expand = async (draftId: string) => {
-    setMsg("Starting the Substack newsroom on this musing…");
+    setMsg("Starting the Substack agent on this post…");
     const res = await fetch("/api/regenerate", {
       method: "POST", headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
       body: JSON.stringify({ workflow: "substack.yml", seed_draft_id: draftId }),
     });
-    setMsg(res.ok ? "Newsroom started. The Substack draft shows up in the Substack tab in ~5 minutes; watch it live under Agents."
+    setMsg(res.ok ? "Started. The Substack draft appears in the Substack tab in about 5 minutes; the Agents page shows each step."
       : `Failed: ${(await res.json()).error}`);
   };
 
@@ -87,8 +87,8 @@ export default function Queue() {
       {tab === "linkedin" && li && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line px-4 py-2 text-sm">
           {li.connected ? (
-            <span><span className="text-good">✓</span> LinkedIn connected as <b>{li.name}</b>
-              <span className={li.daysLeft! <= 7 ? " text-warn" : " text-muted"}> · reconnect in {li.daysLeft} days</span></span>
+            <span><span className="text-ink">✓</span> LinkedIn connected as <b>{li.name}</b>
+              <span className={li.daysLeft! <= 7 ? " text-ink font-semibold" : " text-muted"}> · reconnect in {li.daysLeft} days</span></span>
           ) : <span className="text-ink-2">LinkedIn not connected. Publishing posts directly needs a one-time connection.</span>}
           <button onClick={connectLinkedIn} className="ml-auto rounded-lg border border-line px-3 py-1 hover:bg-card">
             {li.connected ? "Reconnect" : "Connect LinkedIn"}
@@ -136,7 +136,7 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
       body: JSON.stringify({ workflow: "weekly.yml", revise_draft_id: draft.id }),
     });
     setBusy(false);
-    setPubMsg(res.ok ? "Rewriting around your take. This draft updates in ~2 minutes (refresh)." : `Failed: ${(await res.json()).error}`);
+    setPubMsg(res.ok ? "Rewriting around your take. This draft updates in about 3 minutes; refresh to see it." : `Failed: ${(await res.json()).error}`);
   };
 
   const publish = async () => {
@@ -162,21 +162,21 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
         <h2 className="font-semibold">{draft.week}</h2>
         <Status status={draft.status} />
         <span className="text-sm text-muted">{when(draft.created_at)} · {draft.revisions} revision{draft.revisions === 1 ? "" : "s"}</span>
-        <a href={`/runs/${draft.run_id}`} className="ml-auto text-sm text-accent hover:underline">run details</a>
+        <a href={`/runs/${draft.run_id}`} className="ml-auto text-sm text-ink underline underline-offset-4 hover:underline">run details</a>
       </div>
       {draft.angle?.angle && <p className="mt-2 text-sm text-ink-2"><b>Angle:</b> {draft.angle.angle}</p>}
       {draft.judge_scores?.passed_review === false && (
-        <p className="mt-2 text-sm text-warn"><b>! Didn&apos;t pass review</b> after {draft.revisions} rewrites. Edit it, reject it, or generate a new one.</p>
+        <p className="mt-2 text-sm text-ink font-semibold"><b>! Didn&apos;t pass the final check</b> after {draft.revisions} rewrite{draft.revisions === 1 ? "" : "s"}. Edit it, add your take, or reject it.</p>
       )}
       {typeof draft.judge_scores?.critique === "string" && draft.judge_scores.critique && (
-        <p className="mt-2 text-sm text-ink-2"><b>Critic:</b> {draft.judge_scores.critique}</p>
+        <p className="mt-2 text-sm text-ink-2"><b>Editor:</b> {draft.judge_scores.critique}</p>
       )}
 
       <div className="mt-4 grid gap-6 md:grid-cols-[1fr_220px]">
         <div>
           <textarea value={text} onChange={(e) => setText(e.target.value)} disabled={!pending} rows={14}
-            className="w-full rounded-lg border border-line bg-bg p-3 text-[15px] leading-relaxed outline-none focus:border-accent" />
-          <div className={`mt-1 text-xs num ${text.length > MAX_CHARS ? "text-bad" : "text-muted"}`}>
+            className="w-full rounded-lg border border-line bg-bg p-3 text-[15px] leading-relaxed outline-none focus:border-ink" />
+          <div className={`mt-1 text-xs num ${text.length > MAX_CHARS ? "text-ink font-semibold" : "text-muted"}`}>
             {text.length} / {MAX_CHARS} characters · {words} words
             {draft.series_no ? ` · published as ${SERIES} #${draft.series_no}`
               : draft.status !== "rejected" && ` · publishes as ${SERIES} #${nextSeries} (added as the last line)`}
@@ -184,26 +184,26 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
           <div className="mt-3 flex flex-wrap gap-2">
             {pending ? (
               <>
-                <button disabled={busy || text.length > MAX_CHARS} onClick={() => decide("approved")} className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+                <button disabled={busy || text.length > MAX_CHARS} onClick={() => decide("approved")} className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-bg disabled:opacity-50">
                   Approve{text !== draft.post_md ? " with edits" : ""}
                 </button>
                 <RejectButton busy={busy} onReject={(fb) => decide("rejected", fb)} />
-                <TakeBox busy={busy} initial={draft.my_take} onRewrite={rewrite} cost="~2 min · about $0.02" />
+                <TakeBox busy={busy} initial={draft.my_take} onRewrite={rewrite} cost="about 3 min · about $0.05" />
               </>
             ) : draft.status === "approved" && (
               <>
                 {draft.linkedin_url ? (
-                  <a href={draft.linkedin_url} target="_blank" rel="noopener" className="rounded-lg bg-good px-4 py-2 text-sm font-medium text-white">
+                  <a href={draft.linkedin_url} target="_blank" rel="noopener" className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-bg">
                     ✓ {draft.series_no ? `${SERIES} #${draft.series_no}` : "Live"} on LinkedIn · view post
                   </a>
                 ) : (
                   <button disabled={busy || !canPublish} onClick={publish} title={canPublish ? "" : "Connect LinkedIn first"}
-                    className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50">Publish to LinkedIn</button>
+                    className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-bg disabled:opacity-50">Publish to LinkedIn</button>
                 )}
                 <button onClick={() => navigator.clipboard.writeText(text)} className="rounded-lg border border-line px-4 py-2 text-sm">Copy post</button>
                 <button onClick={() => navigator.clipboard.writeText(`Sources and the full breakdown: ${onepagerUrl}`)} className="rounded-lg border border-line px-4 py-2 text-sm">Copy first comment</button>
                 <a href="https://www.linkedin.com/feed/?shareActive=true" target="_blank" rel="noopener" className="rounded-lg border border-line px-4 py-2 text-sm">Open LinkedIn</a>
-                <button onClick={() => window.confirm("Start the Substack newsroom on this musing? It takes ~5 minutes and costs about $0.25.") && onExpand(draft.id)}
+                <button onClick={() => window.confirm("Write a Substack post that expands this one? It takes about 5 minutes and costs about $0.25.") && onExpand(draft.id)}
                   className="rounded-lg border border-line px-4 py-2 text-sm">Expand to Substack</button>
               </>
             )}
@@ -219,7 +219,7 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
             {overall !== null && (
               <div className="mb-3">
                 <div className="text-ink-2">Overall</div>
-                <div className={`num text-2xl font-semibold ${overall < 4 ? "text-warn" : ""}`}>{overall.toFixed(1)}/5</div>
+                <div className={`num text-2xl font-semibold ${overall < 4 ? "text-ink font-semibold" : ""}`}>{overall.toFixed(1)}/5</div>
                 <div className="text-xs text-muted">humanizer 40% · other scores share 60%</div>
               </div>
             )}
@@ -227,12 +227,12 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
             {scores.map(([k, v]) => (
               <div key={k} className="flex items-center justify-between border-t border-line py-1">
                 <span>{k}</span>
-                <span className={`num font-medium ${v < 4 ? "text-warn" : ""}`}>{v}/5</span>
+                <span className={`num font-medium ${v < 4 ? "text-ink font-semibold" : ""}`}>{v}/5</span>
               </div>
             ))}
           </div>
           {violations.length > 0 && (
-            <div className="text-warn"><div className="font-medium">! Guardrail flags</div>
+            <div className="text-ink font-semibold"><div className="font-medium">! Guardrail flags</div>
               <ul className="list-disc pl-4">{violations.map((v) => <li key={v}>{v}</li>)}</ul></div>
           )}
           <div>

@@ -30,8 +30,8 @@ export function SignIn({ title = "Approval queue", next = "/queue" }: { title?: 
       {sent ? <p className="mt-4 text-sm">Check your email for a sign-in link.</p> : (
         <div className="mt-4 flex gap-2">
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com"
-            className="flex-1 rounded-lg border border-line bg-bg px-3 py-2 text-sm outline-none focus:border-accent" />
-          <button onClick={send} className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white">Send link</button>
+            className="flex-1 rounded-lg border border-line bg-bg px-3 py-2 text-sm outline-none focus:border-ink" />
+          <button onClick={send} className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-bg">Send link</button>
         </div>
       )}
     </Card>

@@ -19,14 +19,14 @@ export function RejectButton({ busy, onReject }: { busy: boolean; onReject: (fb:
       <div className="flex flex-wrap gap-1.5">
         {REASONS.map((r) => (
           <button key={r} onClick={() => toggle(r)} aria-pressed={reasons.includes(r)}
-            className={`rounded-full border px-3 py-1 text-sm ${reasons.includes(r) ? "border-accent bg-accent text-white" : "border-line"}`}>{r}</button>
+            className={`rounded-full border px-3 py-1 text-sm ${reasons.includes(r) ? "border-ink bg-ink text-bg" : "border-line"}`}>{r}</button>
         ))}
       </div>
       <input value={note} onChange={(e) => setNote(e.target.value.slice(0, 300))} placeholder="Anything else? (optional)"
-        className="w-full rounded-lg border border-line bg-bg px-3 py-1.5 text-sm outline-none focus:border-accent" />
+        className="w-full rounded-lg border border-line bg-bg px-3 py-1.5 text-sm outline-none focus:border-ink" />
       <div className="flex gap-2">
         <button disabled={busy} onClick={() => onReject({ reasons, ...(note.trim() ? { note: note.trim() } : {}) })}
-          className="rounded-lg bg-bad px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50">Reject draft</button>
+          className="rounded-lg bg-ink px-4 py-1.5 text-sm font-medium text-bg disabled:opacity-50">Reject draft</button>
         <button onClick={() => setOpen(false)} className="rounded-lg px-3 py-1.5 text-sm text-ink-2 hover:underline">Cancel</button>
       </div>
     </div>
@@ -43,10 +43,10 @@ export function TakeBox({ busy, initial, onRewrite, cost }: { busy: boolean; ini
       <label className="block text-sm text-ink-2" htmlFor="take">Your take, in your words. The agent rewrites the draft around it.</label>
       <textarea id="take" value={take} onChange={(e) => setTake(e.target.value.slice(0, 400))} rows={2}
         placeholder="e.g. The year-long reliability test is the whole story; the 1,500 picks an hour is the demo."
-        className="w-full rounded-lg border border-line bg-bg p-2 text-sm outline-none focus:border-accent" />
+        className="w-full rounded-lg border border-line bg-bg p-2 text-sm outline-none focus:border-ink" />
       <div className="flex items-center gap-2">
         <button disabled={busy || take.trim().length < 10} onClick={() => onRewrite(take.trim())}
-          className="rounded-lg bg-accent px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50">Rewrite around my take</button>
+          className="rounded-lg bg-ink px-4 py-1.5 text-sm font-medium text-bg disabled:opacity-50">Rewrite around my take</button>
         <span className="text-xs text-muted">{cost}</span>
       </div>
     </div>

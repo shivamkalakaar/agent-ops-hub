@@ -4,13 +4,24 @@ import Link from "next/link";
 import { supabase, configured } from "@/lib/supabase";
 import type { AgentRegistry, AgentSetting, AgentStep, PromptVersion, Run } from "@/lib/types";
 import { ms, usd, when } from "@/lib/format";
-import { Card, NotConfigured, Status } from "@/components/ui";
+import { Card, NotConfigured, PageTitle, Status } from "@/components/ui";
 import { useSession } from "@/components/auth";
 import { AgentGraph } from "@/components/AgentGraph";
 import { Learning } from "@/components/Learning";
 import { useRunSteps } from "@/lib/useRunSteps";
 
 type StepStat = Pick<AgentStep, "agent" | "specialist" | "kind" | "status" | "cost_usd" | "latency_ms" | "run_id">;
+type AgentId = "market_intel" | "substack";
+
+const AGENTS: { agent: AgentId; name: string; workflow: string; action: string; blurb: string; input: { title: string; sub: string };
+  drafts: string }[] = [
+  { agent: "market_intel", name: "LinkedIn agent", workflow: "weekly.yml", action: "Write a draft now", drafts: "drafts",
+    blurb: "Weekdays at 8 am PT it writes one short post from your AI Stack Brief and RSS stories. It skips the day while 2 drafts are waiting for you.",
+    input: { title: "Stories", sub: "AI Stack Brief and RSS, scored each morning" } },
+  { agent: "substack", name: "Substack agent", workflow: "substack.yml", action: "Write a post now", drafts: "substack_drafts",
+    blurb: "Wednesdays and Saturdays it writes one 800–1,200 word post with images, from the week's stories and your published LinkedIn posts.",
+    input: { title: "Stories and posts", sub: "AI Stack Brief, RSS, your published LinkedIn posts" } },
+];
 
 export default function Agents() {
   const { session } = useSession();
@@ -18,6 +29,7 @@ export default function Agents() {
   const [settings, setSettings] = useState<Record<string, AgentSetting>>({});
   const [runs, setRuns] = useState<Run[]>([]);
   const [steps, setSteps] = useState<StepStat[]>([]);
+  const [kept, setKept] = useState<Record<string, { kept: number; decided: number }>>({});
   const [msg, setMsg] = useState("");
 
   const load = useCallback(async () => {
@@ -34,6 +46,14 @@ export default function Agents() {
     setSteps((s.data ?? []) as StepStat[]);
   }, []);
   useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, [load]);
+  useEffect(() => {  // drafts are owner-only, so "kept by you" needs a session
+    if (!session) return;
+    Promise.all(AGENTS.map(async (a) => {
+      const { data } = await supabase.from(a.drafts).select("status").neq("status", "pending").limit(500);
+      const rows = (data ?? []) as { status: string }[];
+      return [a.agent, { kept: rows.filter((d) => d.status !== "rejected").length, decided: rows.length }] as const;
+    })).then((x) => setKept(Object.fromEntries(x)));
+  }, [session]);
 
   if (!configured) return <NotConfigured />;
   const token = session?.access_token;
@@ -43,101 +63,123 @@ export default function Agents() {
     setMsg("Starting…");
     const res = await fetch("/api/regenerate", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({ workflow }) });
-    setMsg(res.ok ? "Started on GitHub Actions. The run appears below within a minute; open it for the live timeline." : `Failed: ${(await res.json()).error}`);
+    setMsg(res.ok ? "Started on GitHub Actions. The run shows here within a minute." : `Failed: ${(await res.json()).error}`);
   };
 
-  const newsroom = registry.filter((r) => r.agent === "substack");
-  const runsOf = (agent: string) => runs.filter((r) => r.agent === agent && r.kind !== "eval");  // evals live on /evals
-  const live = runsOf("substack").find((r) => r.status === "running");
-  const shown = live ?? runsOf("substack").find((r) => r.kind === "draft") ?? runsOf("substack")[0];
-  const disabled = Object.values(settings).filter((x) => x.agent === "substack" && !x.enabled).map((x) => x.specialist);
-
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-baseline gap-3">
-        <h1 className="text-2xl font-semibold">Agents</h1>
-        <p className="text-ink-2">Every agent and specialist, how it&apos;s doing, and its controls. Last 30 days.</p>
-      </div>
-      {!session && <p className="text-sm text-ink-2">Read-only. <Link href="/queue" className="text-accent hover:underline">Sign in</Link> to change settings or edit prompts.</p>}
-      {msg && <p className="text-sm text-ink-2">{msg}</p>}
-
-      <AgentHeader name="Market intel" agent="market_intel" runs={runsOf("market_intel")}
-        blurb="Daily: collects and scores AI news. Weekdays: one LinkedIn post (skipped when 2 are already waiting), critic loop, one-pager. Configured in code."
-        action={session ? () => start("weekly.yml") : undefined} actionLabel="Draft now" />
-      <Learning agent="market_intel" canEdit={!!session} />
-
-      <AgentHeader name="Substack newsroom" agent="substack" runs={runsOf("substack")}
-        blurb="Wed + Sat: a super agent runs six specialists to write one 800–1,200 word post with images."
-        action={session ? () => start("substack.yml") : undefined} actionLabel="Run now" live={live} />
-      <Learning agent="substack" canEdit={!!session} />
-
-      <NewsroomDiagram run={shown} disabled={disabled} />
-
-      {newsroom.length === 0 ? (
-        <Card><p className="text-ink-2">The newsroom registers its specialists on its first run. Start one with <b>Run now</b>.</p></Card>
-      ) : (
-        <div className="space-y-4">
-          {newsroom.filter((r) => r.specialist === "supervisor").map((r) => (
-            <SpecialistCard key={r.specialist} reg={r} setting={settings[`substack/${r.specialist}`]} steps={steps.filter((s) => s.specialist === r.specialist && s.agent === "substack")}
-              runs={runsOf("substack")} live={live} canEdit={!!session} onSaved={load} />
-          ))}
-          <div className="grid gap-4 md:grid-cols-2">
-            {newsroom.filter((r) => r.specialist !== "supervisor").map((r) => (
-              <SpecialistCard key={r.specialist} reg={r} setting={settings[`substack/${r.specialist}`]} steps={steps.filter((s) => s.specialist === r.specialist && s.agent === "substack")}
-                runs={runsOf("substack")} live={live} canEdit={!!session} onSaved={load} />
-            ))}
-          </div>
+    <div className="space-y-12">
+      <div className="space-y-3">
+        <PageTitle title="Agents">
+          Both writing agents, the specialists inside each one, and what they&apos;ve learned from your feedback. Numbers cover the last 30 days.
+        </PageTitle>
+        <div className="flex flex-wrap gap-4 text-sm">
+          {AGENTS.map((a) => <a key={a.agent} href={`#${a.agent}`} className="text-ink-2 underline underline-offset-4 hover:text-ink">{a.name}</a>)}
         </div>
-      )}
+        {!session && <p className="text-sm text-ink-2">Read-only. <Link href="/queue" className="underline underline-offset-4">Sign in</Link> to change settings or edit prompts.</p>}
+        {msg && <p className="text-sm text-ink-2">{msg}</p>}
+      </div>
+
+      {AGENTS.map((a) => {
+        const own = runs.filter((r) => r.agent === a.agent && r.kind !== "eval");  // evals live on /evals
+        const evals = runs.filter((r) => r.agent === a.agent && r.kind === "eval");
+        const live = own.find((r) => r.status === "running");
+        const shown = live ?? own.find((r) => r.kind === "draft") ?? own[0];
+        const team = registry.filter((r) => r.agent === a.agent);
+        const disabled = Object.values(settings).filter((x) => x.agent === a.agent && !x.enabled).map((x) => x.specialist);
+        return (
+          <section key={a.agent} id={a.agent} className="scroll-mt-6 space-y-4">
+            <AgentHeader name={a.name} runs={own} blurb={a.blurb} kept={kept[a.agent]} live={live}
+              action={session ? () => start(a.workflow) : undefined} actionLabel={a.action} />
+            <TeamDiagram run={shown} team={team} input={a.input} disabled={disabled} />
+            <LatestEval run={evals[0]} />
+            {team.length > 0 ? (
+              <details className="group rounded-lg border border-line">
+                <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-3 text-sm font-medium">
+                  <span>Specialists ({team.length}): models, call limits and prompts</span>
+                  <span aria-hidden className="text-ink-2 group-open:rotate-90">›</span>
+                </summary>
+                <div className="grid gap-4 border-t border-line p-4 md:grid-cols-2">
+                  {team.map((r) => (
+                    <SpecialistCard key={r.specialist} reg={r} setting={settings[`${a.agent}/${r.specialist}`]}
+                      steps={steps.filter((s) => s.specialist === r.specialist && s.agent === a.agent)}
+                      runs={own} live={live} canEdit={!!session} onSaved={load} />
+                  ))}
+                </div>
+              </details>
+            ) : <Card><p className="text-sm text-ink-2">The team registers its specialists on its first run.</p></Card>}
+            <Learning agent={a.agent} canEdit={!!session} />
+          </section>
+        );
+      })}
     </div>
   );
 }
 
-function NewsroomDiagram({ run, disabled }: { run?: Run; disabled: string[] }) {
+function TeamDiagram({ run, team, input, disabled }: { run?: Run; team: AgentRegistry[]; input: { title: string; sub: string }; disabled: string[] }) {
   const running = run?.status === "running";
   const steps = useRunSteps(run?.id, running);
   return (
     <Card>
       <div className="mb-4 flex flex-wrap items-baseline gap-2">
-        <h2 className="font-semibold">Newsroom</h2>
-        <span className="text-sm text-ink-2">
-          {!run ? "no runs yet" : running ? "live run" : `last run · ${when(run.started_at)}${run.kind === "eval" ? " (eval)" : ""}`}
-        </span>
-        {run && <Link href={`/runs/${run.id}`} className="ml-auto text-sm text-accent hover:underline">{running ? "watch every step →" : "see every step →"}</Link>}
+        <h3 className="font-semibold">{running ? "Current run" : "Last run"}</h3>
+        <span className="text-sm text-ink-2">{!run ? "none yet" : running ? `started ${when(run.started_at)}` : when(run.started_at)}</span>
+        {run && <Link href={`/runs/${run.id}`} className="ml-auto text-sm underline underline-offset-4">All steps</Link>}
       </div>
-      <AgentGraph steps={steps} runFinished={!!run && !running} disabled={disabled} />
+      {team.length ? <AgentGraph steps={steps} runFinished={!!run && !running} roster={team} input={input} disabled={disabled} />
+        : <p className="text-sm text-ink-2">The diagram appears after the first run.</p>}
     </Card>
   );
 }
 
-function AgentHeader({ name, agent, runs, blurb, action, actionLabel, live }:
-  { name: string; agent: string; runs: Run[]; blurb: string; action?: () => void; actionLabel: string; live?: Run }) {
+function LatestEval({ run }: { run?: Run }) {
+  if (!run) return null;
+  const s = (run.stats ?? {}) as { mean?: number; baseline?: number | null; passed?: boolean; pr?: string | null; trigger?: string };
+  return (
+    <p className="text-sm text-ink-2">
+      Latest eval: {run.status === "running" ? "running now" : <>mean <span className="num text-ink">{s.mean ?? "–"}</span>
+        {s.baseline != null && <> against a baseline of <span className="num">{s.baseline}</span></>}, {s.passed === false ? <b className="text-ink">failed</b> : "passed"}</>}
+      {run.status !== "running" && <> · {s.pr ? `PR #${s.pr}` : s.trigger ?? "local"}</>} · {when(run.started_at)} · <Link href="/evals" className="underline underline-offset-4">all evals</Link>
+    </p>
+  );
+}
+
+function AgentHeader({ name, runs, blurb, kept, action, actionLabel, live }:
+  { name: string; runs: Run[]; blurb: string; kept?: { kept: number; decided: number }; action?: () => void; actionLabel: string; live?: Run }) {
   const finished = runs.filter((r) => r.status !== "running" && r.status !== "skipped");
-  const ok = finished.filter((r) => r.status === "succeeded").length;
+  const drafts = runs.filter((r) => r.kind === "draft" && r.status === "succeeded");
   const last = runs[0];
   return (
-    <Card>
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-lg font-semibold">{name} <code className="ml-1 text-xs font-normal text-muted">{agent}</code></h2>
-          <p className="text-sm text-ink-2">{blurb}</p>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="min-w-0 flex-1 space-y-1">
+          <h2 className="text-2xl font-semibold tracking-tight">{name}</h2>
+          <p className="max-w-2xl text-sm text-ink-2">{blurb}</p>
         </div>
-        <Stat label="Runs" value={String(runs.length)} />
-        <Stat label="Success" value={finished.length ? `${Math.round((ok / finished.length) * 100)}%` : "–"} />
-        <Stat label="Cost" value={usd(runs.reduce((s, r) => s + Number(r.cost_usd), 0))} />
-        <div className="text-sm">
-          <div className="text-ink-2">Last run</div>
-          {last ? <Link href={`/runs/${last.id}`} className="hover:underline">{when(last.started_at)} <Status status={last.status} /></Link> : "–"}
-        </div>
-        {live && <Link href={`/runs/${live.id}`} className="inline-flex items-center gap-1.5 text-sm text-accent hover:underline"><span className="h-2 w-2 animate-pulse rounded-full bg-accent" />Watch live</Link>}
-        {action && <button onClick={action} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-bg">{actionLabel}</button>}
+        {live && <Link href={`/runs/${live.id}`} className="inline-flex items-center gap-1.5 text-sm underline underline-offset-4"><span aria-hidden className="spinner" />Current run</Link>}
+        {action && <button onClick={action} className="rounded-lg border border-ink px-3 py-1.5 text-sm font-medium hover:bg-ink hover:text-bg">{actionLabel}</button>}
       </div>
-    </Card>
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line md:grid-cols-4">
+        <Stat label="Runs" value={String(runs.length)} note={finished.length ? `${Math.round((finished.filter((r) => r.status === "succeeded").length / finished.length) * 100)}% finished cleanly` : undefined} />
+        <Stat label="Kept by you" value={kept?.decided ? `${Math.round((kept.kept / kept.decided) * 100)}%` : "–"}
+          note={kept ? `${kept.kept} of ${kept.decided} decided drafts` : "sign in to see"} />
+        <Stat label="Cost per draft" value={drafts.length ? usd(drafts.reduce((s, r) => s + Number(r.cost_usd), 0) / drafts.length) : "–"}
+          note={`${usd(runs.reduce((s, r) => s + Number(r.cost_usd), 0))} in total`} />
+        <div className="bg-card p-4 text-sm">
+          <div className="text-xs uppercase tracking-wide text-ink-2">Last run</div>
+          <div className="mt-1.5">{last ? <Link href={`/runs/${last.id}`} className="hover:underline">{when(last.started_at)}</Link> : "–"}</div>
+          {last && <div className="mt-1"><Status status={last.status} /></div>}
+        </div>
+      </div>
+    </div>
   );
 }
 
-const Stat = ({ label, value }: { label: string; value: string }) => (
-  <div className="text-sm"><div className="text-ink-2">{label}</div><div className="num font-semibold">{value}</div></div>
+const Stat = ({ label, value, note }: { label: string; value: string; note?: string }) => (
+  <div className="bg-card p-4 text-sm">
+    <div className="text-xs uppercase tracking-wide text-ink-2">{label}</div>
+    <div className="num mt-1 text-xl font-medium">{value}</div>
+    {note && <div className="mt-0.5 text-xs text-muted">{note}</div>}
+  </div>
 );
 
 function SpecialistCard({ reg, setting, steps, runs, live, canEdit, onSaved }:
@@ -168,22 +210,22 @@ function SpecialistCard({ reg, setting, steps, runs, live, canEdit, onSaved }:
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-semibold">{reg.role}</h3>
-            {running ? <span className="inline-flex items-center gap-1 text-xs text-accent"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />working</span>
+            {running ? <span className="inline-flex items-center gap-1.5 text-xs"><span aria-hidden className="spinner" />working</span>
               : <span className="text-xs text-muted">{enabled ? "idle" : "off"}</span>}
             {reg.required && <span className="rounded border border-line px-1.5 text-[11px] text-muted">required</span>}
           </div>
           <p className="mt-0.5 text-sm text-ink-2">{reg.description}</p>
         </div>
         <label className="flex items-center gap-2 text-sm" title={reg.required ? "Required: can't be switched off" : ""}>
-          <input type="checkbox" checked={enabled} disabled={!canEdit || reg.required} onChange={(e) => save({ enabled: e.target.checked })} className="accent-[var(--accent)]" />
+          <input type="checkbox" checked={enabled} disabled={!canEdit || reg.required} onChange={(e) => save({ enabled: e.target.checked })} className="accent-[var(--ink)]" />
           on
         </label>
       </div>
       <div className="mt-3 grid grid-cols-4 gap-2 text-sm">
-        <Stat label={reg.specialist === "supervisor" ? "Decisions" : "Turns"} value={String(counted.length)} />
-        <Stat label="Avg latency" value={lat.length ? ms(lat.reduce((a, b) => a + b, 0) / lat.length) : "–"} />
-        <Stat label="Cost" value={usd(steps.reduce((s, x) => s + Number(x.cost_usd), 0))} />
-        <Stat label={reg.specialist === "supervisor" ? "OK" : "In runs"} value={reg.specialist === "supervisor"
+        <MiniStat label={reg.specialist === "supervisor" ? "Decisions" : "Turns"} value={String(counted.length)} />
+        <MiniStat label="Avg latency" value={lat.length ? ms(lat.reduce((a, b) => a + b, 0) / lat.length) : "–"} />
+        <MiniStat label="Cost" value={usd(steps.reduce((s, x) => s + Number(x.cost_usd), 0))} />
+        <MiniStat label={reg.specialist === "supervisor" ? "OK" : "In runs"} value={reg.specialist === "supervisor"
           ? (done.length ? `${Math.round((done.filter((s) => s.status === "ok").length / done.length) * 100)}%` : "–")
           : (runs.length ? `${Math.round((runIds.size / runs.length) * 100)}%` : "–")} />
       </div>
@@ -202,7 +244,7 @@ function SpecialistCard({ reg, setting, steps, runs, live, canEdit, onSaved }:
         )}
         {canEdit && <button onClick={() => setEditing(!editing)} className="ml-auto rounded-lg border border-line px-3 py-1 hover:bg-bg">{editing ? "Close prompt" : "Edit prompt"}</button>}
       </div>
-      {err && <p className="mt-2 text-sm text-bad">{err}</p>}
+      {err && <p className="mt-2 text-sm text-ink font-semibold">{err}</p>}
       {editing && <PromptEditor reg={reg} activeId={setting?.prompt_version_id ?? null} onActivate={(id) => save({ prompt_version_id: id })} />}
     </Card>
   );
@@ -240,28 +282,28 @@ function PromptEditor({ reg, activeId, onActivate }: { reg: AgentRegistry; activ
     <div className="mt-4 space-y-3 border-t border-line pt-4">
       <p className="text-xs text-muted">
         Active: <b>{active ? `v${active.version}` : "repo file"}</b>. New versions take effect on the next run. Keep the {"{{PLACEHOLDERS}}"}:
-        the run fills them in. CI evals test the repo files, so copy a version you like into <code>agents/substack/prompts/</code>.
+        the run fills them in. CI evals test the repo files, so copy a version you like into <code>agents/{reg.agent}/prompts/</code>.
       </p>
       <textarea value={text} onChange={(e) => setText(e.target.value)} rows={14} aria-label="Prompt"
-        className="w-full rounded-lg border border-line bg-bg p-3 font-mono text-xs leading-relaxed outline-none focus:border-accent" />
+        className="w-full rounded-lg border border-line bg-bg p-3 font-mono text-xs leading-relaxed outline-none focus:border-ink" />
       <div className="flex flex-wrap gap-2">
         <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="What changed?" aria-label="Version note"
-          className="min-w-40 flex-1 rounded-lg border border-line bg-bg px-3 py-1.5 text-sm outline-none focus:border-accent" />
-        <button onClick={saveNew} disabled={!text.trim()} className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50">Save as new version</button>
+          className="min-w-40 flex-1 rounded-lg border border-line bg-bg px-3 py-1.5 text-sm outline-none focus:border-ink" />
+        <button onClick={saveNew} disabled={!text.trim()} className="rounded-lg bg-ink px-3 py-1.5 text-sm font-medium text-bg disabled:opacity-50">Save as new version</button>
         {activeId && <button onClick={() => onActivate(null)} className="rounded-lg border border-line px-3 py-1.5 text-sm">Use repo file</button>}
       </div>
-      {err && <p className="text-sm text-bad">{err}</p>}
+      {err && <p className="text-sm text-ink font-semibold">{err}</p>}
       <ul className="divide-y divide-line text-sm">
         {versions.map((v) => (
           <li key={v.id} className="flex flex-wrap items-center gap-2 py-1.5">
             <b className="num">v{v.version}</b>
             <span className="text-ink-2">{v.note ?? ""}</span>
             <span className="text-xs text-muted">{when(v.created_at)}</span>
-            {v.id === activeId && <span className="text-xs text-good">active</span>}
+            {v.id === activeId && <span className="text-xs text-ink">active</span>}
             <span className="ml-auto flex gap-2">
-              <button onClick={() => setText(v.body)} className="text-accent hover:underline">load</button>
-              <button onClick={() => setDiffWith(diffWith?.id === v.id ? null : v)} className="text-accent hover:underline">diff</button>
-              {v.id !== activeId && <button onClick={() => onActivate(v.id)} className="text-accent hover:underline">activate</button>}
+              <button onClick={() => setText(v.body)} className="text-ink underline underline-offset-4 hover:underline">load</button>
+              <button onClick={() => setDiffWith(diffWith?.id === v.id ? null : v)} className="text-ink underline underline-offset-4 hover:underline">diff</button>
+              {v.id !== activeId && <button onClick={() => onActivate(v.id)} className="text-ink underline underline-offset-4 hover:underline">activate</button>}
             </span>
           </li>
         ))}
@@ -290,9 +332,13 @@ function Diff({ a, b, label }: { a: string; b: string; label: string }) {
       <div className="mb-1 text-xs text-muted">{label} · {changed} changed line{changed === 1 ? "" : "s"}</div>
       <pre className="max-h-72 overflow-auto rounded-lg border border-line bg-bg p-3 text-xs">
         {out.map((l, n) => (
-          <div key={n} className={l.t === "+" ? "text-good" : l.t === "-" ? "text-bad" : "text-muted"}>{l.t} {l.s}</div>
+          <div key={n} className={l.t === "+" ? "font-semibold text-ink" : l.t === "-" ? "text-ink-2 line-through" : "text-muted"}>{l.t} {l.s}</div>
         ))}
       </pre>
     </div>
   );
 }
+
+const MiniStat = ({ label, value }: { label: string; value: string }) => (
+  <div><div className="text-xs text-ink-2">{label}</div><div className="num font-medium">{value}</div></div>
+);
