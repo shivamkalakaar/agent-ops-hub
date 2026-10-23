@@ -1,70 +1,59 @@
 @import "tailwindcss";
 
+/* Black and white only. Status is carried by shape and weight (see components/ui.tsx), never by hue.
+   Dark mode follows the system unless the header toggle sets data-theme. */
 :root {
   color-scheme: light;
-  --bg: #f6f5f2;
-  --card: #fcfcfb;
-  --ink: #0b0b0b;
-  --ink-2: #52514e;
-  --muted: #8a8780;
-  --line: #e6e4df;
-  --accent: #c2410c;
-  --series-1: #2a78d6;
-  --series-1-track: #d6e5f7;
-  --good: #008300;
-  --warn: #b07400;
-  --bad: #c93a39;
+  --bg: #ffffff;
+  --card: #ffffff;
+  --sunk: #f4f4f4;
+  --ink: #000000;
+  --ink-2: #4d4d4d;
+  --muted: #8a8a8a;
+  --line: #e2e2e2;
+  --line-strong: #bdbdbd;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --bg: #121211;
-    --card: #1a1a19;
-    --ink: #f0efec;
-    --ink-2: #c3c2b7;
-    --muted: #8f8d85;
-    --line: #2e2d2a;
-    --accent: #fb923c;
-    --series-1: #3987e5;
-    --series-1-track: #1f3550;
-    --good: #3fae3f;
-    --warn: #d9a030;
-    --bad: #e66767;
+    --bg: #000000; --card: #0b0b0b; --sunk: #141414;
+    --ink: #ffffff; --ink-2: #b8b8b8; --muted: #7a7a7a; --line: #262626; --line-strong: #4a4a4a;
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #121211; --card: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #8f8d85; --line: #2e2d2a;
-  --accent: #fb923c; --series-1: #3987e5; --series-1-track: #1f3550; --good: #3fae3f; --warn: #d9a030; --bad: #e66767;
+  --bg: #000000; --card: #0b0b0b; --sunk: #141414;
+  --ink: #ffffff; --ink-2: #b8b8b8; --muted: #7a7a7a; --line: #262626; --line-strong: #4a4a4a;
 }
 
 @theme inline {
   --color-bg: var(--bg);
   --color-card: var(--card);
+  --color-sunk: var(--sunk);
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
   --color-muted: var(--muted);
   --color-line: var(--line);
-  --color-accent: var(--accent);
-  --color-series: var(--series-1);
-  --color-good: var(--good);
-  --color-warn: var(--warn);
-  --color-bad: var(--bad);
-  --font-sans: ui-sans-serif, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --color-line-strong: var(--line-strong);
+  --font-sans: var(--font-inter), ui-sans-serif, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SF Mono", Menlo, monospace;
 }
 
-body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); }
-.num { font-variant-numeric: tabular-nums; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); font-feature-settings: "cv11", "ss01"; }
+.num { font-variant-numeric: tabular-nums; font-family: var(--font-mono); letter-spacing: -0.01em; }
+::selection { background: var(--ink); color: var(--bg); }
 
-/* Agent diagram: animated hand-off lines and a soft glow on the working agent */
-@keyframes flow-x { to { background-position: 14px 0; } }
-@keyframes flow-y { to { background-position: 0 14px; } }
-@keyframes node-glow { 50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent) 12%, transparent); } }
-.flow-x { background: repeating-linear-gradient(90deg, var(--accent) 0 8px, transparent 8px 14px); animation: flow-x 0.6s linear infinite; }
-.flow-y { background: repeating-linear-gradient(180deg, var(--accent) 0 8px, transparent 8px 14px); animation: flow-y 0.6s linear infinite; }
-.node-glow { animation: node-glow 1.6s ease-in-out infinite; }
+/* Diagram: a dashed line that moves while a hand-off is happening, and a slow spinner on the working step */
+@keyframes flow-x { to { background-position: 12px 0; } }
+@keyframes flow-y { to { background-position: 0 12px; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+.flow-x { background: repeating-linear-gradient(90deg, var(--ink) 0 6px, transparent 6px 12px); animation: flow-x 0.8s linear infinite; }
+.flow-y { background: repeating-linear-gradient(180deg, var(--ink) 0 6px, transparent 6px 12px); animation: flow-y 0.8s linear infinite; }
+.spinner { display: inline-block; width: 0.7rem; height: 0.7rem; border: 1.5px solid var(--line-strong); border-top-color: var(--ink);
+  border-radius: 9999px; animation: spin 1.2s linear infinite; }
+/* Over 80% of the budget: hatched, so it reads without color */
+.hatch { background: repeating-linear-gradient(135deg, var(--ink) 0 3px, transparent 3px 6px); }
 @media (prefers-reduced-motion: reduce) {
-  .flow-x, .flow-y, .node-glow { animation: none; }
-  .flow-x, .flow-y { background: var(--accent); }
+  .flow-x, .flow-y, .spinner { animation: none; }
+  .flow-x, .flow-y { background: var(--ink); }
 }

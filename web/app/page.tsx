@@ -2,7 +2,7 @@ import Link from "next/link";
 import { supabase, configured } from "@/lib/supabase";
 import type { LlmCall, Run } from "@/lib/types";
 import { MONTHLY_CAP, ms, percentile, usd, when } from "@/lib/format";
-import { BudgetMeter, Card, NotConfigured, StatTile, Status } from "@/components/ui";
+import { BudgetMeter, Card, NotConfigured, PageTitle, StatTile, Status } from "@/components/ui";
 import { SpendChart } from "@/components/SpendChart";
 
 export const revalidate = 300;
@@ -11,10 +11,9 @@ export default async function Overview() {
   if (!configured) return <NotConfigured />;
   const since = new Date(Date.now() - 30 * 864e5).toISOString();
   const monthStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)).toISOString();
-  const [{ data: runs }, { data: calls }, { count: approved }] = await Promise.all([
+  const [{ data: runs }, { data: calls }] = await Promise.all([
     supabase.from("runs").select("*").order("started_at", { ascending: false }).limit(40),
     supabase.from("llm_calls").select("*").gte("created_at", since).limit(10000),
-    supabase.from("drafts").select("id", { count: "exact", head: true }).eq("status", "approved"),
   ]);
   const R = (runs ?? []) as Run[];
   const C = (calls ?? []) as LlmCall[];
@@ -45,16 +44,13 @@ export default async function Overview() {
   ).sort((a, b) => b[1] - a[1]);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Agent operations</h1>
-        <p className="mt-1 max-w-2xl text-ink-2">
-          Two agents. A market-intel agent reads ~12 AI feeds and my daily AI brief, scores what matters and drafts one
-          short LinkedIn post every weekday. A Substack newsroom (a super agent running six specialists) turns the same news into
-          two long posts a week with images. Every call is budget-checked, traced and evaluated; nothing ships without
-          human approval.
-        </p>
-      </div>
+    <div className="space-y-8">
+      <PageTitle title="Overview">
+        Two writing agents. The LinkedIn agent writes one short post every weekday from your AI Stack Brief and about a dozen
+        AI feeds. The Substack agent writes two long posts a week from the same stories. Each is a coordinator with specialists
+        that research, write, edit and fact-check. Every model call is checked against the budget and traced, every prompt change is
+        evaluated, and nothing is published until you approve it.
+      </PageTitle>
 
       <Card>
         <div className="flex items-baseline justify-between">
@@ -68,9 +64,9 @@ export default async function Overview() {
       </Card>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatTile label="Run success rate" value={`${Math.round(successRate * 100)}%`} note={`last ${finished.length} runs`} />
+        <StatTile label="Runs finished cleanly" value={`${Math.round(successRate * 100)}%`} note={`last ${finished.length} runs`} />
         <StatTile label="Cost per LinkedIn draft" value={usd(costPerDraft)} note={`${draftRuns.length} drafts`} />
-        <StatTile label="LLM latency p50 / p95" value={`${ms(percentile(lat, 50))}`} note={`p95 ${ms(percentile(lat, 95))}`} />
+        <StatTile label="Model latency, median" value={`${ms(percentile(lat, 50))}`} note={`p95 ${ms(percentile(lat, 95))}`} />
         <Link href="/evals" className="block hover:opacity-80">
           <StatTile label="Latest eval score (1–5)"
             value={lastEval?.stats?.mean != null ? String(lastEval.stats.mean) : "–"}
@@ -79,7 +75,7 @@ export default async function Overview() {
       </div>
 
       <Card>
-        <h2 className="font-semibold">Daily LLM spend, last 30 days</h2>
+        <h2 className="font-semibold">Model spend per day, last 30 days</h2>
         <div className="mt-3"><SpendChart days={days} /></div>
       </Card>
 
@@ -99,8 +95,8 @@ export default async function Overview() {
           </table>
         </Card>
         <Card>
-          <h2 className="font-semibold">Models that actually served calls</h2>
-          <p className="text-xs text-muted">OpenRouter falls back down each tier when a model fails or is rate-limited.</p>
+          <h2 className="font-semibold">Models that answered</h2>
+          <p className="text-xs text-muted">When a model fails or is rate-limited, OpenRouter moves to the next one in its tier.</p>
           <ul className="mt-3 space-y-1 text-sm">
             {byModel.map(([m, n]) => (
               <li key={m} className="flex justify-between border-t border-line pt-1.5"><code>{m}</code><span className="num">{n}</span></li>
@@ -122,11 +118,11 @@ export default async function Overview() {
             {R.slice(0, 15).map((r) => (
               <tr key={r.id} className="border-t border-line">
                 <td className="py-1.5">{when(r.started_at)}</td>
-                <td className="text-ink-2">{r.agent === "substack" ? "Substack" : "Market intel"}</td>
+                <td className="text-ink-2">{({ substack: "Substack", ai_brief: "AI Stack Brief", market_intel: "LinkedIn" } as Record<string, string>)[r.agent] ?? r.agent}</td>
                 <td><Link className="hover:underline" href={`/runs/${r.id}`}>{r.kind}</Link></td>
                 <td><Status status={r.status} /></td>
                 <td className="text-right num">{usd(Number(r.cost_usd))}</td>
-                <td className="text-right">{r.trace_url && <a className="text-accent hover:underline" href={r.trace_url}>trace</a>}</td>
+                <td className="text-right">{r.trace_url && <a className="text-ink underline underline-offset-4 hover:underline" href={r.trace_url}>trace</a>}</td>
               </tr>
             ))}
           </tbody>
@@ -137,38 +133,33 @@ export default async function Overview() {
 }
 
 function Architecture() {
-  const box = "rounded-lg border border-line px-3 py-2 text-sm";
-  const arrow = <span aria-hidden className="text-muted">→</span>;
+  const flows: { when: string; steps: string[] }[] = [
+    { when: "Every morning, on your Mac", steps: ["AI Stack Brief: read 20 feeds, research, write and email the brief",
+      "Send its stories to the hub"] },
+    { when: "Every morning, GitHub Actions", steps: ["Fetch about 12 RSS feeds", "Drop stories already seen", "Score each story with a free model"] },
+    { when: "Weekdays: LinkedIn agent", steps: ["Scout picks an angle", "Researcher builds a fact sheet", "Writer drafts in your voice",
+      "Editor, fact-checker and final check review it; the writer rewrites up to twice", "One-pager", "Your approval"] },
+    { when: "Wednesday and Saturday: Substack agent", steps: ["Research brief", "Writer (Sonnet)", "Editor and fact-checker",
+      "Images and a chart", "Final check", "Your approval"] },
+  ];
   return (
-    <div className="mt-3 space-y-4 text-sm">
-      <div>
-        <div className="mb-1 text-xs uppercase tracking-wide text-muted">Daily · GitHub Actions cron</div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className={box}>Fetch 12 RSS feeds</span>{arrow}<span className={box}>Dedupe (Postgres)</span>{arrow}
-          <span className={box}>Score importance · <b>free model</b></span>{arrow}<span className={box}>Store</span>
+    <div className="mt-4 grid gap-6 md:grid-cols-2">
+      {flows.map((f) => (
+        <div key={f.when}>
+          <div className="mb-2 text-xs uppercase tracking-wide text-ink-2">{f.when}</div>
+          <ol className="space-y-1.5 text-sm">
+            {f.steps.map((step, i) => (
+              <li key={step} className="flex gap-3">
+                <span className="num w-5 shrink-0 text-right text-muted">{i + 1}</span>
+                <span className={i === f.steps.length - 1 && step === "Your approval" ? "font-semibold" : ""}>{step}</span>
+              </li>
+            ))}
+          </ol>
         </div>
-      </div>
-      <div>
-        <div className="mb-1 text-xs uppercase tracking-wide text-muted">Weekdays · LangGraph</div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className={box}>Pick one angle</span>{arrow}<span className={box}>Write post</span>{arrow}
-          <span className={box}>Critic (other model family)</span>{arrow}<span className={box}>Guardrails</span>{arrow}
-          <span className={`${box} border-dashed`}>Revise ↺ max 2</span>{arrow}<span className={box}>One-pager</span>{arrow}
-          <span className={`${box} border-accent`}>Human approval</span>
-        </div>
-      </div>
-      <div>
-        <div className="mb-1 text-xs uppercase tracking-wide text-muted">Wed + Sat · Substack newsroom (super agent + six specialists)</div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className={`${box} border-accent`}>Super agent picks the next move</span><span aria-hidden className="text-muted">⇄</span>
-          <span className={box}>Research</span><span className={box}>Writer · <b>Sonnet</b></span><span className={box}>Editor</span>
-          <span className={box}>Fact-checker</span><span className={box}>Illustrator · <b>Nano Banana</b></span><span className={box}>Final check</span>
-          {arrow}<span className={`${box} border-accent`}>Human approval</span>
-        </div>
-      </div>
-      <p className="text-xs text-muted">
-        Across every step: budget guard before each call · OpenRouter model fallbacks · Langfuse trace per run ·
-        prompt regression evals in CI.
+      ))}
+      <p className="text-xs text-muted md:col-span-2">
+        On every run: a budget check before each model call, fallbacks to other models when one is down, a Langfuse trace, and
+        lessons from your past approvals and rejections. On every prompt or code change: evals on past news days, on the PR and again after the merge.
       </p>
     </div>
   );

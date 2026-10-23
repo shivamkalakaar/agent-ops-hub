@@ -24,7 +24,7 @@ export type Draft = {
 export type AgentStep = {
   id: number; run_id: string; seq: number; agent: string; specialist: string; kind: "decision" | "work";
   reason: string | null; summary: string | null; output: Record<string, unknown> | null;
-  cost_usd: number; latency_ms: number | null; status: "running" | "ok" | "failed" | "skipped";
+  cost_usd: number; latency_ms: number | null; status: "running" | "ok" | "failed" | "skipped" | "blocked" | "degraded";
   started_at: string; ended_at: string | null;
 };
 export type AgentRegistry = {

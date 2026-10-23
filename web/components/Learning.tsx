@@ -60,8 +60,8 @@ export function Learning({ agent, canEdit }: { agent: "market_intel" | "substack
   return (
     <Card>
       <div className="flex flex-wrap items-baseline gap-3">
-        <h3 className="font-semibold">What it has learned from you</h3>
-        <span className="text-sm text-muted">from your approvals, edits and reject reasons · read at the start of every run</span>
+        <h3 className="font-semibold">Lessons from your feedback</h3>
+        <span className="text-sm text-muted">from your approvals, edits and reject reasons; the agent reads them at the start of every run</span>
       </div>
       {decisions && decisions.length > 0 && (
         <div className="mt-3 space-y-1 text-sm">
@@ -69,13 +69,15 @@ export function Learning({ agent, canEdit }: { agent: "market_intel" | "substack
             {decisions.map((d) => (
               <span key={d.id} title={`${d.created_at.slice(0, 10)}: ${d.status === "rejected" ? `rejected${d.reasons.length ? ` (${d.reasons.join(", ")})` : ""}`
                 : d.share === 0 ? "approved as written" : `approved, ${Math.round(d.share * 100)}% edited`}`}
-                className={`h-3 w-3 rounded-full ${d.status === "rejected" ? "bg-bad" : d.share < 0.15 ? "bg-good" : "bg-warn"}`} />
+                className={`flex h-3.5 w-3.5 items-center justify-center rounded-full text-[9px] leading-none ${d.status === "rejected"
+                  ? "border border-ink text-ink" : d.share < 0.15 ? "bg-ink" : "border border-ink bg-[linear-gradient(90deg,var(--ink)_50%,transparent_50%)]"}`}>
+                {d.status === "rejected" ? "✕" : ""}</span>
             ))}
-            <span className="ml-2 text-xs text-muted">oldest → newest · green = kept (≤15% edited) · amber = rewritten · red = rejected</span>
+            <span className="ml-2 text-xs text-muted">oldest to newest · ● kept (15% edited or less) · ◐ rewritten by you · ✕ rejected</span>
           </div>
           {before.length === 5 ? (
             <p className="text-ink-2">Kept with light edits: <b className="num">{Math.round(good(recent) * 100)}%</b> of the last 5
-              vs <span className="num">{Math.round(good(before) * 100)}%</span> of the 5 before{good(recent) > good(before) ? " ↑" : good(recent) < good(before) ? " ↓" : ""}.</p>
+              vs <span className="num">{Math.round(good(before) * 100)}%</span> of the 5 before{good(recent) > good(before) ? ", up" : good(recent) < good(before) ? ", down" : ""}.</p>
           ) : <p className="text-ink-2">The trend shows after 10 decisions ({decisions.length} so far).</p>}
         </div>
       )}

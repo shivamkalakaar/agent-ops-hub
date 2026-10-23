@@ -26,12 +26,12 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
       <div className="flex flex-wrap items-baseline gap-4">
         <h1 className="text-2xl font-semibold">{r.agent} · {r.kind}</h1>
         <Status status={r.status} />
-        {r.trace_url && <a href={r.trace_url} className="text-accent hover:underline">Open trace in Langfuse →</a>}
+        {r.trace_url && <a href={r.trace_url} className="text-ink underline underline-offset-4 hover:underline">Open trace in Langfuse →</a>}
       </div>
       <div className="text-sm text-ink-2">
         {when(r.started_at)} · {usd(Number(r.cost_usd))} · {C.length} LLM calls · commit <code>{r.git_sha}</code>
       </div>
-      {r.error && <Card className="border-bad"><pre className="whitespace-pre-wrap text-sm">{r.error}</pre></Card>}
+      {r.error && <Card className="border-ink"><pre className="whitespace-pre-wrap text-sm">{r.error}</pre></Card>}
 
       <Timeline runId={r.id} running={r.status === "running"} />
 
@@ -44,11 +44,11 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
           <tbody className="num">
             {C.map((c) => (
               <tr key={c.id} className="border-t border-line">
-                <td className="py-1.5">{c.ok ? c.node : <span className="text-bad">✕ {c.node}</span>}<span className="ml-2 text-xs text-muted">{c.tier}</span></td>
+                <td className="py-1.5">{c.ok ? c.node : <span className="text-ink font-semibold">✕ {c.node}</span>}<span className="ml-2 text-xs text-muted">{c.tier}</span></td>
                 <td><code className="text-xs">{c.model ?? "–"}</code></td>
                 <td className="w-48">
                   <div className="flex items-center gap-2">
-                    <div className="h-1.5 rounded-full bg-series" style={{ width: `${((c.latency_ms ?? 0) / maxLat) * 100}px` }} />
+                    <div className="h-1.5 rounded-full bg-ink-2" style={{ width: `${((c.latency_ms ?? 0) / maxLat) * 100}px` }} />
                     <span className="text-xs text-ink-2">{ms(c.latency_ms)}</span>
                   </div>
                 </td>

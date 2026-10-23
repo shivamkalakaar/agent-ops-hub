@@ -33,7 +33,7 @@ export function SpendChart({ days }: { days: Day[] }) {
               {h > 0 && (
                 <path
                   d={`M${x},${y(0)} v${-(h - r)} q0,${-r} ${r},${-r} h${w - 2 * r} q${r},0 ${r},${r} v${h - r} z`}
-                  fill="var(--series-1)" opacity={hover === null || hover === i ? 1 : 0.45}
+                  fill="var(--ink)" opacity={hover === null || hover === i ? 1 : 0.45}
                 />
               )}
             </g>
