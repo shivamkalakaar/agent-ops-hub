@@ -14,7 +14,7 @@ const AGENT_NAME: Record<string, string> = { market_intel: "LinkedIn", substack:
 type EvalStats = {
   mean?: number; humanizer_mean?: number; guardrail_pass_rate?: number; cases?: number; baseline?: number | null;
   passed?: boolean; gate?: string[]; trigger?: string; pr?: string | null; commit?: string | null; branch?: string | null;
-  ci_url?: string | null;
+  ci_url?: string | null; golden_cases?: number; rejection_cases?: number; rejection_repeats?: number;
 };
 
 export default function Evals() {
@@ -88,7 +88,8 @@ export default function Evals() {
                       <td className="text-right font-medium">{s.mean?.toFixed(2) ?? "–"}</td>
                       <td className="text-right text-ink-2">{s.baseline?.toFixed(2) ?? "–"}</td>
                       <td className="text-right">{s.humanizer_mean != null ? `${s.humanizer_mean.toFixed(1)}/5` : "–"}</td>
-                      <td className="text-right">{s.guardrail_pass_rate != null && s.cases ? `${Math.round(s.guardrail_pass_rate * s.cases)}/${s.cases}` : "–"}</td>
+                      <td className="text-right">{s.guardrail_pass_rate != null && s.cases ? `${Math.round(s.guardrail_pass_rate * (s.golden_cases ?? s.cases))}/${s.golden_cases ?? s.cases}` : "–"}
+                        {s.rejection_cases ? <div className="text-xs text-ink-2">{s.rejection_repeats}/{s.rejection_cases} rejected problems back</div> : null}</td>
                       <td>
                         {running ? <Link href={`/runs/${r.id}`} className="hover:underline"><Status status="running" /></Link>
                           : <Status status={s.passed === false || r.status === "failed" ? "failed" : r.status} />}

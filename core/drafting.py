@@ -66,6 +66,22 @@ def style_examples(n: int = 3, short_only: bool = True, min_words: int = 0, max_
     return posts[:n]
 
 
+def candidates(tier: str, override: str | None, n: int | None = None) -> list[str | None]:
+    """Models for a best-of-N draft: the tier's `candidates` (or just its primary), unless the dashboard picked one
+    model for this specialist, in which case only that one. None means the tier default."""
+    from core.config import load_yaml
+    models = load_yaml("models.yaml")["tiers"][tier].get("candidates") or [None]
+    return ([override] if override else list(models))[: n or None]
+
+
+def pick(drafts: list[dict], score: Callable[[str], tuple]) -> tuple[dict, list[dict]]:
+    """The best of several drafts by `score` (lower is better). Returns the winner and every draft with its score."""
+    scored = [{**d, "score": score(d["text"])} for d in drafts if d.get("text")]
+    if not scored:
+        raise ValueError("no candidate draft came back")
+    return min(scored, key=lambda d: d["score"]), scored
+
+
 def overall_score(scores: dict, human: int) -> float:
     """Weighted 1-5 score: humanizer 40%, critic dimensions 60% split equally."""
     if not scores:

@@ -41,6 +41,7 @@ def offline(monkeypatch, tmp_path):
         monkeypatch.delenv(var, raising=False)
     monkeypatch.setattr(storage, "put", lambda path, data, content_type: f"https://img.example.com/{path}")
     monkeypatch.setattr(research, "fetch_article", lambda url: ARTICLE)
+    monkeypatch.setattr("core.drafting.candidates", lambda tier, override, n=None: [override])  # one writer call per draft
     llm.FAKE_RESPONSES.update({
         "supervisor": lambda m: json.dumps({"next": supervisor.canonical(_allowed(m)), "reason": "next in line",
                                             "instructions": "Focus on the price."}),
@@ -173,7 +174,7 @@ def test_forced_seed_and_used_stories_are_skipped():
 
 
 def test_budget_guard_stops_newsroom(monkeypatch):
-    cfg = dict(load_yaml("budget.yaml"), daily_cap_usd=0.0)
+    cfg = dict(load_yaml("budget.yaml"), daily_cap_usd=0.0, daily_cap_overrides={})
     monkeypatch.setattr("core.budget.load_yaml", lambda name: cfg)
     assert cli.draft(None) == 0
     with connect() as db:
@@ -382,3 +383,11 @@ def test_substack_gate_allows_one_flagged_post_in_three(tmp_path):
     bad = run_evals.gate({**base, "guardrail_pass_rate": 1 / 3}, tmp_path / "b.json", False, run_evals.MIN_GUARDRAIL_PASS["substack"])
     strict = run_evals.gate({**base, "guardrail_pass_rate": 2 / 3}, tmp_path / "b.json", False)
     assert (ok, bad, strict) == (0, 1, 1)
+
+
+def test_daily_cap_override_applies_only_to_its_date():
+    from core import budget
+    cfg = {"daily_cap_usd": 3.0, "daily_cap_overrides": {"2026-10-23": 7.0}}
+    assert budget.daily_cap(cfg, datetime(2026, 10, 23, 23, 59, tzinfo=timezone.utc)) == 7.0
+    assert budget.daily_cap(cfg, datetime(2026, 10, 24, tzinfo=timezone.utc)) == 3.0
+    assert budget.daily_cap({"daily_cap_usd": 3.0}, datetime(2026, 10, 23, tzinfo=timezone.utc)) == 3.0

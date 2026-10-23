@@ -129,10 +129,15 @@ def meta() -> dict:
 
 
 def summarize(agent: str, results: list[dict]) -> dict:
+    """Scores over every case; the guardrail gate over the golden days only. Rejection cases (a judge's call on
+    whether a rejected problem came back) are reported, not gated, so one strict verdict can't block every merge."""
+    golden = [r for r in results if "rejected" not in r] or results
     s = {"mean": round(mean(r["mean"] for r in results), 2), "cases": len(results),
          "humanizer_mean": round(mean(r["humanizer"] for r in results), 2),
-         "guardrail_pass_rate": round(sum(not r["violations"] for r in results) / len(results), 3),
+         "guardrail_pass_rate": round(sum(not r["violations"] for r in golden) / len(golden), 3), "golden_cases": len(golden),
          "per_dimension": {k: round(mean(r["scores"].get(k, 0) for r in results), 2) for k in results[0]["scores"]}}
+    if rej := [r for r in results if "rejected" in r]:
+        s["rejection_cases"], s["rejection_repeats"] = len(rej), sum(r["rejected"]["repeats"] for r in rej)
     if agent == "substack":
         s |= {"final_pass_rate": round(sum(r["passed_final"] for r in results) / len(results), 3),
               "mean_steps": round(mean(r["steps"] for r in results), 1)}
@@ -168,8 +173,10 @@ def comment(agent: str, run_id: str, summary: dict, results: list[dict], reasons
     name = {"market_intel": "LinkedIn agent", "substack": "Substack agent"}[agent]
     head = f"### Evals: {name} {'passed' if not reasons else 'failed'}"
     line = (f"Mean **{summary['mean']}**" + (f" (baseline {base}, allowed drop {TOLERANCE})" if base is not None else "")
-            + f" · humanizer {summary['humanizer_mean']}/5 · guardrails clean on {round(summary['guardrail_pass_rate'] * summary['cases'])}"
-            f"/{summary['cases']} cases")
+            + f" · humanizer {summary['humanizer_mean']}/5 · guardrails clean on "
+            f"{round(summary['guardrail_pass_rate'] * summary.get('golden_cases', summary['cases']))}/{summary.get('golden_cases', summary['cases'])} news days"
+            + (f" · repeats a rejected problem: {summary['rejection_repeats']} of {summary['rejection_cases']} (reported, not gated)"
+               if summary.get("rejection_cases") else ""))
     rows = "\n".join(f"| {r['case']} | {r['mean']} | {r['humanizer']}/5 | {'; '.join(r['violations'])[:160] or '–'} |" for r in results)
     url = os.environ.get("DASHBOARD_URL", "").rstrip("/")
     link = f"\n\n[Posts and scores for each case]({url}/runs/{run_id})" if url else f"\n\nDashboard run `{run_id}`"

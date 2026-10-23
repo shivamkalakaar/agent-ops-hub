@@ -38,6 +38,12 @@ TEMPLATE_MOVES = [
     (r"\bjust became an?\b", "the \"X just became Y\" hook"),
     (r"\bread it that way\b", "\"read it that way\""),
     (r"(?:^|\n|\. )(?:my read|my bet|my guess|here's my take|the real story)\s*(?::|is that)", "a labelled pivot (\"My read:\", \"The real story is…\")"),
+    (r"(?:^|\n)\s*(?:why [\w' ]{1,30}|the (?:catch|kicker|twist|takeaway|upshot|point|bottom line)|here's (?:why|what|the thing))\s*:",
+     "a labelled lead-in (\"Why it matters:\", \"The catch:\")"),
+    (r"\bthat's the (?:part|number|thing|detail|bit|line|question|real \w+) (?:that matters|to (?:sit with|watch|remember|notice))",
+     "a punchline frame (\"That's the number to sit with\")"),
+    (r"\b(?:most|many|every|all|the) [\w ]{0,30}\bI (?:see|talk to|work with|know|meet|advise)\b",
+     "claims first-hand experience the author never gave (\"most teams I talk to\"); cut it or attribute it"),
 ]
 WINDOW_DAYS = (1, 4)
 USED_DAYS = 21  # don't reuse a story that a draft from the last 3 weeks was built on
