@@ -33,6 +33,7 @@ ADD_COLUMN = re.compile(r"^alter table (\w+) add column if not exists (.+?);?$",
 def _sqlite_schema() -> str:
     sql = SCHEMA.read_text()
     sql = re.sub(r"^alter table .*$", "", sql, flags=re.M)  # migrations are replayed by _sqlite_migrate
+    sql = re.sub(r"^create or replace view .*?;$", "", sql, flags=re.M | re.S)  # dashboard views are Postgres-only
     sql = sql.replace("integer generated always as identity primary key", "integer primary key autoincrement")
     sql = re.sub(r"\b(timestamptz|jsonb)\b", "text", sql)
     return sql
