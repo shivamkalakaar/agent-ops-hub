@@ -167,7 +167,7 @@ def writer(state, ctx, cfg):
         return drafting.fill(cfg.prompt, AUTHOR=AUTHOR, STYLE_GUIDE=g.style_guide(), HUMANIZER=humanizer.rules(),
                              EXAMPLES="\n\n---\n\n".join(examples) or "(no examples yet; follow the style guide)")
     outs = drafting.write_candidates(ctx, tier, "writer", drafting.candidates(tier, cfg.model, n=2 if draft else None),
-                                     make_system, user, _clean, max_words=3 * g.WORDS[1])
+                                     make_system, user, _clean, max_words=3 * g.WORDS[1], min_words=int(0.6 * g.WORDS[0]))
     urls, text = {s["url"] for s in state["sources"]}, sources_text(state)
 
     def score(post: str) -> tuple:

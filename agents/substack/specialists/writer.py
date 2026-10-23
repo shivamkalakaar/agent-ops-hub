@@ -63,13 +63,14 @@ def run(state, ctx, cfg):
         user += f"\n\n{state['lessons']}"
     # Best of N (config/models.yaml voice.candidates): repeats get different essay examples; the code's checks pick one.
     outs = drafting.write_candidates(ctx, "voice", "writer", drafting.candidates("voice", cfg.model, n=2 if draft else None),
-                                     lambda i: system(state, cfg, seed=f"{state.get('slot')}-{i}"), user, clean, max_words=3 * 1200)
+                                     lambda i: system(state, cfg, seed=f"{state.get('slot')}-{i}"), user, clean,
+                                     max_words=3 * 1200, min_words=int(0.6 * 800))
     urls, text = {s["url"] for s in state["sources"]}, sources_text(state)
 
-    def score(md: str) -> tuple:
-        body = checks.parse(md)["body"]
-        return (len(checks.violations(md, urls, text)), -humanizer.scan(checks.LINK.sub(r"\1", body))["score"],
-                abs(checks.body_words(body) - TARGET_WORDS))
+    def score(md: str) -> tuple:  # length and structure problems first: a short, clean-sounding fragment must not win
+        body, flags = checks.parse(md)["body"], checks.violations(md, urls, text)
+        shape = sum("words;" in f or "sections" in f for f in flags)
+        return (shape, len(flags), -humanizer.scan(checks.LINK.sub(r"\1", body))["score"], abs(checks.body_words(body) - TARGET_WORDS))
     best, scored = drafting.pick(outs, score)
     md, n = best["text"], version(state) + 1
     p = checks.parse(md)
@@ -78,5 +79,5 @@ def run(state, ctx, cfg):
                f"{len(checks.sections(p['body']))} sections"
                + (f"; best of {len(scored)}, kept {short(best['model'])}" if len(scored) > 1 else ""))
     out = {"version": n, "md": md, "model": best["model"],
-           "candidates": [{"model": d["model"], "flags": d["score"][0], "humanizer": -d["score"][1]} for d in scored]}
+           "candidates": [{"model": d["model"], "flags": d["score"][1], "humanizer": -d["score"][2]} for d in scored]}
     return {"drafts": state.get("drafts", []) + [{"version": n, "md": md}]}, summary, out

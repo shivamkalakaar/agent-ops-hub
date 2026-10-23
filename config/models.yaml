@@ -25,6 +25,9 @@ tiers:
     # own checks (invented facts, template moves, humanizer) pick one before the editor sees it.
     candidates: [z-ai/glm-5.3, z-ai/glm-5.3, deepseek/deepseek-v4.1-flash]
     temperature: 0.8
+    reasoning: {effort: low}      # GLM-5.3 can't turn reasoning off (HTTP 400); low keeps it short
+    reasoning_by_model:           # with reasoning on, DeepSeek's long posts often used all 6,000 tokens and came back cut off
+      deepseek/deepseek-v4.1-flash: {enabled: false}
     max_tokens: 6000    # a 1,200-word post is ~1,800 tokens; rewrites ran ~2.7-3.8k
   judge:   # critic + evals. Different model family from the writer to limit self-preference.
     primary: deepseek/deepseek-v4.1-flash

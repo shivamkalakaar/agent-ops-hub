@@ -84,10 +84,10 @@ def rescue_model(tier: str) -> str | None:
 
 
 def write_candidates(ctx, tier: str, node: str, models: list, make_system: Callable[[int], str], user: str,
-                     clean: Callable[[str], str], max_words: int) -> list[dict]:
-    """One draft per model. A failed call, an empty reply or a runaway one (far past max_words: some open models
-    occasionally loop until max_tokens) is dropped; if nothing usable came back, one rescue call goes to the tier's
-    first fallback before giving up."""
+                     clean: Callable[[str], str], max_words: int, min_words: int = 1) -> list[dict]:
+    """One draft per model. A failed call, an empty reply, a runaway one (far past max_words: some open models
+    occasionally loop until max_tokens) or a cut-off one (under min_words) is dropped; if nothing usable came back,
+    one rescue call goes to the tier's first fallback before giving up."""
     from core import llm
     outs = []
     for i, model in enumerate([*models, "__rescue__"]):
@@ -99,7 +99,7 @@ def write_candidates(ctx, tier: str, node: str, models: list, make_system: Calla
             text = clean(llm.call(ctx, tier, node, make_system(i), user, model=model))
         except Exception:  # noqa: BLE001 - one candidate failing is fine while another comes back
             continue
-        if text and len(text.split()) <= max_words:
+        if text and min_words <= len(text.split()) <= max_words:
             outs.append({"model": model or "default", "text": text})
     if not outs:
         raise ValueError(f"no usable draft from {[m or 'default' for m in models]} or the rescue model")
