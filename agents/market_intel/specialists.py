@@ -160,17 +160,14 @@ def writer(state, ctx, cfg):
         user += f"\n\n# Current draft (v{draft['version']})\n{draft['post']}\n\n{_feedback(state)}\n\nRewrite the whole post."
     if state.get("instructions"):
         user += f"\n\n# Coordinator's note\n{state['instructions']}"
-    tier, outs = _tier(cfg, "voice"), []
-    models = drafting.candidates(tier, cfg.model, n=2 if draft else None)
-    for i, model in enumerate(models):
+    tier = _tier(cfg, "voice")
+
+    def make_system(i: int) -> str:
         examples = drafting.style_examples(n=4, short_only=False, max_words=g.EXAMPLE_MAX_WORDS, seed=f"{state.get('week')}-{i}")
-        system = drafting.fill(cfg.prompt, AUTHOR=AUTHOR, STYLE_GUIDE=g.style_guide(), HUMANIZER=humanizer.rules(),
-                               EXAMPLES="\n\n---\n\n".join(examples) or "(no examples yet; follow the style guide)")
-        try:
-            outs.append({"model": model or "default", "text": _clean(llm.call(ctx, tier, "writer", system, user, model=model))})
-        except Exception:  # noqa: BLE001 - one candidate failing is fine while another came back
-            if i == len(models) - 1 and not outs:
-                raise
+        return drafting.fill(cfg.prompt, AUTHOR=AUTHOR, STYLE_GUIDE=g.style_guide(), HUMANIZER=humanizer.rules(),
+                             EXAMPLES="\n\n---\n\n".join(examples) or "(no examples yet; follow the style guide)")
+    outs = drafting.write_candidates(ctx, tier, "writer", drafting.candidates(tier, cfg.model, n=2 if draft else None),
+                                     make_system, user, _clean, max_words=3 * g.WORDS[1])
     urls, text = {s["url"] for s in state["sources"]}, sources_text(state)
 
     def score(post: str) -> tuple:

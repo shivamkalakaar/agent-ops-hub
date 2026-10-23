@@ -70,8 +70,40 @@ def candidates(tier: str, override: str | None, n: int | None = None) -> list[st
     """Models for a best-of-N draft: the tier's `candidates` (or just its primary), unless the dashboard picked one
     model for this specialist, in which case only that one. None means the tier default."""
     from core.config import load_yaml
-    models = load_yaml("models.yaml")["tiers"][tier].get("candidates") or [None]
-    return ([override] if override else list(models))[: n or None]
+    models = [override] if override else list(load_yaml("models.yaml")["tiers"][tier].get("candidates") or [None])
+    if n and n < len(models):  # a shorter list keeps model variety: distinct models first, then repeats
+        distinct = list(dict.fromkeys(models))
+        models = (distinct + [m for i, m in enumerate(models) if models.index(m) != i])[:n]
+    return models
+
+
+def rescue_model(tier: str) -> str | None:
+    """The tier's first fallback, for one more try when every candidate failed or ran away."""
+    from core.config import load_yaml
+    return (load_yaml("models.yaml")["tiers"][tier].get("fallbacks") or [None])[0]
+
+
+def write_candidates(ctx, tier: str, node: str, models: list, make_system: Callable[[int], str], user: str,
+                     clean: Callable[[str], str], max_words: int) -> list[dict]:
+    """One draft per model. A failed call, an empty reply or a runaway one (far past max_words: some open models
+    occasionally loop until max_tokens) is dropped; if nothing usable came back, one rescue call goes to the tier's
+    first fallback before giving up."""
+    from core import llm
+    outs = []
+    for i, model in enumerate([*models, "__rescue__"]):
+        if model == "__rescue__":
+            if outs:
+                break
+            model = rescue_model(tier)
+        try:
+            text = clean(llm.call(ctx, tier, node, make_system(i), user, model=model))
+        except Exception:  # noqa: BLE001 - one candidate failing is fine while another comes back
+            continue
+        if text and len(text.split()) <= max_words:
+            outs.append({"model": model or "default", "text": text})
+    if not outs:
+        raise ValueError(f"no usable draft from {[m or 'default' for m in models]} or the rescue model")
+    return outs
 
 
 def pick(drafts: list[dict], score: Callable[[str], tuple]) -> tuple[dict, list[dict]]:
