@@ -42,6 +42,6 @@ Second, put a router in front of your models if you don't have one. Send the eas
 
 Third, invest in evaluation before you invest in a bigger model. Cheap calls only help if you can tell a good answer from a bad one automatically. A small golden set and a grader you trust will do more for quality than switching to the newest release.
 
-My bet is that within a year most agent workloads run on open models by default, and the frontier labs compete on the hardest slice of the work. For anyone building products that's good news, because the thing you control, the system around the model, ends up mattering more.
+I think within a year most agent workloads run on open models by default, and the frontier labs compete on the hardest slice of the work. For anyone building products that's good news, because the thing you control, the system around the model, ends up mattering more.
 
 I'll keep tracking the prices. They move faster than the benchmarks do, and right now they tell the better story.

@@ -1,10 +1,15 @@
 """Final check: the gate before FINISH. Every deterministic guardrail, the fact check and editor results on this
 exact version, image alt text, then one publish-readiness read for what rules can't catch."""
+import re
+
 from core import drafting, llm
 from agents.substack import checks
 from agents.substack.roster import AUTHOR
 from agents.substack.specialists import current, sources_text
 from agents.substack.specialists.editor import weak
+
+# The free checker sometimes marks a claim unsupported and then says the source matches it; that's not a blocker.
+SELF_CONFIRMED = re.compile(r"\b(?:which|that|this|it) (?:matches|is confirmed)\b|\bconfirms (?:this|the claim)\b", re.I)
 
 
 def warnings(state) -> list[str]:
@@ -21,7 +26,7 @@ def automated(state) -> list[str]:
     f = state.get("fact_report") or {}
     if f.get("version") == v:
         out += [f'unsupported claim: "{c.get("claim", "")}" → {c.get("fix", "")}' for c in f.get("claims", [])
-                if c.get("verdict") == "unsupported"]
+                if c.get("verdict") == "unsupported" and not SELF_CONFIRMED.search(c.get("fix", ""))]
     e = state.get("edit_report") or {}
     if e.get("version") == v and weak(e):
         low = ", ".join(f"{k} {s}/5" for k, s in e["scores"].items() if s < 3) or f"overall {e['overall']}/5"

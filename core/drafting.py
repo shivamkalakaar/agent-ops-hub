@@ -161,6 +161,32 @@ def keep_best(best: dict | None, current: dict) -> dict:
     return current if not best or rank(current) > rank(best) else best
 
 
+# Moves the agents kept reusing until every post had the same shape. Any of them sends a draft back for a rewrite.
+TEMPLATE_MOVES = [
+    (r"\bnext time (?:a|your) vendor\b", "the \"next time a vendor pitches you\" closer"),
+    (r"\bbefore your next (?:renewal|contract|demo|pitch|meeting|vendor)\b", "the \"before your next renewal\" closer"),
+    (r"\bI'd stop \w+.{0,80}?\band start\b", "the \"I'd stop X and start Y\" line"),
+    (r"\bbefore you sign (?:anything|the|a|that)\b", "the \"before you sign anything\" closer"),
+    (r"\bthat's the (?:slide|pitch|number|headline) (?:a|the|every) vendor\b", "the \"that's the slide a vendor would put up\" line"),
+    (r"\bjust became an?\b", "the \"X just became Y\" hook"),
+    (r"\bread it that way\b", "\"read it that way\""),
+    (r"(?:^|\n|\. )(?:my read|my bet|my guess|here's my take|the real story)\s*(?::|is that)", "a labelled pivot (\"My read:\", \"The real story is…\")"),
+    (r"(?:^|\n)\s*(?:why [\w' ]{1,30}|the (?:catch|kicker|twist|takeaway|upshot|point|bottom line)|here's (?:why|what|the thing))\s*:",
+     "a labelled lead-in (\"Why it matters:\", \"The catch:\")"),
+    (r"\bthat's the (?:part|number|thing|detail|bit|line|question|real \w+) (?:that matters|to (?:sit with|watch|remember|notice))",
+     "a punchline frame (\"That's the number to sit with\")"),
+    (r"\b(?:is|are) worth sitting with\b", "\"worth sitting with\""),
+    (r"\b(?:that's|that is|which is|is) (?:precisely |exactly )?the (?:whole )?point\b", "the \"that's precisely the point\" gloss"),
+    (r"\b(?:most|many|every|all|the) [\w ]{0,30}\bI (?:see|talk to|work with|know|meet|advise)\b",
+     "claims first-hand experience the author never gave (\"most teams I talk to\"); cut it or attribute it"),
+]
+
+
+def template_moves(text: str) -> list[str]:
+    return [f"template move: {name}; say it a different way or drop it" for pattern, name in TEMPLATE_MOVES
+            if re.search(pattern, text, flags=re.I)]
+
+
 def common_violations(text: str, sources_text: str | None = None) -> list[str]:
     """Checks for any text published under the author's name: the humanizer skill's accent scanner, our structural
     tells, its fact guard against the sources (when given) and the banned hype phrases."""

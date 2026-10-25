@@ -10,6 +10,8 @@ MAX_TITLE = 70
 MAX_SUBTITLE = 160
 SECTIONS = (3, 5)
 MAX_LIST_ITEMS = 12
+MAX_HEDGES = 3  # the Oct 24 draft said "reportedly"/"per X" 9 times; attribute a source once, then write
+HEDGE = re.compile(r"\breported(?:ly)?\b|\bper (?:press|media) reports\b|\baccording to\b|\bper [A-Z][\w.]+(?: [A-Z][\w.]+)?(?= |,|\.)")
 CTA = re.compile(r"\b(?:subscribe|share this post|leave a comment|hit the like|smash that)\b", re.I)
 LINK = re.compile(r"(?<!!)\[([^\]]*)\]\((\S+?)\)")  # links, not images
 
@@ -72,5 +74,9 @@ def violations(md: str, source_urls: set[str], sources_text: str | None = None) 
     linked = {u.rstrip(").,") for _, u in LINK.findall(body)}
     bare = {u.rstrip(").,") for u in re.findall(r"(?<!\()https?://[^\s)]+", LINK.sub("", body))}
     v += [f"link not from the sources: {u}" for u in sorted(linked | bare) if u not in source_urls]
+    prose = LINK.sub(r"\1", re.sub(r"!\[[^\]]*\]\([^)]*\)", "", body))
+    if (hedges := len(HEDGE.findall(prose))) > MAX_HEDGES:
+        v.append(f'{hedges} "reportedly"/"according to"/"per X" hedges; attribute each source once, then write with confidence')
+    v += drafting.template_moves(f"{p['title']}\n{p['subtitle']}\n{prose}")
     v += drafting.common_violations(LINK.sub(r"\1", f"{p['title']}\n{p['subtitle']}\n{body}"), sources_text)
     return v

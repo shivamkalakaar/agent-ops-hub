@@ -391,3 +391,13 @@ def test_daily_cap_override_applies_only_to_its_date():
     assert budget.daily_cap(cfg, datetime(2026, 10, 23, 23, 59, tzinfo=timezone.utc)) == 7.0
     assert budget.daily_cap(cfg, datetime(2026, 10, 24, tzinfo=timezone.utc)) == 3.0
     assert budget.daily_cap({"daily_cap_usd": 3.0}, datetime(2026, 10, 23, tzinfo=timezone.utc)) == 3.0
+
+
+def test_hedging_and_template_closers_are_violations():
+    from agents.substack import checks
+    urls = {"https://example.com/a", "https://example.com/b"}
+    assert checks.violations(GOOD_MD, urls) == []
+    hedged = GOOD_MD.replace("I think within a year", "It reportedly rose, per CNBC. It reportedly fell, according to Bernstein. Reportedly. I think within a year")
+    assert any("hedges" in v for v in checks.violations(hedged, urls))
+    closer = GOOD_MD.replace("I think within a year", "Next time a vendor pitches you, ask. I think within a year")
+    assert any("template move" in v for v in checks.violations(closer, urls))

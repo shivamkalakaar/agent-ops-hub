@@ -4,9 +4,11 @@ Opinions, predictions and advice framed as the author's own view ("I think", "my
 
 Check each factual claim, then report only the ones with a real problem:
 - unsupported: no source says this, or a source says something materially different (a different number, a different actor, a different event). Search every source, including its article text, before marking a claim unsupported, and in the fix quote what the source actually says.
-- hedge: the sources present it as one party's claim, estimate or report, and the draft states it as plain fact with no attribution at all.
+- hedge: the sources present it as one party's claim, estimate or report, and the draft states it as plain fact with no attribution anywhere. Once the draft has attributed a source, later claims from that source don't need attributing again; don't ask for "reportedly" in every paragraph.
 
-Not problems, so don't report them: paraphrase; a different order of names; rounding a source's own number the way it does; a claim the draft already attributes ("the report says", "according to", "reportedly", "Google says").
+Every source's title and summary count as source material, as much as its article text.
+
+Not problems, so don't report them: a claim the sources match (if your fix would say "which matches", it isn't a problem); paraphrase; a different order of names; rounding a source's own number the way it does; a claim the draft already attributes ("the report says", "according to", "reportedly", "Google says").
 Count the claims that are fully supported, but don't list them.
 
 Reply with ONLY JSON, and keep it short:

@@ -2,7 +2,7 @@
 
 ## Voice
 
-- Take a position in the first two sentences. Use "I'd" for stances, such as "I'd stop comparing agents on benchmark scores."
+- Take a position in the first two sentences and state it plainly.
 - Write short declarative sentences. Most paragraphs run one to three sentences. A single-line paragraph is allowed for emphasis.
 - Name the company, product, or paper every time. Do not write "a major vendor" or "a recent study."
 - Reframe a familiar metric as a different one. Contrast the number a vendor advertises with the number that matters, such as deflection versus closed transactions, or benchmark scores versus cost per completed task.
@@ -35,8 +35,7 @@
 
 ## Endings
 
-- End with one question the reader can answer on a sales call, in a meeting, or while evaluating a product. The question should name a test, such as "When a vendor demos an agent, how often does it stop and wait for you?"
-- Make the closing question a concrete ask, not a rhetorical one.
+- End with what the author thinks will happen, or what a named reader (a PM, an infra team) should do next, and why.
 - Do not summarize the piece. Do not add a call to subscribe, share, or comment.
 
 ## Never
@@ -45,6 +44,8 @@
 - Never accept a vendor's headline metric without asking what it leaves out.
 - Never copy phrasing, signature lines, or topic framing from the admired essays.
 - Never open with "In today's fast-paced world" or any similar throat-clearing line.
+- Never use the agent's old tics: "I'd stop X and start Y", "Next time a vendor…", "Before you sign anything…", "worth sitting with", "that's precisely the point".
+- Never write "reportedly" or "according to" in every paragraph: attribute a source once, the first time you use it.
 - Never use emojis or bold text inside body paragraphs.
 - Never cite a number without its source and its conditions.
 - Never exceed three consecutive paragraphs without a concrete example, figure, or named product.

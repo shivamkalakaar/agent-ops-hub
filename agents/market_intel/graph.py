@@ -30,21 +30,6 @@ MAX_CHARS = 1300
 MAX_LIST_ITEMS = 8
 WORDS = (60, 200)  # guardrail band; the prompt targets 80–180
 EXAMPLE_MAX_WORDS = 550  # voice examples: short and mid-length posts, not the long essays
-# Moves the agent kept reusing until every post had the same shape. Any of them sends a draft back for a rewrite.
-TEMPLATE_MOVES = [
-    (r"\bnext time (?:a|your) vendor\b", "the \"next time a vendor pitches you\" closer"),
-    (r"\bbefore your next (?:renewal|contract|demo|pitch|meeting|vendor)\b", "the \"before your next renewal\" closer"),
-    (r"\bI'd stop \w+.{0,80}?\band start\b", "the \"I'd stop X and start Y\" line"),
-    (r"\bjust became an?\b", "the \"X just became Y\" hook"),
-    (r"\bread it that way\b", "\"read it that way\""),
-    (r"(?:^|\n|\. )(?:my read|my bet|my guess|here's my take|the real story)\s*(?::|is that)", "a labelled pivot (\"My read:\", \"The real story is…\")"),
-    (r"(?:^|\n)\s*(?:why [\w' ]{1,30}|the (?:catch|kicker|twist|takeaway|upshot|point|bottom line)|here's (?:why|what|the thing))\s*:",
-     "a labelled lead-in (\"Why it matters:\", \"The catch:\")"),
-    (r"\bthat's the (?:part|number|thing|detail|bit|line|question|real \w+) (?:that matters|to (?:sit with|watch|remember|notice))",
-     "a punchline frame (\"That's the number to sit with\")"),
-    (r"\b(?:most|many|every|all|the) [\w ]{0,30}\bI (?:see|talk to|work with|know|meet|advise)\b",
-     "claims first-hand experience the author never gave (\"most teams I talk to\"); cut it or attribute it"),
-]
 WINDOW_DAYS = (1, 4)
 USED_DAYS = 21  # don't reuse a story that a draft from the last 3 weeks was built on
 
@@ -216,9 +201,7 @@ def guardrail_violations(post: str, source_urls: set[str], sources_text: str | N
     Includes the humanizer skill's accent scanner, when sources are given its fact guard, and when recent posts
     are given the novelty check (same ground, same hook or same ending as one of them)."""
     v, words = drafting.common_violations(post, sources_text), len(post.split())
-    for pattern, name in TEMPLATE_MOVES:
-        if re.search(pattern, post, flags=re.I):
-            v.append(f"template move: {name}; say it a different way or drop it")
+    v += drafting.template_moves(post)
     v += novelty.check(post, recent)
     if sources_text:
         v += [f"copies a source's words without quoting them (\"{c[:80]}…\"); say it your own way or quote it"
