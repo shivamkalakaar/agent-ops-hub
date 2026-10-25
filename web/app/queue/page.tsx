@@ -156,7 +156,8 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
   /** Record a post that went out through LinkedIn, so the queue shows it live and the agent learns from the final text. */
   const markLive = async () => {
     setBusy(true);
-    const changed = finalText.trim() && finalText.trim() !== withSeries(text, nextSeries).trim();
+    // a note like "no changes" isn't the post: only text at least half the draft's length counts as the final version
+    const changed = finalText.trim().length >= text.trim().length / 2 && finalText.trim() !== withSeries(text, nextSeries).trim();
     const label = new RegExp(`^${SERIES} #\\d+\\s*$`, "m");
     await supabase.from("drafts").update({
       linkedin_url: liveUrl.trim(), published_at: new Date().toISOString(), series_no: nextSeries,
@@ -246,7 +247,7 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
                   <input value={liveUrl} onChange={(e) => setLiveUrl(e.target.value)} placeholder="https://www.linkedin.com/feed/update/urn:li:share:…"
                     aria-label="LinkedIn post link" className="w-full rounded-lg border border-line bg-bg px-3 py-1.5 outline-none focus:border-ink" />
                   <textarea value={finalText} onChange={(e) => setFinalText(e.target.value)} rows={4} aria-label="Final text"
-                    placeholder="Changed it in LinkedIn? Paste the final text here so the agent learns from your edits (optional)."
+                    placeholder="Changed it in LinkedIn? Paste the whole final post here so the agent learns from your edits. Leave empty if you didn't change it."
                     className="w-full rounded-lg border border-line bg-bg p-2 outline-none focus:border-ink" />
                   <button disabled={busy || !POST_URL.test(liveUrl.trim())} onClick={markLive}
                     className="rounded-lg bg-ink px-4 py-1.5 font-medium text-bg disabled:opacity-50">Mark as live</button>
