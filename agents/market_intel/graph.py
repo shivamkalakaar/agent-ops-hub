@@ -45,7 +45,7 @@ TEMPLATE_MOVES = [
     (r"\b(?:most|many|every|all|the) [\w ]{0,30}\bI (?:see|talk to|work with|know|meet|advise)\b",
      "claims first-hand experience the author never gave (\"most teams I talk to\"); cut it or attribute it"),
 ]
-WINDOW_DAYS = (1, 4)
+DAY = timedelta(hours=24)  # a post is about today's news: only stories from the last 24 hours
 USED_DAYS = 21  # don't reuse a story that a draft from the last 3 weeks was built on
 
 
@@ -75,7 +75,7 @@ def fetch(state: CollectState) -> CollectState:
 def dedupe(state: CollectState, config: RunnableConfig) -> CollectState:
     db = ctx_of(config).db
     known = db.known_urls([i["url"] for i in state["items"]])
-    since = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    since = (datetime.now(timezone.utc) - DAY).isoformat()  # older stories won't be drafted, so don't score them
     return {"new": [i for i in state["items"] if i["url"] not in known], "pending": db.unscored_items(since)}
 
 
@@ -170,13 +170,6 @@ class DraftState(TypedDict, total=False):
     draft_id: str
 
 
-def window_start(last_draft: str | None, now: datetime) -> datetime:
-    """Stories since the last draft (Monday's run covers the weekend), at least 1 and at most 4 days back."""
-    t = datetime.fromisoformat(last_draft) if last_draft else now - timedelta(days=WINDOW_DAYS[1])
-    t = t if t.tzinfo else t.replace(tzinfo=timezone.utc)
-    return max(now - timedelta(days=WINDOW_DAYS[1]), min(t, now - timedelta(days=WINDOW_DAYS[0])))
-
-
 def load_items(state: DraftState, config: RunnableConfig) -> DraftState:
     ctx = ctx_of(config)
     db = ctx.db
@@ -188,12 +181,9 @@ def load_items(state: DraftState, config: RunnableConfig) -> DraftState:
         items = state.get("items")  # evals and redrafts inject items directly
         if not items:
             used = db.used_draft_urls((now - timedelta(days=USED_DAYS)).isoformat())
-            for since in (window_start(db.last_draft_at(), now), now - timedelta(days=7)):  # a quiet day falls back to the week
-                items = [i for i in db.top_items(since.isoformat()) if i["url"] not in used]
-                if items:
-                    break
+            items = [i for i in db.top_items((now - DAY).isoformat()) if i["url"] not in used]
         if not items:
-            raise RuntimeError("no unused scored items in the last 7 days; run collect first")
+            raise RuntimeError("no unused scored stories from the last 24 hours; run collect first")
         week = state.get("week") or now.date().isoformat()  # one draft per weekday: the date is the key (and the one-pager URL)
         base, n = week, 2
         while not state.get("week") and db.week_taken(week):  # never take over another post's one-pager URL
