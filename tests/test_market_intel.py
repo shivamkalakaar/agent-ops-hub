@@ -54,8 +54,8 @@ def offline(monkeypatch, tmp_path):
                            "critique": "Sharpen the hook."})
 
     llm.FAKE_RESPONSES.update({
-        "score": lambda m: json.dumps([{"id": 0, "layer": "models", "importance": 5, "why": "price drop"},
-                                       {"id": 1, "layer": "compute", "importance": 4, "why": "capex"}]),
+        "score": lambda m: json.dumps([{"id": 0, "layer": "models", "importance": 5, "appeal": 4, "why": "price drop"},
+                                       {"id": 1, "layer": "compute", "importance": 4, "appeal": 3, "why": "capex"}]),
         "scout": lambda m: '```json\n{"item_ids": [0], "angle": "open models win on cost", "hook": "10x cheaper", "why_now": "today"}\n```',
         "researcher": lambda m: json.dumps({"facts": [{"claim": "scores 88 on X", "evidence": "The model scores 88 on X", "source_id": 0},
                                                       {"claim": "made up", "evidence": "a quote that is nowhere", "source_id": 0}],
@@ -375,6 +375,33 @@ def test_scout_skips_an_angle_too_close_to_a_recent_post_and_researcher_drops_fa
         assert update["angle"]["angle"] == "open models win on cost" and out["why"].startswith("switched")
         update, summary, out = specialists.researcher({**state, **update}, ctx, cfg["researcher"])
     assert [f["claim"] for f in update["facts"]] == ["scores 88 on X"] and "dropped 1" in summary
+
+
+def test_brief_stories_keep_their_importance_and_rank_by_appeal():
+    from core.db import connect
+    with connect() as db:
+        rid = db.start_run("market_intel", "collect", "t")
+        db.insert_items([dict(ITEMS[1], url="https://example.com/rss", importance=5, appeal=2)], rid)
+        for url, imp, tldr in [("https://example.com/tldr", 5, True), ("https://example.com/plain", 4, False)]:
+            db.execute("insert into items (url, title, source, layer, importance, tldr, published_at, collected_at, origin)"
+                       " values (%s,'t','Brief','models',%s,%s,%s,%s,'brief')", (url, imp, tldr, NOW, NOW))
+        pending = {i["url"] for i in db.unscored_items("2000-01-01")}
+        assert pending == {"https://example.com/tldr", "https://example.com/plain"}  # appeal still missing
+        db.update_scores([{"url": "https://example.com/tldr", "importance": 2, "appeal": 5, "layer": "business"},
+                          {"url": "https://example.com/plain", "importance": 1, "appeal": 5}])
+        top = db.top_items("2000-01-01")
+    assert [(i["url"].rsplit("/", 1)[1], i["importance"], i["appeal"]) for i in top] == [
+        ("tldr", 5, 5), ("rss", 5, 2), ("plain", 4, 5)]  # the brief's importance wins over the cheap scorer
+    assert top[0]["layer"] == "models" and top[0]["tldr"] in (True, 1)
+
+
+def test_scout_adds_the_briefs_corroborating_links():
+    from agents.market_intel.specialists import _with_corroboration
+    s = {"url": "https://paywall.example/x", "title": "Deal", "source": "The Information", "origin": "brief",
+         "also": [{"url": "https://free.example/x", "source": "RuntimeWire"}, {"url": "https://other.example/x", "source": "TC"}]}
+    out = _with_corroboration([s, dict(ITEMS[0])])
+    assert [o["url"] for o in out] == ["https://paywall.example/x", "https://example.com/a", "https://free.example/x"]
+    assert out[2]["source"] == "RuntimeWire" and out[2]["corroborates"] == s["url"]
 
 
 def test_novelty_flags_same_ground_hook_and_ending():

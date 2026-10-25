@@ -9,6 +9,7 @@ from core import drafting, humanizer, llm, novelty
 from agents.market_intel.roster import AUTHOR
 
 SCOUT_REPEAT = 0.4  # an angle this close to a recent one loses to a fresher candidate
+MAX_SOURCES = 5  # chosen stories plus the brief's corroborating links, for the researcher
 
 
 def current(state) -> dict | None:
@@ -38,8 +39,9 @@ def _lessons(state) -> str:
 
 
 def listing(items: list[dict]) -> str:
-    return "\n".join(json.dumps({"id": n, "source": i["source"], "layer": i.get("layer"), "importance": i.get("importance"),
-                                 "title": i["title"], "summary": (i.get("summary") or "")[:400], "why": i.get("why")},
+    return "\n".join(json.dumps({"id": n, "source": i["source"], "from_brief": i.get("origin") == "brief",
+                                 "tldr": bool(i.get("tldr")), "layer": i.get("layer"), "importance": i.get("importance"),
+                                 "appeal": i.get("appeal"), "title": i["title"], "summary": (i.get("summary") or "")[:400], "why": i.get("why")},
                                 ensure_ascii=False) for n, i in enumerate(items))
 
 
@@ -77,9 +79,21 @@ def scout(state, ctx, cfg):
     if cands[pick]["repeat"] >= SCOUT_REPEAT and (fresher := min(cands, key=lambda c: c["repeat"]))["repeat"] < SCOUT_REPEAT:
         pick, note = cands.index(fresher), f"switched: the first pick was too close to a recent post ({cands[pick]['repeat']})"
     angle = {k: cands[pick].get(k) for k in ("angle", "hook", "why_now")}
-    sources = [items[i] for i in cands[pick]["item_ids"]]
+    sources = _with_corroboration([items[i] for i in cands[pick]["item_ids"]])
     summary = f"Angle: \"{angle['angle']}\" from {len(sources)} stor{'y' if len(sources) == 1 else 'ies'} ({len(cands)} candidates)"
     return {"angle": angle, "sources": sources}, summary, {"candidates": cands, "pick": pick, "why": note}
+
+
+def _with_corroboration(sources: list[dict], cap: int = MAX_SOURCES) -> list[dict]:
+    """Add the brief's corroborating links (first one per story) so the researcher has a second source to quote,
+    which matters most when the main link is paywalled."""
+    extra = []
+    for s in sources:
+        also = s.get("also") if isinstance(s.get("also"), list) else []
+        extra += [{"url": a["url"], "title": s["title"], "source": a.get("source") or s["source"], "summary": "",
+                   "origin": s.get("origin", "rss"), "corroborates": s["url"]}
+                  for a in also[:1] if isinstance(a, dict) and a.get("url")]
+    return (sources + extra)[:max(cap, len(sources))]
 
 
 # --------------------------------------------------------------------------- researcher

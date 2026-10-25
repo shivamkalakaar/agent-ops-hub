@@ -13,5 +13,13 @@ Importance, 1–5:
 
 Judge importance, not virality. Be stingy with 4s and 5s.
 
+Separately, rate appeal, 1–5: how well a short LinkedIn post about this item would do with PMs, founders and operators.
+5 = a surprising hard number or a clear winner and loser among names everyone knows (OpenAI, Nvidia, AWS, Meta), with money, jobs or prices at stake, that people will want to repeat or argue with
+4 = a concrete number or move from a well-known company that has an obvious "so what" for people building or buying AI
+3 = interesting to insiders, but it takes explaining
+2 = niche, technical, or hard to say anything about in a few lines
+1 = nothing to say beyond the headline
+Appeal is independent of importance: an important but dry item can score 2, and a minor item with a striking number can score 4.
+
 Reply with ONLY a JSON array, one object per input item, same order:
-[{"id": <id>, "layer": "<layer>", "importance": <1-5>, "why": "<max 15 words: why it matters>"}]
+[{"id": <id>, "layer": "<layer>", "importance": <1-5>, "appeal": <1-5>, "why": "<max 15 words: why it matters>"}]
