@@ -73,11 +73,14 @@ def scout(state, ctx, cfg):
         c["item_ids"] = [i for i in c.get("item_ids") or [] if isinstance(i, int) and 0 <= i < len(items)][:3]
         text = novelty.words(f"{c.get('angle', '')} {c.get('hook', '')} " + " ".join(items[i]["title"] for i in c["item_ids"]))
         c["repeat"] = round(max([novelty.jaccard(text, novelty.words(a)) for a in state.get("recent_angles") or []] or [0]), 2)
+        c["thesis"] = drafting.thesis_contrast(f"{c.get('angle', '')} {c.get('hook', '')}")
     cands = [c for c in cands if c["item_ids"]] or [{"item_ids": [0], "angle": items[0]["title"], "hook": "", "why_now": "", "repeat": 0}]
     pick = r.get("pick") if isinstance(r.get("pick"), int) and 0 <= r.get("pick") < len(cands) else 0
     note = str(r.get("why", ""))[:200]
     if cands[pick]["repeat"] >= SCOUT_REPEAT and (fresher := min(cands, key=lambda c: c["repeat"]))["repeat"] < SCOUT_REPEAT:
         pick, note = cands.index(fresher), f"switched: the first pick was too close to a recent post ({cands[pick]['repeat']})"
+    if cands[pick].get("thesis") and (plain := [c for c in cands if not c.get("thesis") and c["repeat"] < SCOUT_REPEAT]):
+        pick, note = cands.index(plain[0]), "switched: the first pick was an \"X, not Y\" thesis line"
     angle = {k: cands[pick].get(k) for k in ("angle", "hook", "why_now")}
     sources = _with_corroboration([items[i] for i in cands[pick]["item_ids"]])
     summary = f"Angle: \"{angle['angle']}\" from {len(sources)} stor{'y' if len(sources) == 1 else 'ies'} ({len(cands)} candidates)"
@@ -175,7 +178,9 @@ def writer(state, ctx, cfg):
     user += _take(state) + _lessons(state)
     draft = current(state)
     if draft:
-        user += f"\n\n# Current draft (v{draft['version']})\n{draft['post']}\n\n{_feedback(state)}\n\nRewrite the whole post."
+        user += (f"\n\n# Current draft (v{draft['version']})\n{draft['post']}\n\n{_feedback(state)}\n\n"
+                 "Fix what the notes mark must-fix, and should-fix where it's easy. Keep every other sentence as it is: "
+                 "don't restructure the post or add a new opening or closing line the notes didn't ask for.")
     if state.get("instructions"):
         user += f"\n\n# Coordinator's note\n{state['instructions']}"
     tier = _tier(cfg, "voice")

@@ -36,12 +36,16 @@ Write the way {{AUTHOR}} would explain it to a sharp friend over coffee: plain w
 # Examples of the target voice
 {{EXAMPLES}}
 
+# Where the opinion comes from
+Stories from the AI Stack Brief carry a "Why it matters (the AI Stack Brief's read)" line. That's {{AUTHOR}}'s own daily brief, and its read is usually the sharpest thing in the input: build the post's point from it. Take its idea, not its sentence: say it the way {{AUTHOR}} would say it to a friend, and pin it to one concrete fact from the story.
+The angle you're given is a direction, not a line to put in the post.
+
 # Facts
-The source items' summaries and "why it matters" notes are research notes, not your words: never reuse their sentences. Write the point your own way, or quote the source in quotation marks.
+The source items' summaries and "why it matters" notes are research notes, not your words: never reuse their sentences (9 or more words in a row sends the draft back). Write the point your own way, or quote the source in quotation marks.
 Comparisons need a source too: "cheaper", "faster", "bigger", "the first" only when a source says so.
 The fact sheet is what you're allowed to use, not a checklist. Pick the one or two facts that carry the idea and leave the rest out; a post with five statistics reads like a report. A number, name or date that isn't in the fact sheet or the source items can't go in the post. Mark reports as "reportedly".
 
 # When you're rewriting
-You'll get the current draft and notes from the editor, the fact-checker and the final check. Keep what works; fix everything marked must-fix in one pass. The post is published under {{AUTHOR}}'s name: never mention the sources, the editor, the notes, or that anything was corrected. If a claim isn't supported, drop it and build the post on what is.
+You'll get the current draft and notes from the editor, the fact-checker and the final check. Fix what's marked must-fix in one pass and leave the rest of the post alone: a rewrite that changes more than it has to usually comes out sounding more like AI, not less. The post is published under {{AUTHOR}}'s name: never mention the sources, the editor, the notes, or that anything was corrected. If a claim isn't supported, drop it and build the post on what is.
 
 Reply with ONLY the post text. No preamble, no quotes around it.

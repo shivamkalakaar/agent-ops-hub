@@ -406,6 +406,26 @@ def test_scout_adds_the_briefs_corroborating_links():
     assert out[2]["source"] == "RuntimeWire" and out[2]["corroborates"] == s["url"]
 
 
+def test_writer_sees_the_briefs_read_and_scout_drops_thesis_angles():
+    from core import drafting, settings
+    from agents.market_intel import specialists
+    from agents.market_intel.roster import PROMPTS, SPECIALISTS
+    brief = dict(ITEMS[0], origin="brief", why="Cheap open models move agent work off frontier APIs and onto whoever serves them.")
+    assert "Why it matters (the AI Stack Brief's read): Cheap open models" in drafting.sources_block([brief])
+    assert "Why it matters" not in drafting.sources_block([dict(ITEMS[1], why="rss note")])
+    assert drafting.copied_spans("Funny thing: cheap open models move agent work off frontier APIs and onto whoever serves them.",
+                                 drafting.sources_block([brief]))  # the brief's line still can't be pasted in
+    cfg = settings.from_files(SPECIALISTS, PROMPTS)
+    llm.FAKE_RESPONSES["scout"] = lambda m: json.dumps({"candidates": [
+        {"item_ids": [0], "angle": "The moat is no longer the model, it's the price", "hook": "h"},
+        {"item_ids": [1], "angle": "A $4B GPU deal over five years", "hook": "h"}], "pick": 0})
+    from core.db import connect
+    with connect() as db:
+        ctx = llm.RunContext(db=db, run_id=db.start_run("market_intel", "draft", "t"))
+        update, _, out = specialists.scout({"items": [brief, dict(ITEMS[1])], "recent_angles": []}, ctx, cfg["scout"])
+    assert update["angle"]["angle"].startswith("A $4B") and "thesis" in out["why"]
+
+
 def test_novelty_flags_same_ground_hook_and_ending():
     from core import novelty
     recent = ["Nscale's backlog is 85% two customers.\n\nLenders can see it and the debt costs more.\n\nAsk who else they serve."]
