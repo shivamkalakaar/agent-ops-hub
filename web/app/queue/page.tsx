@@ -4,15 +4,12 @@ import { supabase, configured } from "@/lib/supabase";
 import type { Draft } from "@/lib/types";
 import { when } from "@/lib/format";
 import { Card, NotConfigured, Status } from "@/components/ui";
-import { SERIES } from "@/lib/linkedin";
+import { SERIES, withSeries } from "@/lib/linkedin";
 import { SignIn, useSession } from "@/components/auth";
 import { SubstackQueue } from "@/components/SubstackQueue";
 import { RejectButton, TakeBox, type Feedback } from "@/components/Feedback";
-import { nextSlot } from "@/lib/schedule";
-
-/** "Tue, Oct 27, 8:30 AM PT" */
-const slotLabel = (d: Date) => d.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric",
-  minute: "2-digit", timeZone: "America/Los_Angeles" }) + " PT";
+const COMPOSER = "https://www.linkedin.com/feed/?shareActive=true";
+const POST_URL = /^https:\/\/(www\.)?linkedin\.com\/(feed\/update|posts)\/\S+$/;
 
 const MAX_CHARS = 1300;
 
@@ -144,16 +141,34 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
     setPubMsg(res.ok ? "Rewriting around your take. This draft updates in about 3 minutes; refresh to see it." : `Failed: ${(await res.json()).error}`);
   };
 
-  const schedule = async (at: Date | null) => {
+  const [handedOff, setHandedOff] = useState(false);
+  const [liveUrl, setLiveUrl] = useState("");
+  const [finalText, setFinalText] = useState("");
+
+  /** LinkedIn's API can't create scheduled posts, so hand the finished text to LinkedIn's own composer. */
+  const scheduleInLinkedIn = () => {
+    navigator.clipboard.writeText(withSeries(text, nextSeries)).catch(() => {});  // start the copy inside the click
+    window.open(COMPOSER, "_blank", "noopener");
+    setHandedOff(true);
+    setPubMsg(`Copied, with ${SERIES} #${nextSeries} on the last line. In LinkedIn: paste (⌘V), edit if you like, then use the clock icon to schedule it.`);
+  };
+
+  /** Record a post that went out through LinkedIn, so the queue shows it live and the agent learns from the final text. */
+  const markLive = async () => {
     setBusy(true);
-    await supabase.from("drafts").update({ publish_at: at ? at.toISOString() : null }).eq("id", draft.id);
+    const changed = finalText.trim() && finalText.trim() !== withSeries(text, nextSeries).trim();
+    const label = new RegExp(`^${SERIES} #\\d+\\s*$`, "m");
+    await supabase.from("drafts").update({
+      linkedin_url: liveUrl.trim(), published_at: new Date().toISOString(), series_no: nextSeries,
+      ...(changed ? { edited_post_md: finalText.replace(label, "").replace(/\n{3,}/g, "\n\n").trim(), learned_at: null } : {}),
+    }).eq("id", draft.id);
     setBusy(false);
-    setPubMsg(at ? `Scheduled. It goes out ${slotLabel(at)} with the one-pager link as the first comment.` : "Schedule cancelled.");
+    setPubMsg(changed ? "Saved as live, with your final text: the agent learns from your changes on its next run." : "Saved as live.");
     onChange();
   };
 
   const publish = async () => {
-    if (!window.confirm("Publish this post to your LinkedIn profile now? It will be public. Weekday mornings usually reach more people; editing it after it's live may cost reach.")) return;
+    if (!window.confirm("Publish this post to your LinkedIn profile now? It will be public. Weekday mornings usually reach more people, and editing it after it's live may cost reach.")) return;
     setBusy(true);
     setPubMsg("Publishing…");
     const res = await fetch("/api/linkedin/publish", {
@@ -212,27 +227,33 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
                   </a>
                 ) : (
                   <>
-                    {draft.publish_at ? (
-                      <span className="inline-flex items-center gap-2 rounded-lg border border-ink px-4 py-2 text-sm">
-                        ○ Scheduled for {slotLabel(new Date(draft.publish_at))}
-                        <button onClick={() => schedule(null)} className="text-ink-2 underline underline-offset-4">cancel</button>
-                      </span>
-                    ) : (
-                      <button disabled={busy || !canPublish} onClick={() => schedule(nextSlot())} title={canPublish ? "" : "Connect LinkedIn first"}
-                        className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-bg disabled:opacity-50">Schedule for {slotLabel(nextSlot())}</button>
-                    )}
+                    <button disabled={busy} onClick={scheduleInLinkedIn}
+                      className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-bg disabled:opacity-50">Schedule in LinkedIn</button>
                     <button disabled={busy || !canPublish} onClick={publish} title={canPublish ? "" : "Connect LinkedIn first"}
                       className="rounded-lg border border-line px-4 py-2 text-sm disabled:opacity-50">Publish now</button>
                   </>
                 )}
-                <button onClick={() => navigator.clipboard.writeText(text)} className="rounded-lg border border-line px-4 py-2 text-sm">Copy post</button>
                 <button onClick={() => navigator.clipboard.writeText(`Sources and the full breakdown: ${onepagerUrl}`)} className="rounded-lg border border-line px-4 py-2 text-sm">Copy first comment</button>
-                <a href="https://www.linkedin.com/feed/?shareActive=true" target="_blank" rel="noopener" className="rounded-lg border border-line px-4 py-2 text-sm">Open LinkedIn</a>
                 <button onClick={() => window.confirm("Write a Substack post that expands this one? It takes about 5 minutes and costs about $0.25.") && onExpand(draft.id)}
                   className="rounded-lg border border-line px-4 py-2 text-sm">Expand to Substack</button>
               </>
             )}
             {pubMsg && <span className="self-center text-sm text-ink-2">{pubMsg}</span>}
+            {draft.status === "approved" && !draft.linkedin_url && (
+              <details open={handedOff} className="w-full rounded-lg border border-line p-3 text-sm">
+                <summary className="cursor-pointer text-ink-2">Posted it from LinkedIn? Add the link once it&apos;s live</summary>
+                <div className="mt-2 space-y-2">
+                  <input value={liveUrl} onChange={(e) => setLiveUrl(e.target.value)} placeholder="https://www.linkedin.com/feed/update/urn:li:share:…"
+                    aria-label="LinkedIn post link" className="w-full rounded-lg border border-line bg-bg px-3 py-1.5 outline-none focus:border-ink" />
+                  <textarea value={finalText} onChange={(e) => setFinalText(e.target.value)} rows={4} aria-label="Final text"
+                    placeholder="Changed it in LinkedIn? Paste the final text here so the agent learns from your edits (optional)."
+                    className="w-full rounded-lg border border-line bg-bg p-2 outline-none focus:border-ink" />
+                  <button disabled={busy || !POST_URL.test(liveUrl.trim())} onClick={markLive}
+                    className="rounded-lg bg-ink px-4 py-1.5 font-medium text-bg disabled:opacity-50">Mark as live</button>
+                  <p className="text-xs text-muted">Copy first comment adds the one-pager link; LinkedIn posts it under your post when you paste it as a comment.</p>
+                </div>
+              </details>
+            )}
             {draft.linkedin_url && <Performance draft={draft} onChange={onChange} />}
             <button onClick={() => setPreview(!preview)} className="rounded-lg px-3 py-2 text-sm text-ink-2 hover:underline">
               {preview ? "Hide" : "Preview"} one-pager
