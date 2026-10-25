@@ -114,6 +114,29 @@ def pick(drafts: list[dict], score: Callable[[str], tuple]) -> tuple[dict, list[
     return min(scored, key=lambda d: d["score"]), scored
 
 
+COPY_WORDS = 9  # this many words in a row, outside quotation marks, taken straight from a source
+
+
+def copied_spans(post: str, sources_text: str, n: int = COPY_WORDS) -> list[str]:
+    """Runs of n+ words the post takes verbatim from the sources without quoting them: usually a brief's
+    'why it matters' line or an article sentence passed off as the author's own words."""
+    unquoted = re.sub(r"[\"“][^\"”]{0,400}[\"”]", " ", post)
+    words = lambda t: re.findall(r"[a-z0-9$%.]+", t.lower())  # noqa: E731
+    src, mine = words(sources_text), words(unquoted)
+    grams = {tuple(src[i:i + n]) for i in range(len(src) - n + 1)}
+    hits, i = [], 0
+    while i <= len(mine) - n:
+        if tuple(mine[i:i + n]) in grams:
+            j = i + n
+            while j < len(mine) and tuple(mine[j - n + 1:j + 1]) in grams:
+                j += 1
+            hits.append(" ".join(mine[i:j]))
+            i = j
+        else:
+            i += 1
+    return hits
+
+
 def overall_score(scores: dict, human: int) -> float:
     """Weighted 1-5 score: humanizer 40%, critic dimensions 60% split equally."""
     if not scores:

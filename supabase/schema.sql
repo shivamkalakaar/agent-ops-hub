@@ -200,3 +200,6 @@ select (c.created_at at time zone 'utc')::date as day, coalesce(r.agent, 'unknow
        sum(coalesce(c.prompt_tokens, 0) + coalesce(c.completion_tokens, 0)) as tokens, sum(c.cost_usd) as cost_usd
 from llm_calls c left join runs r on r.id = c.run_id
 group by 1, 2, 3, 4, 5;
+
+-- Scheduled publishing: an approved LinkedIn draft with publish_at goes out at the next cron run after that time.
+alter table drafts add column if not exists publish_at timestamptz;

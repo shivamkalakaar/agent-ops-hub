@@ -8,6 +8,11 @@ import { SERIES } from "@/lib/linkedin";
 import { SignIn, useSession } from "@/components/auth";
 import { SubstackQueue } from "@/components/SubstackQueue";
 import { RejectButton, TakeBox, type Feedback } from "@/components/Feedback";
+import { nextSlot } from "@/lib/schedule";
+
+/** "Tue, Oct 27, 8:30 AM PT" */
+const slotLabel = (d: Date) => d.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric",
+  minute: "2-digit", timeZone: "America/Los_Angeles" }) + " PT";
 
 const MAX_CHARS = 1300;
 
@@ -139,8 +144,16 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
     setPubMsg(res.ok ? "Rewriting around your take. This draft updates in about 3 minutes; refresh to see it." : `Failed: ${(await res.json()).error}`);
   };
 
+  const schedule = async (at: Date | null) => {
+    setBusy(true);
+    await supabase.from("drafts").update({ publish_at: at ? at.toISOString() : null }).eq("id", draft.id);
+    setBusy(false);
+    setPubMsg(at ? `Scheduled. It goes out ${slotLabel(at)} with the one-pager link as the first comment.` : "Schedule cancelled.");
+    onChange();
+  };
+
   const publish = async () => {
-    if (!window.confirm("Publish this post to your LinkedIn profile now? It will be public.")) return;
+    if (!window.confirm("Publish this post to your LinkedIn profile now? It will be public. Weekday mornings usually reach more people; editing it after it's live may cost reach.")) return;
     setBusy(true);
     setPubMsg("Publishing…");
     const res = await fetch("/api/linkedin/publish", {
@@ -176,6 +189,7 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
         <div>
           <textarea value={text} onChange={(e) => setText(e.target.value)} disabled={!pending} rows={14}
             className="w-full rounded-lg border border-line bg-bg p-3 text-[15px] leading-relaxed outline-none focus:border-ink" />
+          {pending && <p className="mt-1 text-xs text-muted">Make your edits here before approving: what you approve is exactly what gets published, and changing a post once it&apos;s live may cost reach.</p>}
           <div className={`mt-1 text-xs num ${text.length > MAX_CHARS ? "text-ink font-semibold" : "text-muted"}`}>
             {text.length} / {MAX_CHARS} characters · {words} words
             {draft.series_no ? ` · published as ${SERIES} #${draft.series_no}`
@@ -197,8 +211,19 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
                     ✓ {draft.series_no ? `${SERIES} #${draft.series_no}` : "Live"} on LinkedIn · view post
                   </a>
                 ) : (
-                  <button disabled={busy || !canPublish} onClick={publish} title={canPublish ? "" : "Connect LinkedIn first"}
-                    className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-bg disabled:opacity-50">Publish to LinkedIn</button>
+                  <>
+                    {draft.publish_at ? (
+                      <span className="inline-flex items-center gap-2 rounded-lg border border-ink px-4 py-2 text-sm">
+                        ○ Scheduled for {slotLabel(new Date(draft.publish_at))}
+                        <button onClick={() => schedule(null)} className="text-ink-2 underline underline-offset-4">cancel</button>
+                      </span>
+                    ) : (
+                      <button disabled={busy || !canPublish} onClick={() => schedule(nextSlot())} title={canPublish ? "" : "Connect LinkedIn first"}
+                        className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-bg disabled:opacity-50">Schedule for {slotLabel(nextSlot())}</button>
+                    )}
+                    <button disabled={busy || !canPublish} onClick={publish} title={canPublish ? "" : "Connect LinkedIn first"}
+                      className="rounded-lg border border-line px-4 py-2 text-sm disabled:opacity-50">Publish now</button>
+                  </>
                 )}
                 <button onClick={() => navigator.clipboard.writeText(text)} className="rounded-lg border border-line px-4 py-2 text-sm">Copy post</button>
                 <button onClick={() => navigator.clipboard.writeText(`Sources and the full breakdown: ${onepagerUrl}`)} className="rounded-lg border border-line px-4 py-2 text-sm">Copy first comment</button>

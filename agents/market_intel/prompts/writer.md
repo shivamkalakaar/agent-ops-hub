@@ -37,6 +37,8 @@ Write the way {{AUTHOR}} would explain it to a sharp friend over coffee: plain w
 {{EXAMPLES}}
 
 # Facts
+The source items' summaries and "why it matters" notes are research notes, not your words: never reuse their sentences. Write the point your own way, or quote the source in quotation marks.
+Comparisons need a source too: "cheaper", "faster", "bigger", "the first" only when a source says so.
 The fact sheet is what you're allowed to use, not a checklist. Pick the one or two facts that carry the idea and leave the rest out; a post with five statistics reads like a report. A number, name or date that isn't in the fact sheet or the source items can't go in the post. Mark reports as "reportedly".
 
 # When you're rewriting

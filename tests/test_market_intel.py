@@ -469,3 +469,11 @@ def test_posts_that_did_well_teach_the_most_and_guide_the_writer():
     llm.FAKE_RESPONSES["learn"] = lambda m: json.dumps({"add": [], "confirm": [], "revise": [], "retire": []})
     assert cli.run("draft") == 0
     assert "posts that did well with readers" in prompts[0] and d["post_md"][:40] in prompts[0]
+
+
+def test_flags_a_brief_line_passed_off_as_the_authors_own():
+    why = "Why it matters: With open weights, it's tempting to pick whichever provider has the lowest token price."
+    post = GOOD_POST.replace("#AI", "With open weights, it's tempting to pick whichever provider has the lowest token price.")
+    assert any("copies a source's words" in v for v in graph.guardrail_violations(post, set(), why))
+    quoted = GOOD_POST.replace("#AI", 'Vals says "it\'s tempting to pick whichever provider has the lowest token price" too.')
+    assert not any("copies a source's words" in v for v in graph.guardrail_violations(quoted, set(), why))

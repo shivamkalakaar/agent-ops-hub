@@ -220,6 +220,9 @@ def guardrail_violations(post: str, source_urls: set[str], sources_text: str | N
         if re.search(pattern, post, flags=re.I):
             v.append(f"template move: {name}; say it a different way or drop it")
     v += novelty.check(post, recent)
+    if sources_text:
+        v += [f"copies a source's words without quoting them (\"{c[:80]}…\"); say it your own way or quote it"
+              for c in drafting.copied_spans(post, sources_text)[:2]]
     if len(post) > MAX_CHARS:
         v.append(f"{len(post)} characters; the cap is {MAX_CHARS}")
     if not WORDS[0] <= words <= WORDS[1]:
