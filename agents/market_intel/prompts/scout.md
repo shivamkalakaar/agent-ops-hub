@@ -19,6 +19,8 @@ Avoid: pure hype, items you can't support from the summaries given, and the topi
 Recent draft angles (pick a different topic):
 {{RECENT}}
 
+Write the angle as a concrete observation anchored on a fact or number ("AWS is booked into 2028 while 63% of voters don't want a data center near them"), not as a thesis. Never frame it as "X, not Y", "no longer X, it's Y", "isn't X, it's Y" or "— not X —": those become AI-sounding hooks. The brief's "why" line is a good place to find the observation.
+
 The angle and hook may only state facts that appear in the item summaries. Don't infer capabilities, dates, or numbers the summaries don't give.
 
 Work in two steps. First propose 3 candidates that differ in topic, not just wording. Then pick the one that gives {{AUTHOR}} the most to say and is most likely to do well on LinkedIn: a real opinion, a number people will repeat, and the least overlap with recent posts. If {{AUTHOR}}'s own take is given below, every candidate must be a story that take is about.
