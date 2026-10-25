@@ -446,3 +446,26 @@ def test_rewrites_keep_model_variety_and_a_runaway_or_empty_draft_is_rescued(mon
         ctx = llm.RunContext(db=db, run_id=db.start_run("market_intel", "draft", "t"))
         outs = drafting.write_candidates(ctx, "voice", "writer", ["glm", "glm"], lambda i: "s", "u", str.strip, max_words=600)
     assert outs == [{"model": "ds", "text": "A real post."}]  # both candidates unusable: the rescue model's draft
+
+
+def test_posts_that_did_well_teach_the_most_and_guide_the_writer():
+    from core import lessons
+    from core.db import connect
+    assert cli.run("collect") == 0 and cli.run("draft") == 0
+    with connect() as db:
+        d = db.one("select * from drafts")
+        db.execute("update drafts set status='approved', approved_at=%s, feedback=%s, learned_at=null where id=%s",
+                   ("2026-10-23T00:00:00+00:00", db.json({"performance": "well"}), d["id"]))
+        assert db.top_posts() == [d["post_md"]]
+        evs = lessons.events(db, "market_intel")
+        assert evs[0]["performance"] == "did well with readers"
+        lessons.apply(db, "market_intel", {"add": [{"lesson": "Stack numbers from three companies, then one dry line.",
+                                                    "from": [d["id"]]}]}, {d["id"]}, strong={d["id"]})
+        assert lessons.active(db, "market_intel")[0]["evidence"] == 3
+        db.execute("update drafts set sources=%s", (db.json([]),))  # free the stories for the next draft
+    prompts = []
+    write = llm.FAKE_RESPONSES["writer"]
+    llm.FAKE_RESPONSES["writer"] = lambda m: (prompts.append(m[-1].content), write(m))[1]
+    llm.FAKE_RESPONSES["learn"] = lambda m: json.dumps({"add": [], "confirm": [], "revise": [], "retire": []})
+    assert cli.run("draft") == 0
+    assert "posts that did well with readers" in prompts[0] and d["post_md"][:40] in prompts[0]

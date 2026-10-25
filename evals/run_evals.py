@@ -71,7 +71,7 @@ def run_case(ctx, name: str, items: list[dict]) -> dict:
     from agents.market_intel.roster import PROMPTS, SPECIALISTS
     from core import settings
     state = graph.build_draft(persist=False).invoke(
-        {"items": items, "week": name, "recent_angles": [], "recent_posts": [], "learn": False, "lessons": LESSONS},
+        {"items": items, "week": name, "recent_angles": [], "recent_posts": [], "top_posts": [], "learn": False, "lessons": LESSONS},
         config={"configurable": {"ctx": ctx, "settings": settings.from_files(SPECIALISTS, PROMPTS)}, "callbacks": ctx.callbacks,
                 "run_name": f"eval.{name}", "recursion_limit": 60})
     scores = state["scores"]
