@@ -217,13 +217,15 @@ def test_scheduled_run_skips_when_two_drafts_are_waiting():
     assert runs[-1]["status"] == "skipped" and "2 drafts already waiting" in runs[-1]["stats"]["reason"]
 
 
-def test_window_starts_at_last_draft_within_bounds():
+def test_draft_uses_only_the_last_24_hours():
     from datetime import timedelta
-    now = datetime(2026, 10, 26, 15, tzinfo=timezone.utc)                      # a Monday
-    friday = (now - timedelta(days=3)).isoformat()
-    assert graph.window_start(friday, now) == now - timedelta(days=3)          # covers the weekend
-    assert graph.window_start((now - timedelta(hours=2)).isoformat(), now) == now - timedelta(days=1)
-    assert graph.window_start(None, now) == now - timedelta(days=4)
+    from core.db import connect
+    old = (datetime.now(timezone.utc) - timedelta(hours=30)).isoformat()
+    with connect() as db:
+        rid = db.start_run("market_intel", "collect", "t")
+        db.insert_items([dict(ITEMS[0], importance=5, appeal=5), dict(ITEMS[1], published=old, importance=5, appeal=5)], rid)
+        state = graph.load_items({}, {"configurable": {"ctx": llm.RunContext(db=db, run_id=rid)}})
+    assert [i["url"] for i in state["items"]] == ["https://example.com/a"]
 
 
 def test_flags_the_recap_template_and_repeated_endings():
