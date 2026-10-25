@@ -124,28 +124,33 @@ class DB:
     def insert_items(self, items: list[dict], run_id: str):
         for i in items:
             self.execute(
-                "insert into items (url, title, source, layer, importance, why, summary, published_at, collected_at, run_id)"
-                " values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) on conflict (url) do nothing",
-                (i["url"], i["title"], i["source"], i.get("layer"), i.get("importance"), i.get("why"),
+                "insert into items (url, title, source, layer, importance, appeal, why, summary, published_at, collected_at, run_id)"
+                " values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) on conflict (url) do nothing",
+                (i["url"], i["title"], i["source"], i.get("layer"), i.get("importance"), i.get("appeal"), i.get("why"),
                  i.get("summary"), i.get("published"), now(), run_id))
 
     def unscored_items(self, since_iso: str) -> list[dict]:
-        """Items stored without a score, e.g. pushed from the daily brief; collect scores them."""
-        rows = self.all("select * from items where importance is null and collected_at >= %s", (since_iso,))
+        """Items missing a score or an appeal rating, e.g. pushed from the daily brief; collect scores them."""
+        rows = self.all("select * from items where (importance is null or appeal is null) and collected_at >= %s", (since_iso,))
         return [{**r, "published": r["published_at"]} for r in rows]
 
     def update_scores(self, items: list[dict]):
+        """Brief stories arrive with their importance already set (the brief's curation wins); fill in the rest."""
         for i in items:
-            self.execute("update items set layer=coalesce(%s, layer), importance=%s, why=coalesce(why, %s) where url=%s",
-                         (i.get("layer"), i.get("importance"), i.get("why"), i["url"]))
+            self.execute("update items set layer=coalesce(layer, %s), importance=coalesce(importance, %s), appeal=%s,"
+                         " why=coalesce(why, %s) where url=%s",
+                         (i.get("layer"), i.get("importance"), i.get("appeal"), i.get("why"), i["url"]))
 
     def top_items(self, since_iso: str, per_origin: dict | None = None) -> list[dict]:
-        """Best-scored recent items, with a fixed share per origin so the curated brief can't crowd out RSS."""
+        """Best recent items, with a fixed share per origin so neither the brief nor RSS crowds out the other.
+        Importance first (brief TL;DR stories are 5, other brief stories at least 4), then LinkedIn appeal, then newest."""
         rows = []
         for origin, n in (per_origin or {"brief": 15, "rss": 10}).items():
             rows += self.all("select * from items where published_at >= %s and importance is not null and origin = %s"
-                             " order by importance desc, published_at desc limit %s", (since_iso, origin, n))
-        return sorted(rows, key=lambda r: (-r["importance"], str(r["published_at"])), reverse=False)
+                             " order by importance desc, coalesce(appeal, 0) desc, published_at desc limit %s",
+                             (since_iso, origin, n))
+        rows.sort(key=lambda r: str(r["published_at"]), reverse=True)
+        return sorted(rows, key=lambda r: (-r["importance"], -(r.get("appeal") or 0), r.get("origin") != "brief"))
 
     # --- drafts --------------------------------------------------------------
     def insert_draft(self, d: dict, run_id: str) -> str:

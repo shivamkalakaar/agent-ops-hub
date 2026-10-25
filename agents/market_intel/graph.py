@@ -93,9 +93,10 @@ def score(state: CollectState, config: RunnableConfig) -> CollectState:
         by_id = {r.get("id"): r for r in rows if isinstance(r, dict)}
         for n, item in enumerate(batch):
             r = by_id.get(n, {})
-            imp = r.get("importance")
+            imp, appeal = r.get("importance"), r.get("appeal")
             scored.append({**item, "layer": r.get("layer", item.get("layer_hint")),
                            "importance": imp if isinstance(imp, int) and 1 <= imp <= 5 else None,
+                           "appeal": appeal if isinstance(appeal, int) and 1 <= appeal <= 5 else None,
                            "why": r.get("why")})
     return {"scored": scored}
 

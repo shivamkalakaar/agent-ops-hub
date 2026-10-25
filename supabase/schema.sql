@@ -30,6 +30,9 @@ create table if not exists items (
 );
 create index if not exists items_published_idx on items (published_at);
 alter table items add column if not exists origin text not null default 'rss';
+alter table items add column if not exists appeal integer;  -- 1..5 how well it would do as a LinkedIn post, from the scorer
+alter table items add column if not exists tldr boolean not null default false;  -- a brief TL;DR story
+alter table items add column if not exists also jsonb;  -- the brief's corroborating links [{url, source}]
 
 create table if not exists drafts (
   id             text primary key,
