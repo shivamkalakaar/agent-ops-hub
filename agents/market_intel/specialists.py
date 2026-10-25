@@ -151,6 +151,10 @@ def writer(state, ctx, cfg):
     a = state["angle"]
     user = (f"Angle: {a.get('angle')}\nCandidate hook: {a.get('hook')}\nWhy now: {a.get('why_now')}\n\n"
             f"# Fact sheet\n{fact_sheet(state)}\n\n# Source items\n{drafting.sources_block(state['sources'])}")
+    if top := "\n\n---\n\n".join(state.get("top_posts") or []):
+        user += (f"\n\n# {AUTHOR}'s posts that did well with readers (the best guide there is: use the same kind of moves,"
+                 f" such as how they stack facts, where the opinion sits and how they end, on today's story. Don't copy their"
+                 f" wording or topic)\n{top}")
     if recent := "\n\n---\n\n".join(state.get("recent_posts") or []):
         user += (f"\n\n# {AUTHOR}'s last few posts (already published: don't reuse their hook pattern, structure, "
                  f"stance line or closing move; this post should feel different)\n{recent}")
@@ -193,6 +197,9 @@ def editor(state, ctx, cfg):
     if state.get("lessons"):
         user += (f"\n\n{state['lessons']}\nA draft that breaks one of these lessons loses a point on voice or human, "
                  "and the critique must name the lesson.")
+    if state.get("top_posts"):
+        user += ("\n\n# Posts by the author that did well with readers\n" + "\n\n---\n\n".join(state["top_posts"])
+                 + "\nA draft that works the way these do (dry one-line reactions included) shouldn't lose points for it.")
     review = llm.call_json(ctx, _tier(cfg, "judge"), "editor", drafting.fill(cfg.prompt, STYLE_GUIDE=g.style_guide()), user,
                            model=cfg.model)
     scores = {k: max(1, min(5, int(v))) for k, v in (review.get("scores") or {}).items() if str(v).isdigit()}

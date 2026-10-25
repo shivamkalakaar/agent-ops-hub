@@ -174,6 +174,14 @@ class DB:
     def item(self, url: str) -> dict | None:
         return self.one("select * from items where url=%s", (url,))
 
+    def top_posts(self, limit: int = 3) -> list[str]:
+        """Published LinkedIn posts the owner marked as having done well with readers, newest first."""
+        rows = self.all("select coalesce(edited_post_md, post_md) as post, feedback from drafts where status='approved'"
+                        " and feedback is not null order by approved_at desc limit 50")
+        good = [r["post"] for r in rows if ((json.loads(r["feedback"]) if isinstance(r["feedback"], str) else r["feedback"]) or {})
+                .get("performance") == "well"]
+        return good[:limit]
+
     def approved_posts(self, limit: int = 3) -> list[str]:
         rows = self.all("select coalesce(edited_post_md, post_md) as post from drafts where status='approved'"
                         " order by approved_at desc limit %s", (limit,))

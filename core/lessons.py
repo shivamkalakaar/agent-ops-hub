@@ -59,6 +59,9 @@ def events(db, agent: str) -> list[dict]:
             e["owner_note"] = fb["note"]
         if d.get("my_take"):
             e["owner_take"] = d["my_take"]
+        if fb.get("performance"):  # set after publishing: how readers responded
+            e["performance"] = {"well": "did well with readers", "average": "did about average with readers",
+                                "poorly": "didn't land with readers"}.get(fb["performance"], fb["performance"])
         out.append(e)
     return out
 
@@ -79,7 +82,8 @@ def learn(db, ctx, agent: str, author: str) -> dict:
                 f"# New decisions by {author}\n{json.dumps(evs, ensure_ascii=False, indent=1)}")
         ops = llm.call_json(ctx, "judge", "learn", prompt("learn", AUTHOR=author,
                                                           KIND="LinkedIn posts" if agent == "market_intel" else "Substack posts"), user)
-        stats = apply(db, agent, ops, {e["draft_id"] for e in evs})
+        stats = apply(db, agent, ops, {e["draft_id"] for e in evs},
+                      strong={e["draft_id"] for e in evs if e.get("performance") == "did well with readers"})
         table = TABLES[agent][0]
         for e in evs:
             db.execute(f"update {table} set learned_at=%s where id=%s", (now(), e["draft_id"]))
@@ -89,20 +93,23 @@ def learn(db, ctx, agent: str, author: str) -> dict:
         return {"read": 0, "error": str(ex)[:200]}
 
 
-def apply(db, agent: str, ops: dict, draft_ids: set[str]) -> dict:
+def apply(db, agent: str, ops: dict, draft_ids: set[str], strong: set[str] | None = None) -> dict:
+    """strong: drafts readers responded well to; lessons drawn from them start with extra evidence."""
     known = {l["id"]: l for l in active(db, agent)}
     added = confirmed = revised = retired = 0
     for a in (ops.get("add") or [])[:5]:
         text = str(a.get("lesson") or "").strip()
         if 8 <= len(text) <= 300:
             src = [i for i in a.get("from") or [] if i in draft_ids]
+            weight = max(1, len(src)) + 2 * len(set(src) & (strong or set()))  # readers' response counts for more
             db.execute("insert into lessons (id, agent, lesson, kind, evidence, draft_ids, active, created_at, updated_at)"
                        " values (%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                       (new_id(), agent, text, str(a.get("kind") or "voice")[:20], max(1, len(src)), db.json(src), True, now(), now()))
+                       (new_id(), agent, text, str(a.get("kind") or "voice")[:20], weight, db.json(src), True, now(), now()))
             added += 1
+    boost = 3 if strong else 1  # a post readers responded well to backs a lesson more than an approval does
     for i in ops.get("confirm") or []:
         if i in known:
-            db.execute("update lessons set evidence=evidence+1, updated_at=%s where id=%s", (now(), i))
+            db.execute("update lessons set evidence=evidence+%s, updated_at=%s where id=%s", (boost, now(), i))
             confirmed += 1
     for r in ops.get("revise") or []:
         text = str(r.get("lesson") or "").strip()

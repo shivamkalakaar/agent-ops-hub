@@ -5,6 +5,7 @@ How to read the evidence:
 - `reasons` and `owner_note` say why a draft was rejected. A reject with no reason is weak evidence; don't over-read it.
 - "approved as written" means the draft worked. It can confirm a lesson, but rarely adds one.
 - `owner_take` is an opinion {{AUTHOR}} supplied. It tells you what they think and how they phrase things.
+- `performance` is how readers responded after it was published. "did well with readers" is the strongest evidence there is: say what that post did (structure, hook, ending, kind of topic, how it used numbers) so the agent repeats the approach, not the wording. If a current lesson would have stopped that post, revise or retire it.
 
 Write lessons that are:
 - specific and checkable on a new draft: "Cuts quotes from outside experts and keeps {{AUTHOR}}'s own reaction", not "be more authentic".

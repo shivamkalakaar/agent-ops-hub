@@ -208,6 +208,7 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
               </>
             )}
             {pubMsg && <span className="self-center text-sm text-ink-2">{pubMsg}</span>}
+            {draft.linkedin_url && <Performance draft={draft} onChange={onChange} />}
             <button onClick={() => setPreview(!preview)} className="rounded-lg px-3 py-2 text-sm text-ink-2 hover:underline">
               {preview ? "Hide" : "Preview"} one-pager
             </button>
@@ -247,5 +248,28 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
       </div>
       {preview && <iframe title="One-pager preview" srcDoc={draft.onepager_html} sandbox="" className="mt-4 h-[70vh] w-full rounded-lg border border-line" />}
     </Card>
+  );
+}
+
+const PERFORMANCE = [["well", "Did well"], ["average", "Average"], ["poorly", "Didn't land"]] as const;
+
+/** After a post is live: how readers responded. The next run learns from it, and posts that did well become the
+ *  writer's main reference (core/lessons.py, agents/market_intel/specialists.py). */
+function Performance({ draft, onChange }: { draft: Draft; onChange: () => void }) {
+  const current = draft.feedback?.performance;
+  const mark = async (performance: string) => {
+    const feedback = { ...(draft.feedback ?? {}), performance: current === performance ? undefined : performance };
+    await supabase.from("drafts").update({ feedback, learned_at: null }).eq("id", draft.id);  // learned again next run
+    onChange();
+  };
+  return (
+    <div className="flex w-full flex-wrap items-center gap-2 text-sm">
+      <span className="text-ink-2">How did it do?</span>
+      {PERFORMANCE.map(([value, label]) => (
+        <button key={value} onClick={() => mark(value)} aria-pressed={current === value}
+          className={`rounded-full border px-3 py-1 ${current === value ? "border-ink bg-ink text-bg" : "border-line hover:border-ink"}`}>{label}</button>
+      ))}
+      {current === "well" && <span className="text-xs text-muted">The writer now uses this post as a reference.</span>}
+    </div>
   );
 }

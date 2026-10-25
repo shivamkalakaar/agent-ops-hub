@@ -128,6 +128,7 @@ class DraftState(TypedDict, total=False):
     items: list[dict]
     recent_posts: list[str]
     recent_angles: list[str]
+    top_posts: list[str]  # published posts the owner said did well with readers
     lessons: str          # what the owner's past decisions taught the agent (core/lessons.py)
     learn: bool           # False in evals: don't consume the owner's queue decisions
     learned: dict
@@ -203,6 +204,7 @@ def load_items(state: DraftState, config: RunnableConfig) -> DraftState:
                     "disabled": [k for k, v in cfg.items() if not v.enabled]}
     return {"items": items, "week": week, "learned": learned, "settings": cfg,
             "recent_posts": state["recent_posts"] if "recent_posts" in state else db.approved_posts(3),
+            "top_posts": state["top_posts"] if "top_posts" in state else db.top_posts(3),
             "lessons": state["lessons"] if "lessons" in state else lessons.block(db, AGENT, AUTHOR),
             "recent_angles": state["recent_angles"] if "recent_angles" in state else db.recent_angles(5),
             "seq": 1, "work_steps": 0, "calls": {}, "history": [], "drafts": [], "candidates": {}}
