@@ -5,7 +5,7 @@ daily_cap_usd: 3.00   # a newsroom post (~$0.45) plus PR evals (~$0.65) on the s
 monthly_cap_usd: 10.00   # weekday LinkedIn (~$1) + 2 illustrated Substack posts a week (~$4) + PR evals, with headroom
 # One-off overrides (UTC). Without an entry the standing cap applies, so both reset on their own.
 # Oct 2026: launch month, with evals on every PR and again after each merge for the multi-agent rollout.
-monthly_cap_overrides: { "2026-10": 15.00 }
+monthly_cap_overrides: { "2026-10": 20.00 }   # OpenRouter key limit raised to $20 on Oct 26
 daily_cap_overrides: { "2026-10-23": 7.00 }   # merge day: PR evals plus the reruns on main
 # Used when the provider does not report cost, so the guard errs on the side of caution.
 fallback_cost_per_1k_tokens_usd: 0.001
