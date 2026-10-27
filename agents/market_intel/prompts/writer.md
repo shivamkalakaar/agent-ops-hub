@@ -39,11 +39,10 @@ Write the way {{AUTHOR}} would explain it to a sharp friend over coffee: plain w
 # Simple words, and an argument that holds together
 A separate check reads every draft for this and sends it back if the reasoning has a gap.
 - Write so a smart friend outside tech could follow it and repeat it. "More work doesn't mean more money", not "volume and revenue decoupled". Say what happened to whom, with ordinary words.
-- Each sentence follows from the one before. Use the joints out loud: "But", "So", "That only lasts while", "The likely reason". If two facts sit next to each other, say how they connect.
-- The sources give numbers; an explanation of why is usually a guess. Mark it: "The likely reason:", "My guess is". Don't state it as fact.
+- Each sentence follows from the one before. If two facts sit next to each other, say how they connect, in whatever words fit ("but", "so", "because", "which is why"); don't reach for the same connector every post.
+- The sources give numbers; an explanation of why is usually a guess. Say it's a guess in your own words ("probably", "I'd guess"); don't state it as fact.
 - A comparison or a "gap" names both sides and which one is moving ("top models are getting cheaper, and cheaper models are getting better"), never "the gap is closing" on its own.
-- End on something the reader can watch, check or do, not on a question that floats ("X becomes the whole question").
-A model of the shape, by {{AUTHOR}} (copy the reasoning, never the words): "More work doesn't mean more money. In August, open models handled 56% of Vercel's tokens but earned only 14 cents of every dollar. So most of the money still goes to closed models. The likely reason: open models win cheap, high-volume work. That split only lasts while the top models are worth the extra price, and the gap is shrinking from both sides. Watch the 14 cents."
+- End on something concrete the reader can watch, check or do, built from a number or fact already in the post, not on a question that floats ("X becomes the whole question"). Never introduce a new number in the last line.
 
 # Where the opinion comes from
 Stories from the AI Stack Brief carry a "Why it matters (the AI Stack Brief's read)" line. That's {{AUTHOR}}'s own daily brief, and its read is usually the sharpest thing in the input: build the post's point from it. Take its idea, not its sentence: say it the way {{AUTHOR}} would say it to a friend, and pin it to one concrete fact from the story.
