@@ -70,7 +70,41 @@ def market_intel() -> dict:
             "settings": settings.from_files(SPECIALISTS, PROMPTS)}
 
 
-AGENTS = {"market_intel": market_intel}
+def _ss_state(case: dict, src: dict) -> dict:
+    return {"drafts": [{"version": 1, "md": case["post"]}], "sources": src["items"], "brief": src.get("brief") or {},
+            "seed": src.get("seed"), "lessons": LESSONS, "images": [], "candidates": {}}
+
+
+def _ss_guardrails(state) -> list[str]:
+    from agents.substack import checks
+    from agents.substack.specialists import sources_text
+    return checks.violations(state["drafts"][-1]["md"], {s["url"] for s in state["sources"]}, sources_text(state))
+
+
+def _ss_flags(name: str, state, out: dict) -> tuple[list[str], list[str]]:
+    from agents.substack.specialists import editor
+    if name == "editor":
+        r = out["edit_report"]
+        return [f"weak scores {json.dumps(r['scores'])}, overall {r['overall']}"] if editor.weak(r) else [], [str(r["critique"])[:200]]
+    if name == "fact_checker":
+        r = out["fact_report"]
+        return [f"unsupported: {c.get('claim', '')}" for c in r["claims"] if c["verdict"] == "unsupported"] + \
+            [f"invented: {i}" for i in r["invented"]], [f"hedge: {c.get('claim', '')}" for c in r["claims"] if c["verdict"] == "hedge"]
+    if name == "final_check":  # its own read only, without the automated results it was handed
+        r = out["final_report"]
+        return [b for b in r["blockers"] if b not in r["automated"]], r["polish"]
+    raise KeyError(name)
+
+
+def substack() -> dict:
+    from agents.substack.roster import PROMPTS, SPECIALISTS
+    from agents.substack.specialists import editor, fact_checker, final_check
+    return {"name": "Substack agent", "state": _ss_state, "guardrails": _ss_guardrails, "flags": _ss_flags,
+            "runners": {"editor": editor.run, "fact_checker": fact_checker.run, "final_check": final_check.run},
+            "settings": settings.from_files(SPECIALISTS, PROMPTS)}
+
+
+AGENTS = {"market_intel": market_intel, "substack": substack}
 
 
 # --------------------------------------------------------------------------- running
@@ -129,7 +163,8 @@ def run_cases(db, run_id: str, spec: dict, fixture: dict, workers: int = 16) -> 
     finally:
         for c in conns:
             c.conn.close()
-    return results
+    order = ["guardrails", *spec["runners"]]  # threads finish in any order; reports list reviewers the same way every run
+    return [r | {"reviewers": {n: r["reviewers"][n] for n in order if n in r["reviewers"]}} for r in results]
 
 
 # --------------------------------------------------------------------------- scoring
