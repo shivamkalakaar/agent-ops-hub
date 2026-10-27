@@ -113,3 +113,9 @@ def test_summary_and_gate_tolerate_one_noisy_case():
     worse = R.summarize([row("a", 3.0, ["x"]), row("b", 3.0, ["y"]), row("c", 3.0), row("d", 3.0)])
     assert len(R.gate(worse, base)) == 2  # two flagged cases, and the mean dropped more than the tolerance
     assert R.gate(R.summarize([row(c, 2.0) for c in "abcd"]), {**base, "version": "older-judge"}) == []  # different yardstick: no comparison
+
+
+def test_an_empty_compare_reply_is_a_tie_not_a_crash(monkeypatch, ctx):
+    monkeypatch.setitem(llm.FAKE_RESPONSES, "reference_compare", lambda m: "")
+    r = R.compare(ctx, AGENT, SHIVAM, SOURCES)
+    assert r["orders"] == ["tie", "tie"] and r["result"] == "tie" and r["score"] == 0

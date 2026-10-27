@@ -1,15 +1,44 @@
 {
- "mean": 4.34,
- "cases": 5,
- "humanizer_mean": 4,
+ "mean": 4.12,
+ "cases": 4,
+ "humanizer_mean": 4.5,
  "guardrail_pass_rate": 1.0,
+ "golden_cases": 3,
  "per_dimension": {
-  "hook": 4.6,
-  "focus": 4.8,
-  "brevity": 4.8,
+  "hook": 4.5,
+  "focus": 4,
+  "brevity": 4.25,
   "concreteness": 5,
-  "voice": 4.4,
-  "human": 3.4,
-  "grounding": 5
- }
+  "voice": 3.25,
+  "human": 2.25,
+  "grounding": 3.75
+ },
+ "rejection_cases": 1,
+ "rejection_repeats": 0,
+ "judge": {
+  "version": "413eb67c97",
+  "cases": 4,
+  "judge_mean": 3.54,
+  "per_dimension": {
+   "plain": 3.75,
+   "logic": 3.75,
+   "one_idea": 4.25,
+   "hook": 3.75,
+   "grounded": 2.75,
+   "human": 3
+  },
+  "flagged": [
+   "ref 977b5049c201",
+   "ref 942e36b0112d",
+   "rejected a02c890bc277"
+  ],
+  "vs_shivam": 0.0,
+  "vs_shivam_cases": 3,
+  "results": {
+   "win": 0,
+   "tie": 0,
+   "loss": 3
+  }
+ },
+ "source": "local eval of the evals/redo branch (run 890be4ee9650, 2026-10-27): 3 of Shivam's posts + 1 rejected draft, fixed judge 413eb67c97"
 }

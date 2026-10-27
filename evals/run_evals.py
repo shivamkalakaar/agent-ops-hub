@@ -31,6 +31,7 @@ from core.config import git_sha
 from core.db import connect
 from core.steps import step
 from agents.market_intel import graph
+from evals import reference as ref
 
 HERE = Path(__file__).parent
 BASELINES = {"market_intel": HERE / "baseline.json", "substack": HERE / "baseline.substack.json"}
@@ -40,7 +41,10 @@ TOLERANCE = 0.3
 # a 3-case run isn't a regression; two are. The LinkedIn agent still needs every final post clean.
 MIN_GUARDRAIL_PASS = {"market_intel": 1.0, "substack": 2 / 3}
 DAYS_PER_SUBSTACK_CASE = 3  # a Wed/Sat post covers 3-4 days of news
-REJECTION_CASES = 3  # the owner's latest rejected LinkedIn drafts (with a reason) are rerun as "don't do this again" cases
+REJECTION_CASES = 1  # the owner's latest rejected LinkedIn draft (with a reason) is rerun as a "don't do this again" case
+# PR set: the agent writes on the stories behind three of Shivam's published posts, and the fixed judge (evals/reference.py)
+# compares it with his. --full adds the golden news days and the rest of the reference cases.
+PR_REFERENCES = ("4a50be497600", "942e36b0112d", "977b5049c201")
 WORKERS = 4  # cases at once: ~4x faster; more starts to hit the free models' rate limits (then their paid fallbacks)
 CASE_SEQ = 100  # each case's own steps get a block of seq numbers (case n: 100n+1...), so they don't interleave
 
@@ -70,7 +74,24 @@ def run_rejection_case(ctx, case: dict) -> dict:
     if verdict.get("repeats"):
         r["violations"] = r["violations"] + [f"repeats what was rejected ({', '.join(case['reasons'])}): {str(verdict.get('why', ''))[:160]}"]
     r["rejected"] = {"id": case["id"], "reasons": case["reasons"], "repeats": bool(verdict.get("repeats"))}
+    return judged(ctx, r, case["items"])
+
+
+def judged(ctx, r: dict, items: list[dict], reference: str | None = None) -> dict:
+    """The fixed judge's score, and with Shivam's post for the same stories, which of the two it prefers."""
+    r["judge"] = ref.judge(ctx, r["post"], items)
+    r["compare"] = ref.compare(ctx, r["post"], reference, items) if reference else None
     return r
+
+
+def run_reference_case(ctx, case: dict) -> dict:
+    return judged(ctx, run_case(ctx, f"ref {case['id']}", case["items"]), case["items"], case["reference"])
+
+
+def frozen_articles(cases: list[dict]):
+    """Reference cases read the article text frozen with them; everything else is fetched live as before."""
+    bodies, live = {i["url"]: i["body"] for c in cases for i in c["items"] if i.get("body")}, graph.fetch_article
+    graph.fetch_article = lambda url, *a, **k: bodies.get(url) or live(url, *a, **k)
 
 
 def run_case(ctx, name: str, items: list[dict]) -> dict:
@@ -145,6 +166,8 @@ def summarize(agent: str, results: list[dict]) -> dict:
          "per_dimension": {k: round(mean(r["scores"].get(k, 0) for r in results), 2) for k in results[0]["scores"]}}
     if rej := [r for r in results if "rejected" in r]:
         s["rejection_cases"], s["rejection_repeats"] = len(rej), sum(r["rejected"]["repeats"] for r in rej)
+    if judged_rows := [{"case": r["case"], "judge": r["judge"], "compare": r.get("compare")} for r in results if r.get("judge")]:
+        s["judge"] = ref.summarize(judged_rows)
     if agent == "substack":
         s |= {"final_pass_rate": round(sum(r["passed_final"] for r in results) / len(results), 3),
               "mean_steps": round(mean(r["steps"] for r in results), 1)}
@@ -152,8 +175,16 @@ def summarize(agent: str, results: list[dict]) -> dict:
 
 
 def check(summary: dict, baseline: Path, min_guardrail_pass: float = 1.0) -> tuple[list[str], float | None]:
-    """Reasons the gate fails (empty = pass), and the baseline mean it compared against."""
-    base = json.loads(baseline.read_text())["mean"] if baseline.exists() else None
+    """Reasons the gate fails (empty = pass), and the baseline mean it compared against. When the fixed judge ran
+    (LinkedIn), it decides: the agent's own editor score and its guardrail rate move with every prompt change, so
+    they're reported, not gated."""
+    saved = json.loads(baseline.read_text()) if baseline.exists() else {}
+    base = saved.get("mean")
+    if "judge" in summary:
+        reasons = ref.gate(summary["judge"], saved.get("judge"))
+        if summary["humanizer_mean"] < humanizer.MIN_HUMAN:
+            reasons.append(f"mean humanizer {summary['humanizer_mean']}/5 is below {humanizer.MIN_HUMAN}")
+        return reasons, base
     reasons = []
     if base is not None and summary["mean"] < base - TOLERANCE:
         reasons.append(f"mean {summary['mean']} is below baseline {base} - {TOLERANCE}")
@@ -184,6 +215,18 @@ def comment(agent: str, run_id: str, summary: dict, results: list[dict], reasons
             f"{round(summary['guardrail_pass_rate'] * summary.get('golden_cases', summary['cases']))}/{summary.get('golden_cases', summary['cases'])} news days"
             + (f" · repeats a rejected problem: {summary['rejection_repeats']} of {summary['rejection_cases']} (reported, not gated)"
                if summary.get("rejection_cases") else ""))
+    if j := summary.get("judge"):
+        line = (f"Judge **{j['judge_mean']}**/5" + (f" · preferred over Shivam's post {j['vs_shivam']:.2f} of the time "
+                f"({j['results']['win']} win, {j['results']['tie']} tie, {j['results']['loss']} loss; 0.50 = as good as Shivam)" if "vs_shivam" in j else "")
+                + f" · {len(j['flagged'])} case(s) break a hard rule · agent's own editor {summary['mean']} (reported, not gated)"
+                + (f" · repeats a rejected problem: {summary['rejection_repeats']} of {summary['rejection_cases']}" if summary.get("rejection_cases") else ""))
+        vs = lambda r: (r.get("compare") or {}).get("result", "–")  # noqa: E731
+        rows = "\n".join(f"| {r['case']} | {r['judge']['overall']} | {vs(r)} | {r['mean']} | {'; '.join(r['judge']['flags'] + r['violations'])[:160] or '–'} |"
+                         for r in results)
+        url = os.environ.get("DASHBOARD_URL", "").rstrip("/")
+        link = f"\n\n[Posts and scores for each case]({url}/runs/{run_id})" if url else f"\n\nDashboard run `{run_id}`"
+        why = "\n\n" + "\n".join(f"- {r}" for r in reasons) if reasons else ""
+        return (f"{head}\n\n{line}{why}\n\n| Case | Judge | vs Shivam | Editor | Flags |\n|---|---|---|---|---|\n{rows}{link}\n")
     rows = "\n".join(f"| {r['case']} | {r['mean']} | {r['humanizer']}/5 | {'; '.join(r['violations'])[:160] or '–'} |" for r in results)
     url = os.environ.get("DASHBOARD_URL", "").rstrip("/")
     link = f"\n\n[Posts and scores for each case]({url}/runs/{run_id})" if url else f"\n\nDashboard run `{run_id}`"
@@ -253,20 +296,25 @@ def run_suite(agent: str, cases: list[tuple[str, Callable]], describe: Callable[
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--agent", choices=["market_intel", "substack"], default="market_intel")
-    ap.add_argument("--cases", type=int, default=5, help="newest N golden weeks (cost scales linearly)")
+    ap.add_argument("--cases", type=int, default=None, help="newest N golden days (LinkedIn: only with --full; Substack default 2)")
+    ap.add_argument("--full", action="store_true", help="LinkedIn: also the golden days and every reference case")
     ap.add_argument("--workers", type=int, default=WORKERS, help="cases run at once")
     ap.add_argument("--update-baseline", action="store_true")
     ap.add_argument("--images", action="store_true", help="substack: keep the illustrator on (adds ~$0.13 per case)")
     args = ap.parse_args()
     if args.agent == "substack":
         cases = [(name, lambda ctx, n=name, i=items: run_substack_case(ctx, n, i, args.images))
-                 for name, items in substack_cases(args.cases)]
+                 for name, items in substack_cases(args.cases or 2)]
         describe = lambda r: (f"{r['case']}: overall {r['mean']}, humanizer {r['humanizer']}/5, {r['steps']} steps, "  # noqa: E731
                               f"final check {'passed' if r['passed_final'] else 'failed'}: \"{r['title']}\""
                               + (f". Flags: {'; '.join(r['violations'])}" if r["violations"] else ""))
     else:
-        cases = [(p.stem, lambda ctx, p=p: run_case(ctx, p.stem, json.loads(p.read_text())["items"]))
-                 for p in sorted((HERE / "golden").glob("*.json"))[-args.cases:]]
+        refs = [c for c in ref.reference_cases() if args.full or c["id"] in PR_REFERENCES]
+        frozen_articles(refs)
+        cases = [(f"ref {c['id']}", lambda ctx, c=c: run_reference_case(ctx, c)) for c in refs]
+        if args.full:
+            cases += [(p.stem, lambda ctx, p=p: judged(ctx, run_case(ctx, p.stem, json.loads(p.read_text())["items"]), json.loads(p.read_text())["items"]))
+                      for p in sorted((HERE / "golden").glob("*.json"))[-(args.cases or 5):]]
         with connect() as db:
             cases += [(f"rejected {c['id']}", lambda ctx, c=c: run_rejection_case(ctx, c)) for c in rejections(db)]
         describe = lambda r: (f"{r['case']}: overall {r['mean']}, humanizer {r['humanizer']}/5, {r['chars']} chars, "  # noqa: E731

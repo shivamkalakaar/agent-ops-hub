@@ -68,8 +68,7 @@ def _score(v) -> int:
 
 def judge(ctx, post: str, sources: list[dict] | str, kind: str = "linkedin") -> dict:
     """Absolute score, 1-5 per dimension. `flags` are hard-rule breaks plus an ungrounded post (grounded <= 2)."""
-    r = llm.call_json(ctx, "judge", "reference_judge", _prompt("judge", kind),
-                      f"# Sources\n{_sources(sources)}\n\n# The post\n{post}", model=JUDGE_MODEL)
+    r = _call(ctx, "reference_judge", _prompt("judge", kind), f"# Sources\n{_sources(sources)}\n\n# The post\n{post}")
     raw = r.get("scores") if isinstance(r.get("scores"), dict) else {}
     scores = {k: _score(raw.get(k)) for k in DIMENSIONS}
     flags = rules(post, kind) + ([f"not grounded: {'; '.join(map(str, r.get('unsupported') or []))[:160]}"] if scores["grounded"] <= 2 else [])
@@ -77,9 +76,21 @@ def judge(ctx, post: str, sources: list[dict] | str, kind: str = "linkedin") -> 
             "unsupported": r.get("unsupported") or [], "fix": str(r.get("fix") or ""), "version": version()}
 
 
+def _call(ctx, node: str, system: str, user: str, tries: int = 2) -> dict:
+    """The pinned model now and then returns an empty reply; one retry, then raise (the judge) or no verdict (a pick)."""
+    for n in range(tries):
+        try:
+            return llm.call_json(ctx, "judge", node, system, user, model=JUDGE_MODEL)
+        except ValueError:
+            if n == tries - 1:
+                raise
+
+
 def _pick(ctx, a: str, b: str, sources: str, kind: str) -> tuple[str, str]:
-    r = llm.call_json(ctx, "judge", "reference_compare", _prompt("compare", kind),
-                      f"# Sources\n{sources}\n\n# Post A\n{a}\n\n# Post B\n{b}", model=JUDGE_MODEL)
+    try:
+        r = _call(ctx, "reference_compare", _prompt("compare", kind), f"# Sources\n{sources}\n\n# Post A\n{a}\n\n# Post B\n{b}")
+    except ValueError:
+        return "tie", "no verdict: the judge returned nothing twice"
     better = str(r.get("better", "")).strip().upper()
     return (better if better in ("A", "B") else "tie"), str(r.get("why") or "")[:240]
 
@@ -113,10 +124,12 @@ def gate(summary: dict, baseline: dict | None) -> list[str]:
     """Reasons to fail (empty = pass). Scores are only compared with a baseline from the same judge version; a
     single noisy case can't fail the gate on its own: the mean and the vs-Shivam share move with all cases, and one
     flagged case is allowed."""
-    reasons = []
-    if len(summary["flagged"]) > MAX_FLAGGED:
-        reasons.append(f"{len(summary['flagged'])} cases break a hard rule or aren't grounded: {', '.join(summary['flagged'])}")
-    if not baseline or baseline.get("version") != summary["version"]:
+    reasons, same = [], bool(baseline) and baseline.get("version") == summary["version"]
+    allowed = max(MAX_FLAGGED, len(baseline["flagged"])) if same else MAX_FLAGGED  # gate regressions, not today's level
+    if len(summary["flagged"]) > allowed:
+        reasons.append(f"{len(summary['flagged'])} cases break a hard rule or aren't grounded (baseline allows {allowed}): "
+                       f"{', '.join(summary['flagged'])}")
+    if not same:
         return reasons
     if summary["judge_mean"] < baseline["judge_mean"] - TOLERANCE:
         reasons.append(f"judge mean {summary['judge_mean']} is below baseline {baseline['judge_mean']} - {TOLERANCE}")

@@ -10,14 +10,17 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --frozen
       - run: uv run pytest -q
-  # Real models on golden weeks, only for the agent whose prompts or code changed: on every PR, and again on main
-  # after a merge so the dashboard's /evals page tracks what's live. Results: the PR comment, the job summary,
-  # an artifact, and the eval run on the dashboard.
+  # Real models, only for the agent whose prompts or code changed. Two tiers:
+  # - reviewer evals (~1 min, ~$0.04): only the checkers, on frozen labelled posts. On PRs and on main. Reported, not
+  #   gated yet: the editor and logic check still flag some of Shivam's own posts.
+  # - end-to-end (PRs only, ~5 min): LinkedIn writes on the stories behind 3 of Shivam's posts + 1 rejected draft, and a
+  #   fixed judge compares it with his (evals/reference.py); Substack runs 2 golden windows. This tier gates.
+  # Results: the PR comment, the job summary, an artifact, and the eval runs on the dashboard.
   evals:
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     needs: tests
     runs-on: ubuntu-latest
-    timeout-minutes: 50   # Substack cases take ~5-8 min each
+    timeout-minutes: 25   # cases run 4 at a time; a Substack case takes ~5-8 min
     permissions: { contents: read, pull-requests: write }
     env:
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
@@ -47,14 +50,22 @@ jobs:
         if: steps.changed.outputs.market_intel == 'true' || steps.changed.outputs.substack == 'true'
       - if: steps.changed.outputs.market_intel == 'true' || steps.changed.outputs.substack == 'true'
         run: uv sync --frozen --no-dev
-      - id: linkedin
+      - id: reviewers
         if: steps.changed.outputs.market_intel == 'true'
         continue-on-error: true
-        run: uv run python -m evals.run_evals --cases 5
-      - id: substack
-        if: steps.changed.outputs.substack == 'true'   # 3 cases, images off: ~$0.25-0.40
+        run: uv run python -m evals.run_reviewer_evals --agent market_intel
+      - id: reviewers_substack
+        if: steps.changed.outputs.substack == 'true'
         continue-on-error: true
-        run: uv run python -m evals.run_evals --agent substack --cases 3
+        run: uv run python -m evals.run_reviewer_evals --agent substack
+      - id: linkedin
+        if: github.event_name == 'pull_request' && steps.changed.outputs.market_intel == 'true'
+        continue-on-error: true
+        run: uv run python -m evals.run_evals   # --full adds the golden days and every reference case
+      - id: substack
+        if: github.event_name == 'pull_request' && steps.changed.outputs.substack == 'true'   # 2 cases, images off
+        continue-on-error: true
+        run: uv run python -m evals.run_evals --agent substack
       - name: Report
         if: always() && (steps.changed.outputs.market_intel == 'true' || steps.changed.outputs.substack == 'true')
         env: { GH_TOKEN: "${{ github.token }}" }

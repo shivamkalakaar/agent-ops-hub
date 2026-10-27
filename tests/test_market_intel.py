@@ -64,6 +64,9 @@ def offline(monkeypatch, tmp_path):
         "editor": critic,
         "fact_checker": lambda m: json.dumps({"claims": [{"claim": "scored 88 on X", "verdict": "supported"}]}),
         "logic_checker": lambda m: json.dumps({"chain": ["open model matches", "at a tenth of the price"], "logic": 5, "plain": 5, "issues": []}),
+        "reference_judge": lambda m: json.dumps({"scores": dict.fromkeys(["plain", "logic", "one_idea", "hook", "grounded", "human"], 4),
+                                                 "chain": ["a", "so b"], "unsupported": [], "fix": ""}),
+        "reference_compare": lambda m: json.dumps({"better": "B", "why": "clearer"}),
         "final_check": lambda m: json.dumps({"passed": True, "blockers": [], "polish": []}),
         "supervisor": lambda m: json.dumps({"next": supervisor.canonical(_allowed(m)), "reason": "next in line"}),
         "onepager": lambda m: json.dumps({"title": "Open models <script>x</script>", "dek": "d",
@@ -169,11 +172,12 @@ def test_evals_offline(monkeypatch, tmp_path):
         steps = db.all("select * from agent_steps where run_id=%s order by seq", (run["id"],))
     s = run["stats"]
     assert run["status"] == "succeeded" and s["trigger"] == "pr" and s["pr"] == "7" and s["passed"] is True
-    assert len(s["results"]) == 2 and s["results"][0]["post"] and s["gate"] == []
+    assert len(s["results"]) == 3 and s["results"][0]["post"] and s["gate"] == []  # the PR set: three of Shivam's posts
+    assert s["judge"]["cases"] == 3 and s["judge"]["vs_shivam"] == 0.5 and s["judge"]["judge_mean"] == 4  # one fake judge, both orders
     cases = [x for x in steps if x["specialist"] == "eval_case"]
-    assert len(cases) == 2 and cases[0]["summary"].startswith("2026-") and cases[0]["seq"] == 900
+    assert len(cases) == 3 and cases[0]["summary"].startswith("ref ") and cases[0]["seq"] == 900
     md = (tmp_path / "results" / "market_intel.md").read_text()
-    assert "Evals: LinkedIn agent passed" in md and "| Case |" in md
+    assert "Evals: LinkedIn agent passed" in md and "| Case | Judge | vs Shivam |" in md
 
 
 def test_keeps_more_human_version_when_rewrite_is_worse():
