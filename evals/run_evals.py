@@ -38,8 +38,8 @@ BASELINES = {"market_intel": HERE / "baseline.json", "substack": HERE / "baselin
 LESSONS = (HERE / "lessons.fixture.md").read_text().strip()
 TOLERANCE = 0.3
 # The Substack agent saves its best version even when nothing passes, flagged for the owner, so one flagged post in
-# a 3-case run isn't a regression; two are. The LinkedIn agent still needs every final post clean.
-MIN_GUARDRAIL_PASS = {"market_intel": 1.0, "substack": 2 / 3}
+# the 2-case run isn't a regression; two are. LinkedIn is gated by the fixed judge instead (see check()).
+MIN_GUARDRAIL_PASS = {"market_intel": 1.0, "substack": 1 / 2}
 DAYS_PER_SUBSTACK_CASE = 3  # a Wed/Sat post covers 3-4 days of news
 REJECTION_CASES = 1  # the owner's latest rejected LinkedIn draft (with a reason) is rerun as a "don't do this again" case
 # PR set: the agent writes on the stories behind three of Shivam's published posts, and the fixed judge (evals/reference.py)
