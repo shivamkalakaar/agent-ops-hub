@@ -1,0 +1,57 @@
+{
+ "id": "942e36b0112d",
+ "kind": "linkedin",
+ "topic": "business: open models' token share vs revenue share (edited for plain words and logic)",
+ "created_at": "2026-10-27 17:48:29",
+ "linkedin_url": "https://www.linkedin.com/feed/update/urn:li:activity:7520908787281469440/",
+ "performance": null,
+ "items": [
+  {
+   "url": "https://globaladvisors.biz/2026/10/17/fast-fact-closed-weight-ai-usage-on-openrouter-rose-13-fold-as-its-share-of-tokens-fell/",
+   "title": "Open-weight models now serve about 72% of OpenRouter's tokens, up from about 28% a year ago",
+   "summary": "Per Latent Space, weekly OpenRouter traffic is up about 27× since last November, to roughly 165T tokens. Closed models grew too (13× by one analysis), but their share fell from 74% to 28%. These figures cover only OpenRouter traffic, not the whole market.",
+   "why": "Tokens and dollars are diverging. On Vercel's gateway in August, open models handled 56% of tokens but only 14 cents of every dollar, so high-volume work goes to cheap open models while the profit stays with closed frontier models.",
+   "source": "Global Advisors",
+   "layer": "inference",
+   "importance": 4,
+   "origin": "brief",
+   "also": [
+    {
+     "url": "https://latent.space/p/ainews-anthropic-s1/",
+     "source": "Latent Space"
+    },
+    {
+     "url": "https://thenewstack.io/open-weight-anthropic-spend/",
+     "source": "The New Stack (Vercel data)"
+    }
+   ],
+   "body": "Fast Fact: Closed-weight AI usage on OpenRouter rose 13-fold as its share of tokens fell\nby Akira Hoshino | 2026-10-17 | Breaking business news AM , Breaking Business News PM , Business News Select , Fast-Facts , Link from bio | 0 comments\nClosed-weight AI usage on OpenRouter rose 13-fold while its share of tokens fell from 74% to 28%. Open-weight usage increased 95-fold. The total expanded 34-fold. A percentage chart captures the change in relative scale, but hides much of the growth behind it. [1]\nThese figures measure traffic routed through OpenRouter. They exclude requests sent directly to OpenAI and Anthropic APIs, and usage in their own applications such as ChatGPT and Claude. They also omit open-weight models run directly through other hosts or on private infrastructure. The charts therefore cannot establish total provider usage growth or market-wide open/closed shares. Growth on OpenRouter could reflect new demand, traffic moving between routes, or both. [1]\nThe more recent pattern is just as revealing. Closed-weight models recovered some share as their growth accelerated. Successive releases from OpenAI, Anthropic and DeepSeek attracted substantial usage, challenging a simple account of models becoming interchangeable. The strategic question is whether providers can keep delivering improvements that customers value, at a cost that allows them to earn acceptable returns.\nFalling share can coexist with rapid growth. Closed-weight weekly tokens increased from 3,60 trillion to 46,70 trillion.\nRecent competition has been more balanced. Closed-weight share of volume recovered from approximately 26% in July to 31% in September.\nNew releases can attract usage quickly. DeepSeek V4.1 Flash, GPT-6 Luna and Claude Opus 5.5 became substantial sources of OpenRouter traffic within weeks.\nCapability and economics need to be assessed together. Higher performance, lower prices and fewer tokens per completed task can all change demand.\nUsage growth does not settle the moat question. Providers still need to convert that activity into returns after serving customers and financing the next generation.\nOpenRouter measures one route to the market\nThe missing direct traffic is material to interpretation. A change in OpenRouter share could coexist with a different pattern in direct subscriptions and API usage. The OpenRouter series cannot tell us how quickly direct OpenAI or Anthropic usage grew, whether it grew faster than routed usage, or whether either provider gained or lost share across all channels. Ramp provides a complementary connected-provider sample, discussed below, rather than a complete measure of all direct activity. The 13-fold figure belongs to closed-weight tokens on OpenRouter, rather than to the whole closed-weight market.\nThis also narrows what the chart can say about competitive moats. A shared routing platform makes it possible to compare models without capturing all the advantages a provider might build through its own applications, workflow integration, enterprise relationships or distribution. Those potential advantages require separate evidence. OpenRouter remains a useful lens on competition between models, but an incomplete lens on competition between the businesses behind them.\nA growing denominator changes the interpretation\nBetween the complete weeks beginning 20 October 2025 and 5 October 2026, open-weight volume increased from 1,27 trillion to 120,95 trillion tokens per week. Closed-weight volume increased from 3,60 trillion to 46,70 trillion. Together, they grew from 4,87 trillion to 167,65 trillion tokens per week. Open-weight models accounted for approximately 74% of the increase. [1]\nThe open-weight share gain is real. It does not follow that closed-weight demand collapsed. Both categories expanded substantially, and one expanded faster. Nor does their simultaneous growth prove there was no substitution: these aggregate figures cannot reveal how much closed-weight usage might otherwise have occurred.\nThe three panels answer different questions. Absolute volumes establish the scale of activity. Growth rates show how quickly that scale changes. Percentage shares show how the activity"
+  },
+  {
+   "url": "https://openai.com/index/introducing-gpt-6-1-terra/",
+   "title": "GPT-6.1 Terra: OpenAI's mid-tier model gains 6 points and costs less than a third as much per task",
+   "summary": "Terra costs $1 per million input tokens and $5 per million output, versus $2/$12 for GPT-5.6 Terra. It is aimed at visual reasoning, computer use and writing, and is available in ChatGPT, Codex and the API. Artificial Analysis scores it 4 points below GPT-6.1 Sol overall, and its \"makes up an answer when unsure\" rate fell from 88% to 38%. OpenAI also says Terra meets the \"Critical\" cybersecurity level in its Preparedness Framework, so it ships with the same safeguards as GPT-6 Astra.",
+   "why": "Mid-tier models decide what agents cost to run, and Terra's price undercuts open-weight competitors on the work where they have been gaining share (see Inference).",
+   "source": "OpenAI",
+   "layer": "models",
+   "importance": 5,
+   "origin": "brief",
+   "also": [
+    {
+     "url": "https://artificialanalysis.ai/articles/gpt-6-1-terra-pushes-the-cost-efficiency-frontier",
+     "source": "Artificial Analysis"
+    },
+    {
+     "url": "https://simonwillison.net/2026/Oct/26/gpt-61-terra/",
+     "source": "Simon Willison"
+    },
+    {
+     "url": "https://www.helpnetsecurity.com/2026/10/27/gpt-6-1-terra-released/",
+     "source": "Help Net Security"
+    }
+   ]
+  }
+ ],
+ "reference": "Open models now handle 72% of the tokens on OpenRouter, up from 28% a year ago.\n\nTotal traffic grew about 27x in that time, to around 165T tokens a week. Closed models grew too, but open models grew much faster, so the closed share fell to 28%.\n\nBut more work doesn't mean more money. Vercel's AI gateway shows both. In August, open models handled 56% of its tokens but earned only 14 cents of every dollar.\n\nSo most of the money still goes to closed models. The likely reason: open models win cheap, high-volume work, and closed models keep expensive, lower-volume work.\n\nThat split only lasts while the top closed models are worth the extra price. And the gap is shrinking from both sides. Top models are getting cheaper - OpenAI's GPT-6.1 Terra costs $1 per million input tokens, half the $2 of GPT-5.6 Terra, and a job that used to cost $3 now costs less than $1. Cheaper models are also getting better.\n\nWatch the 14 cents. It shows who is winning the money.\n\n#ai #opensource #inference",
+ "agent_post": "Open-weight models serve 72% of OpenRouter's tokens, up from 28% a year ago.\n\nOn Vercel's gateway in August, they handled 56% of tokens and took 14 cents of every dollar.\n\nVolume and revenue came apart. OpenRouter traffic is up roughly 27x since last November, to about 165T tokens a week. Closed models grew too, 13x by one count, and their share still fell from 74% to 28%.\n\nBut the dollars stayed with the frontier. The open models win the cheap, high-volume work and the closed ones keep the expensive, low-volume work.\n\nThat split only holds while the frontier is worth the premium. OpenAI's GPT-6.1 Terra costs $1 per million input tokens against $2 for GPT-5.6 Terra, and less than a third the cost per task. If the mid-tier keeps closing the gap, the 14 cents becomes the whole question.\n\n#ai #opensource #inference"
+}
