@@ -12,7 +12,7 @@ from core.orchestrator import FINISH, done_or_off, on
 from agents.market_intel.roster import AGENT, AUTHOR, MAX_STEPS, WORKERS
 from agents.market_intel.specialists import version, weak
 
-PREFERENCE = ["editor", "fact_checker", "writer", "final_check", "onepager", FINISH, "scout", "researcher"]
+PREFERENCE = ["editor", "fact_checker", "logic_checker", "writer", "final_check", "onepager", FINISH, "scout", "researcher"]
 
 
 def allowed(state, settings) -> list[str]:
@@ -24,9 +24,11 @@ def allowed(state, settings) -> list[str]:
     if v == 0:
         return ["writer"]
     e, f, fr = state.get("edit_report") or {}, state.get("fact_report") or {}, state.get("final_report") or {}
+    lg = state.get("logic_report") or {}
     edited, checked, finaled = e.get("version") == v, f.get("version") == v, fr.get("version") == v
+    reasoned = lg.get("version") == v
     issues = ((edited and (weak(e) or e.get("violations") or e.get("unsupported"))) or (checked and f.get("blocking"))
-              or (finaled and not fr.get("passed")))
+              or (reasoned and lg.get("blocking")) or (finaled and not fr.get("passed")))
     if finaled and fr.get("passed"):
         issues = False  # cleared for publishing: no more rewrites
     opts = []
@@ -34,11 +36,14 @@ def allowed(state, settings) -> list[str]:
         opts.append("editor")
     if not checked and on(state, settings, "fact_checker"):
         opts.append("fact_checker")
+    if not reasoned and on(state, settings, "logic_checker"):
+        opts.append("logic_checker")
     w = settings["writer"]
     writer_left = w.max_calls - state.get("calls", {}).get("writer", 0)
     if issues and on(state, settings, "writer") and (writer_left > 1 or (finaled and not fr.get("passed"))):
         opts.append("writer")
-    ready = done_or_off(state, settings, "editor", edited) and done_or_off(state, settings, "fact_checker", checked)
+    ready = (done_or_off(state, settings, "editor", edited) and done_or_off(state, settings, "fact_checker", checked)
+             and done_or_off(state, settings, "logic_checker", reasoned))
     if ready and not finaled and on(state, settings, "final_check"):
         opts.append("final_check")
     if (finaled and fr.get("passed")) or not opts:
@@ -61,6 +66,9 @@ def workspace(state) -> str:
                      f"{len(e.get('violations', []))} guardrail flags. {e.get('critique', '')}")
     if f:
         lines.append(f"Fact check on v{f['version']}: {f['blocking']} unsupported, {f['hedges']} to state more carefully")
+    if lg := state.get("logic_report"):
+        lines.append(f"Logic check on v{lg['version']}: logic {lg['logic']}/5, plain {lg['plain']}/5, "
+                     f"{'must fix' if lg['blocking'] else 'ok'}: {len(lg['issues'])} issues")
     if fr:
         lines.append(f"Final check on v{fr['version']}: {'PASS' if fr['passed'] else 'FAIL: ' + '; '.join(fr['blockers'][:3])}")
     return "\n".join(lines)

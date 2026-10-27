@@ -144,6 +144,7 @@ class DraftState(TypedDict, total=False):
     drafts: list[dict]    # [{"version", "post"}]
     edit_report: dict
     fact_report: dict
+    logic_report: dict
     final_report: dict
     candidates: dict      # str(version) -> editor + fact-check results, for picking the best version
     onepager: dict
@@ -235,7 +236,8 @@ def best(state: DraftState) -> dict | None:
     """The version to save when none passed: fact-checked beats unchecked, then fewest problems, then the weighted
     score, then the more human one (core.drafting.rank). Same rule as the Substack agent (agents/substack/ranking.py)."""
     on = state["settings"]["fact_checker"].enabled
-    entries = [{**e, "violations": e["violations"] + e.get("fact_issues", []) + ([] if e.get("fact_checked") or not on else ["not fact-checked"])}
+    entries = [{**e, "violations": e["violations"] + e.get("fact_issues", []) + e.get("logic_issues", [])
+                + ([] if e.get("fact_checked") or not on else ["not fact-checked"])}
                for e in state.get("candidates", {}).values()]
     return max(entries, key=lambda e: (bool(e.get("fact_checked")) or not on, drafting.rank(e))) if entries else None
 

@@ -63,6 +63,7 @@ def offline(monkeypatch, tmp_path):
         "writer": lambda m: GOOD_POST,
         "editor": critic,
         "fact_checker": lambda m: json.dumps({"claims": [{"claim": "scored 88 on X", "verdict": "supported"}]}),
+        "logic_checker": lambda m: json.dumps({"chain": ["open model matches", "at a tenth of the price"], "logic": 5, "plain": 5, "issues": []}),
         "final_check": lambda m: json.dumps({"passed": True, "blockers": [], "polish": []}),
         "supervisor": lambda m: json.dumps({"next": supervisor.canonical(_allowed(m)), "reason": "next in line"}),
         "onepager": lambda m: json.dumps({"title": "Open models <script>x</script>", "dek": "d",
@@ -93,14 +94,15 @@ def test_collect_then_draft_end_to_end():
         calls = db.all("select node from llm_calls where run_id=%s order by id", (run["id"],))
         # the coordinator is only asked when more than one move is allowed
         assert [c["node"] for c in calls] == ["scout", "researcher", "writer", "supervisor", "editor", "supervisor", "fact_checker",
-                                              "supervisor", "writer", "supervisor", "editor", "fact_checker", "final_check", "onepager"]
+                                              "supervisor", "logic_checker", "supervisor", "writer", "supervisor", "editor", "supervisor",
+                                              "fact_checker", "logic_checker", "final_check", "onepager"]
         steps = db.all("select specialist, kind, status from agent_steps where run_id=%s order by seq", (run["id"],))
         assert steps[0]["specialist"] == "supervisor" and steps[-1]["specialist"] == "supervisor"
         assert {s["specialist"] for s in steps if s["kind"] == "work"} == {"supervisor", "scout", "researcher", "writer", "editor",
-                                                                           "fact_checker", "final_check", "onepager"}
+                                                                           "fact_checker", "logic_checker", "final_check", "onepager"}
         assert d["judge_scores"]["passed_review"] is True
         reg = db.all("select specialist from agent_registry where agent='market_intel'")
-        assert len(reg) == 8  # the dashboard sees the whole team
+        assert len(reg) == 9  # the dashboard sees the whole team
         assert "article_text" in graph._sources_block([{"source": "s", "title": "t", "summary": "x", "body": "b"}])
 
 
@@ -349,6 +351,41 @@ def test_unsupported_claims_go_back_to_the_writer_and_final_check_gates_the_save
     with connect() as db:
         d = db.one("select * from drafts")
         assert d["judge_scores"]["passed_review"] is True and d["revisions"] == 2  # v3 passed the final check
+
+
+def test_a_gap_in_the_argument_goes_back_to_the_writer_and_blocks_until_fixed():
+    from core.db import connect
+    seen = []
+    gap = {"chain": ["open models carry the tokens", "?"], "logic": 3, "plain": 3, "issues": [
+        {"kind": "unclear_comparison", "quote": "if the mid-tier keeps closing the gap", "problem": "whose gap?",
+         "fix": "say top models get cheaper and cheap models get better"}]}
+    logic = iter([gap, gap])
+    llm.FAKE_RESPONSES["editor"] = lambda m: json.dumps({"scores": dict.fromkeys(["hook", "focus", "brevity", "concreteness", "voice", "grounding"], 5),
+                                                          "critique": "Good."})
+    llm.FAKE_RESPONSES["logic_checker"] = lambda m: json.dumps(next(logic, {"chain": ["a", "so b"], "logic": 5, "plain": 4, "issues": []}))
+    llm.FAKE_RESPONSES["writer"] = lambda m: (seen.append(m[-1].content), GOOD_POST)[1]
+    assert cli.run("collect") == 0 and cli.run("draft") == 0
+    assert len(seen) >= 2 and "Logic check (logic 3/5, plain words 3/5; must fix)" in seen[1] and "whose gap?" in seen[1]
+    with connect() as db:
+        d = db.one("select * from drafts")
+        assert d["judge_scores"]["passed_review"] is True and d["revisions"] == 2  # v3's argument held together
+
+
+def test_logic_check_blocks_the_final_check_and_minor_notes_dont():
+    from agents.market_intel import specialists
+    state = {"drafts": [{"version": 1, "post": GOOD_POST}], "sources": [], "facts": [],
+             "logic_report": {"version": 1, "logic": 2, "plain": 4, "blocking": True,
+                              "issues": [{"kind": "non_sequitur", "quote": "so the money", "problem": "p", "fix": "f"}]}}
+    assert specialists.version(state) == 1
+    from agents.market_intel import supervisor
+    from core import settings
+    from agents.market_intel.roster import PROMPTS, SPECIALISTS
+    cfg = settings.from_files(SPECIALISTS, PROMPTS)
+    done = {"edit_report": {"version": 1, "scores": dict.fromkeys(["hook", "voice"], 5), "accent": {"score": 5}, "violations": []},
+            "fact_report": {"version": 1, "blocking": 0}, "angle": {"angle": "a"}, "researched": True, "calls": {}}
+    assert "writer" in supervisor.allowed({**state, **done}, cfg)
+    minor = {**state["logic_report"], "logic": 4, "blocking": False}
+    assert "writer" not in supervisor.allowed({**state, **done, "logic_report": minor}, cfg)
 
 
 def test_a_failing_final_check_is_flagged_not_hidden():
