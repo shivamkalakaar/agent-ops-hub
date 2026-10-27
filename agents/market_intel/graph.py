@@ -37,7 +37,7 @@ TEMPLATE_MOVES = [
     (r"\bI'd stop \w+.{0,80}?\band start\b", "the \"I'd stop X and start Y\" line"),
     (r"\bjust became an?\b", "the \"X just became Y\" hook"),
     (r"\bread it that way\b", "\"read it that way\""),
-    (r"(?:^|\n|\. )(?:my read|my bet|my guess|here's my take|the real story)\s*(?::|is that)", "a labelled pivot (\"My read:\", \"The real story is…\")"),
+    (r"(?:^|\n|[.!?][\"”')]? )(?:my read|my bet|my guess|here's my take|the real story)\s*(?::|is that)", "a labelled pivot (\"My read:\", \"The real story is…\")"),
     (r"(?:^|\n)\s*(?:why [\w' ]{1,30}|the (?:catch|kicker|twist|takeaway|upshot|point|bottom line)|here's (?:why|what|the thing))\s*:",
      "a labelled lead-in (\"Why it matters:\", \"The catch:\")"),
     (r"\bthat's the (?:part|number|thing|detail|bit|line|question|real \w+) (?:that matters|to (?:sit with|watch|remember|notice))",

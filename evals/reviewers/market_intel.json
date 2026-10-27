@@ -1,0 +1,626 @@
+{
+ "about": "Reviewer evals for the LinkedIn agent: posts with the sources they were written from and what each reviewer should say. own = Shivam's published or edited posts (every reviewer should pass them); bad = agent drafts he rewrote or rejected; planted = a good post with one defect added. expect: pass, flag, or a list of words the flags must mention. accept: flags on that case that are known and fine (substring match).",
+ "sources": {
+  "36eb482a4936": {
+   "items": [
+    {
+     "url": "https://x.com/ArtificialAnlys/status/2113424551396934134",
+     "title": "Artificial Analysis Coding Agent Index v2.0: Claude Code + Opus 5.5 leads at 61.7, under stricter grading",
+     "source": "Artificial Analysis",
+     "summary": "The index scores each model together with its agent harness, and now uses Cognition's FrontierCode v1.1 in place of DeepSWE. Sonnet 5.5 in Claude Code scores 59.3 and Muse Wonder Full in Muse Code 58.9. On cost, Opus 5.5 spends $11.42 per task, while DeepSeek V4.1 Flash in Codex reaches 47.3 for $0.39.",
+     "why": "A 29× cost gap for a 14-point quality gap is the trade-off enterprises are now making when they choose which model runs their coding agents.",
+     "origin": "brief"
+    }
+   ],
+   "facts": [
+    {
+     "claim": "Claude Code with Opus 5.5 leads the Artificial Analysis Coding Agent Index v2.0 with a score of 61.7",
+     "evidence": "Claude Code + Opus 5.5 leads at 61.7",
+     "source_id": 0
+    },
+    {
+     "claim": "Opus 5.5 in Claude Code costs $11.42 per task on the index",
+     "evidence": "Opus 5.5 spends $11.42 per task",
+     "source_id": 0
+    },
+    {
+     "claim": "DeepSeek V4.1 Flash in Codex scores 47.3 on the index",
+     "evidence": "DeepSeek V4.1 Flash in Codex reaches 47.3",
+     "source_id": 0
+    },
+    {
+     "claim": "DeepSeek V4.1 Flash in Codex costs $0.39 per task on the index",
+     "evidence": "DeepSeek V4.1 Flash in Codex reaches 47.3 for $0.39",
+     "source_id": 0
+    },
+    {
+     "claim": "The cost gap between Opus 5.5 and DeepSeek V4.1 Flash is approximately 29x",
+     "evidence": "Opus 5.5 spends $11.42 per task, while DeepSeek V4.1 Flash in Codex reaches 47.3 for $0.39",
+     "source_id": 0
+    },
+    {
+     "claim": "The index now uses Cognition's FrontierCode v1.1 instead of DeepSWE for evaluation",
+     "evidence": "now uses Cognition's FrontierCode v1.1 in place of DeepSWE",
+     "source_id": 0
+    },
+    {
+     "claim": "Sonnet 5.5 in Claude Code scores 59.3 and Muse Wonder Full in Muse Code scores 58.9",
+     "evidence": "Sonnet 5.5 in Claude Code scores 59.3 and Muse Wonder Full in Muse Code 58.9",
+     "source_id": 0
+    }
+   ],
+   "context": [
+    "The 29x cost ratio and 14-point quality gap are derived calculations from the posted scores and costs, not explicitly stated in the source",
+    "The index evaluates model+agent harness combinations, not raw model performance in isolation",
+    "Source doesn't provide token volume data or trends to validate the 'token volume going up' claim"
+   ]
+  },
+  "3fcc2862c829": {
+   "items": [
+    {
+     "url": "https://lynchlab.net/llm-skin-cancer",
+     "title": "A fine-tuned 2015-era CNN beats GPT-6 Astra and Claude Fable 5.1 at diagnosing skin lesions, 62% to 42%",
+     "source": "Lynch Lab",
+     "summary": "The test used 200 lesions from the public MILK10k set, each confirmed by biopsy. Inception v3, fine-tuned on 68,011 ISIC images, got 125 first-choice diagnoses right. GPT-6 Astra got 84 and Fable 5.1 got 85, and the CNN was also ahead when counting a correct first or second choice (173 vs. 134 and 138).",
+     "why": "General frontier models still lose to small specialist models in narrow visual domains that have lots of labeled data, which is the argument for vertical AI companies that own their own data.",
+     "origin": "brief"
+    }
+   ],
+   "facts": [
+    {
+     "claim": "A fine-tuned Inception v3 (2015 CNN) achieved 62% first-choice accuracy on 200 biopsy-proven skin lesions, beating GPT-6 Astra (42%) and Claude Fable 5.1 (42%).",
+     "evidence": "The CNN named the right diagnosis (out of 6 possiblities) for 125 of them (62%). The two frontier LLMs named it for 84 and 85 (42%).",
+     "source_id": 0
+    },
+    {
+     "claim": "Inception v3 was fine-tuned on 68,011 ISIC Archive images on a single H100 GPU for about twenty minutes.",
+     "evidence": "I used Inception v3 pretrained on everyday photographs and then fine-tuned all layers on 68,011 dermoscopic and clinical images from the ISIC Archive on a single H100 GPU... fine-tuned for about twenty minutes.",
+     "source_id": 0
+    },
+    {
+     "claim": "With a second-choice allowance, the CNN reached 173/200 correct vs 134 for GPT-6 Astra and 138 for Claude Fable 5.1.",
+     "evidence": "Allowing a second choice, it reached 173 of 200 against 134 and 138.",
+     "source_id": 0
+    },
+    {
+     "claim": "The CNN correctly identified 13 of 30 melanomas vs 8 for GPT-6 Astra and 11 for Claude Fable 5.1.",
+     "evidence": "It named 13 of the 30 melanomas against 8 and 11.",
+     "source_id": 0
+    },
+    {
+     "claim": "GPT-6 Astra over-called basal cell carcinoma (75 predictions vs 25 actual), including 14 of 30 melanomas; Claude Fable 5.1 over-called actinic keratosis (53 predictions vs 20 actual).",
+     "evidence": "GPT-6 Astra called 75 lesions basal cell carcinoma when 25 were, including 14 of the 30 melanomas, and Claude Fable 5.1 called 53 lesions actinic keratosis when 20 were.",
+     "source_id": 0
+    },
+    {
+     "claim": "Test designed and conducted by Dr Magnus Lynch, Consultant Dermatologist and Mohs Surgeon at Guy's Hospital and Honorary Reader at King's College London.",
+     "evidence": "Dr Magnus Lynch is a Consultant Dermatologist and Mohs Surgeon at Guy's Hospital and Honorary Reader (equivalent of Associate Professor) at King's College London.",
+     "source_id": 0
+    }
+   ],
+   "context": [
+    "Small sample: only 200 lesions (30 melanomas) — wide uncertainty on melanoma detection rates; single-run LLM evaluations (answers vary between runs).",
+    "MILK10k has been public since 2025, so LLMs may have seen it in training (which would help them); CNN test set was decontaminated.",
+    "Inception v3 is a baseline — state-of-the-art dermatology AI uses transformer ensembles on more data and performs considerably better; this is not a claim that CNNs beat all specialist AI, only that they beat these two frontier LLMs on this narrow task."
+   ]
+  },
+  "4a50be497600": {
+   "items": [
+    {
+     "url": "https://latent.space/p/ainews-kimi-31/",
+     "title": "Vals AI: the same Kimi K3 scored 75.8% on legal tasks through Moonshot, but only 60.6% through Baseten",
+     "source": "Latent Space AINews (citing Vals AI)",
+     "summary": "Vals ran its legal benchmark against one open-weight model served by different providers and found a 15-point gap. The gap comes from how a provider serves the model, for example quantization, chat templates and tool-call parsing, not from the weights themselves.",
+     "why": "With open weights, it's tempting to pick whichever provider has the lowest token price. This shows the cheaper serving can cost real accuracy, so evaluate the model on the provider you'll actually use.",
+     "origin": "brief"
+    }
+   ],
+   "facts": [
+    {
+     "claim": "Kimi K3 scored 75.8% on Vals AI legal benchmark when served by Moonshot",
+     "evidence": "the same Kimi K3 scored 75.8% on legal tasks through Moonshot",
+     "source_id": 0
+    },
+    {
+     "claim": "Kimi K3 scored 60.6% on Vals AI legal benchmark when served by Baseten",
+     "evidence": "but only 60.6% through Baseten",
+     "source_id": 0
+    },
+    {
+     "claim": "The 15.2-point accuracy gap comes from provider serving differences like quantization, chat templates, and tool-call parsing, not model weights",
+     "evidence": "The gap comes from how a provider serves the model, for example quantization, chat templates and tool-call parsing, not from the weights themselves.",
+     "source_id": 0
+    },
+    {
+     "claim": "Vals AI ran its legal benchmark against one open-weight model served by different providers",
+     "evidence": "Vals ran its legal benchmark against one open-weight model served by different providers",
+     "source_id": 0
+    }
+   ],
+   "context": [
+    "Source is a summary citing Vals AI data; the original Vals AI benchmark methodology and full results are not shown in the provided text.",
+    "The comparison uses Kimi K3 (not the newer K3.1 Pro), so provider gaps may differ for the latest model version.",
+    "Only two providers (Moonshot and Baseten) are compared; the gap may not generalize to all serving platforms."
+   ]
+  },
+  "59788df1bfbd": {
+   "items": [
+    {
+     "url": "https://www.notion.com/blog/notion-ai-more-for-less",
+     "title": "Notion's sixth-gen agent harness runs single tasks for 24+ hours, and seats now come with AI credits",
+     "source": "Notion Blog (Akshay Kothari)",
+     "summary": "Notion rebuilt its agents on a queue-backed worker service, so tasks survive restarts and can run for more than 24 hours, up from five minutes. Agents also write scripts for browser work, compact long context, and have a separate \"Review for me\" model check risky actions. Business and Enterprise seats now include 1,500 Standard and 500 Select credits a month, and existing customers move over on November 2. Notion says its \"Auto\" router matched Opus 5.5 and Astra across 20+ use cases at about 90% lower average cost.",
+     "why": "This is the seat-to-usage shift in practice: a seat buys a credit allowance, and a model router is what protects Notion's margin.",
+     "origin": "brief"
+    }
+   ],
+   "facts": [],
+   "context": []
+  },
+  "942e36b0112d": {
+   "items": [
+    {
+     "url": "https://globaladvisors.biz/2026/10/17/fast-fact-closed-weight-ai-usage-on-openrouter-rose-13-fold-as-its-share-of-tokens-fell/",
+     "title": "Open-weight models now serve about 72% of OpenRouter's tokens, up from about 28% a year ago",
+     "source": "Global Advisors",
+     "summary": "Per Latent Space, weekly OpenRouter traffic is up about 27× since last November, to roughly 165T tokens. Closed models grew too (13× by one analysis), but their share fell from 74% to 28%. These figures cover only OpenRouter traffic, not the whole market.",
+     "why": "Tokens and dollars are diverging. On Vercel's gateway in August, open models handled 56% of tokens but only 14 cents of every dollar, so high-volume work goes to cheap open models while the profit stays with closed frontier models.",
+     "origin": "brief"
+    },
+    {
+     "url": "https://openai.com/index/introducing-gpt-6-1-terra/",
+     "title": "GPT-6.1 Terra: OpenAI's mid-tier model gains 6 points and costs less than a third as much per task",
+     "source": "OpenAI",
+     "summary": "Terra costs $1 per million input tokens and $5 per million output, versus $2/$12 for GPT-5.6 Terra. It is aimed at visual reasoning, computer use and writing, and is available in ChatGPT, Codex and the API. Artificial Analysis scores it 4 points below GPT-6.1 Sol overall, and its \"makes up an answer when unsure\" rate fell from 88% to 38%. OpenAI also says Terra meets the \"Critical\" cybersecurity level in its Preparedness Framework, so it ships with the same safeguards as GPT-6 Astra.",
+     "why": "Mid-tier models decide what agents cost to run, and Terra's price undercuts open-weight competitors on the work where they have been gaining share (see Inference).",
+     "origin": "brief"
+    },
+    {
+     "url": "https://latent.space/p/ainews-anthropic-s1/",
+     "title": "Update: Anthropic's IPO is reportedly about two weeks out, and nearly half its revenue comes through cloud marketplaces",
+     "source": "Latent Space (AINews)",
+     "summary": "Reports put the Nasdaq listing (\"ANT\") around November 9. The widely quoted \"$2T\" is Polymarket's expected closing value, which slipped from about $2.1T to $2.0T after the filing; it is not a company target. New details from the S-1: about 48% of H1 2026 revenue (roughly $7.8B) came through Bedrock, Vertex and Azure Marketplace, up from 11% in 2023. The lockup releases shares in stages over more than a year instead of all at once after 180 days, and 5% of shares go into a Public Benefit Fund. Analysts' cash estimates range from about $132B to $134B.",
+     "why": "The hyperscalers are Anthropic's compute suppliers and also its biggest sales channel, so a frontier lab's distribution now depends on the same three companies as its infrastructure.",
+     "origin": "brief"
+    },
+    {
+     "url": "https://artificialanalysis.ai/articles/gpt-6-1-terra-pushes-the-cost-efficiency-frontier",
+     "title": "GPT-6.1 Terra: OpenAI's mid-tier model gains 6 points and costs less than a third as much per task",
+     "source": "Artificial Analysis",
+     "origin": "brief"
+    }
+   ],
+   "facts": [
+    {
+     "claim": "Open-weight models serve about 72% of OpenRouter's tokens, up from about 28% a year ago",
+     "evidence": "Open-weight models now serve about 72% of OpenRouter's tokens, up from about 28% a year ago",
+     "source_id": 0
+    },
+    {
+     "claim": "Weekly OpenRouter traffic is up about 27× since last November to roughly 165T tokens",
+     "evidence": "weekly OpenRouter traffic is up about 27× since last November, to roughly 165T tokens",
+     "source_id": 0
+    },
+    {
+     "claim": "Closed-weight models' share of OpenRouter tokens fell from 74% to 28%",
+     "evidence": "Closed models grew too (13× by one analysis), but their share fell from 74% to 28%",
+     "source_id": 0
+    },
+    {
+     "claim": "Closed-weight weekly tokens on OpenRouter increased from 3.6 trillion to 46.7 trillion",
+     "evidence": "Closed-weight weekly tokens increased from 3,60 trillion to 46,70 trillion",
+     "source_id": 0
+    },
+    {
+     "claim": "Total OpenRouter traffic expanded 34-fold",
+     "evidence": "The total expanded 34-fold",
+     "source_id": 0
+    }
+   ],
+   "context": [
+    "Figures cover only OpenRouter traffic, not the whole market — they exclude direct API usage to OpenAI/Anthropic and private infrastructure",
+    "Closed-weight share recovered from ~26% in July to 31% in September, showing recent competition is more balanced",
+    "Vercel gateway data is from August only; revenue share may differ across other platforms or time periods"
+   ]
+  },
+  "977b5049c201": {
+   "items": [
+    {
+     "url": "https://nebius.com/newsroom/nebius-secures-3-5-billion-financing-facility-with-citi",
+     "title": "Neoclouds sell off: CoreWeave falls 10% to a 52-week low as Nebius takes a one-year, $3.5B loan from Citi",
+     "source": "Nebius Newsroom",
+     "summary": "Nebius's 364-day secured loan from Citi costs SOFR + 2.75% and will fund data centers and GPUs. Nebius says it still has over $40B of investment-grade contracts it can borrow against. CoreWeave closed at $55.60 after Bernstein cut its target to $51, estimating CoreWeave needs about $85B to fund its committed backlog, and some CoreWeave bonds now yield around 15%, up from 9.675% when they were issued (per Motley Fool and press reports).",
+     "why": "The GPU build-out runs on borrowed money, so the cost of that debt is now a real limit on how fast neoclouds can add capacity, whatever Jensen Huang says about demand being \"off the charts.\"",
+     "origin": "brief"
+    },
+    {
+     "url": "https://fortune.com/2026/10/21/meta-q3-earnings-mark-zuckerberg-capex-muse/",
+     "title": "Meta spent $34.9B on capex last quarter, and its free cash flow went negative",
+     "source": "Fortune",
+     "summary": "Revenue rose 26% to $64.6B, but free cash flow was −$2.1B, down from $10.6B a year ago. Meta narrowed its 2026 capex guidance to $135–145B. Zuckerberg said more than 10M people in the US and Canada have set up the Muse assistant, that it isn't global yet because it needs so much compute, and that \"it's going to be very important to get the math on all of this to work out.\"",
+     "why": "A hyperscaler whose capex now exceeds its operating cash flow is one more reason AI infrastructure is moving to debt financing, the same pressure showing up in neocloud credit.",
+     "origin": "brief"
+    }
+   ],
+   "facts": [
+    {
+     "claim": "Nebius's Citi loan starts at SOFR + 2.75% and can rise to at most 3.50%",
+     "source_id": 0,
+     "evidence": "initially bears interest at Term SOFR plus 2.75% per annum, increasing up to a maximum of 3.50% per annum"
+    },
+    {
+     "claim": "Meta is creating a Class C stock share class to help fund the AI buildout",
+     "source_id": 1,
+     "evidence": "The company also said it create a Class C stock share class to help it fund the AI buildout"
+    }
+   ],
+   "context": []
+  },
+  "a02c890bc277": {
+   "items": [
+    {
+     "url": "https://www.theinformation.com/articles/anthropics-margin-openais-opportunity",
+     "title": "Update: OpenAI reportedly won Replit's model spending with a 30%+ discount on a $100M+/year contract",
+     "source": "The Information (paywalled)",
+     "summary": "The Information, citing one person familiar with the deal, says Replit moved most of its AI spending from Anthropic to OpenAI after OpenAI offered more than 30% off list prices. None of the three companies has confirmed the terms. On Oct 17, Replit's CEO had said ChatGPT models are now Replit Agent's default, citing cost, performance and partnership, though Claude models are still available.",
+     "why": "Coding platforms are the biggest buyers of tokens, and their default model decides where most of that money goes. OpenAI is using price to pull share from Anthropic, whose margins matter more as it heads toward a reported IPO.",
+     "origin": "brief"
+    },
+    {
+     "url": "https://runtimewire.com/article/replit-openai-model-spending-discount-contract",
+     "title": "Update: OpenAI reportedly won Replit's model spending with a 30%+ discount on a $100M+/year contract",
+     "source": "RuntimeWire",
+     "origin": "brief"
+    }
+   ],
+   "facts": [
+    {
+     "claim": "OpenAI reportedly offered Replit a discount of more than 30% off list prices to win its model spending.",
+     "evidence": "OpenAI offered a discount of more than 30% under a contract worth more than $100 million annually",
+     "source_id": 1
+    },
+    {
+     "claim": "The reported contract is worth more than $100 million annually.",
+     "evidence": "a contract worth more than $100 million annually",
+     "source_id": 1
+    },
+    {
+     "claim": "Replit shifted most of its AI spending from Anthropic to OpenAI.",
+     "evidence": "Replit shifted most of its AI spending from Anthropic to OpenAI",
+     "source_id": 1
+    },
+    {
+     "claim": "The Information reported the deal on October 25th, citing a person familiar with the situation.",
+     "evidence": "The Information reported on October 25th, citing a person familiar with the situation",
+     "source_id": 1
+    },
+    {
+     "claim": "Replit, OpenAI and Anthropic have not publicly confirmed the financial terms.",
+     "evidence": "Replit, OpenAI and Anthropic have not publicly confirmed the financial terms",
+     "source_id": 1
+    },
+    {
+     "claim": "On Oct 17, Replit's CEO said ChatGPT models are now Replit Agent's default, citing cost, performance and partnership.",
+     "evidence": "Replit's CEO had said ChatGPT models are now Replit Agent's default, citing cost, performance and partnership",
+     "source_id": 0
+    },
+    {
+     "claim": "Claude models remain available on Replit despite the default switch.",
+     "evidence": "though Claude models are still available",
+     "source_id": 0
+    },
+    {
+     "claim": "Model discounts can steer usage through a platform's preferred model while rival models remain available.",
+     "evidence": "model discounts can affect a coding platform's costs and steer usage through its preferred model, while rival models remain available",
+     "source_id": 1
+    }
+   ],
+   "context": [
+    "The 30%+ discount and $100M+/year figure come from a single unnamed source cited by The Information; none of Replit, OpenAI or Anthropic has confirmed the terms.",
+    "The sources do not say whether the discount is a flat rate cut, credits, or tied to volume commitments, so the exact economics are unknown.",
+    "Replit's CEO publicly framed the default switch around cost, performance and partnership, not price alone, and Claude models are still offered on the platform."
+   ]
+  }
+ },
+ "cases": [
+  {
+   "id": "own-kimi-edited",
+   "label": "Shivam's edit of the Kimi K3 provider-gap post (did well); he kept two of the brief's lines",
+   "kind": "own",
+   "sources": "4a50be497600",
+   "expect": {
+    "guardrails": "pass",
+    "editor": "pass",
+    "fact_checker": "pass",
+    "logic_checker": "pass",
+    "final_check": "pass"
+   },
+   "accept": [
+    "copies a source's words"
+   ],
+   "post": "Vals AI ran its legal benchmark against the same open-weight model Kimi-K3 twice, once through Moonshot and once through Baseten.\n\n75.8% through Moonshot. 60.6% through Baseten.\n\nThe weights were identical. The serving wasn't. Quantization, chat templates and tool-call parsing all sit between the checkpoint and your API call, and Vals puts the cost of those choices at 15 points.\n\nThat is a bigger swing than most people expect from anything outside the model itself. Two providers can hand you the same file and a different product, and the same model card across both won't tell you which one you got.\n\nWith open weights, it's tempting to pick whichever provider has the lowest token price. But this benchmark comparison shows that the cheaper serving can cost real accuracy, so evaluate the model on the provider you'll actually use.\n\n#opensource #openweight"
+  },
+  {
+   "id": "own-kimi-approved",
+   "label": "Approved Kimi K3 post as the agent wrote it (did well)",
+   "kind": "own",
+   "sources": "4a50be497600",
+   "expect": {
+    "guardrails": "pass",
+    "editor": "pass",
+    "fact_checker": "pass",
+    "logic_checker": "pass",
+    "final_check": "pass"
+   },
+   "accept": [
+    "copies a source's words"
+   ],
+   "post": "Same Kimi K3 weights. 75.8% on legal tasks through Moonshot, 60.6% through Baseten.\n\nThat's Vals AI, which ran its legal benchmark on one open-weight model served by two different providers.\n\nThe weights are identical. The gap is 15.2 points, and it comes entirely from the serving layer: quantization, chat templates, tool-call parsing.\n\nVals tested two providers on one benchmark, so the exact gap is provisional. But the direction of the finding is what I'd act on: evaluate the model on the provider you'll actually use, because the cheaper serving can quietly cost you those 15 points and you'd never see it on a pricing page."
+  },
+  {
+   "id": "own-debt",
+   "label": "Approved CoreWeave/Nebius/Meta debt post (did well)",
+   "kind": "own",
+   "sources": "977b5049c201",
+   "expect": {
+    "guardrails": "pass",
+    "editor": "pass",
+    "fact_checker": "pass",
+    "logic_checker": "pass",
+    "final_check": "pass"
+   },
+   "post": "Some CoreWeave bonds were issued at 9.675%. They now reportedly yield around 15%, and the stock closed at a 52-week low of $55.60 after Bernstein estimated it needs about $85B to fund its backlog.\n\nSame week, Nebius took a $3.5B loan from Citi at SOFR + 2.75%, which can step up to 3.50%. It matures in 364 days and pays for data centers and GPUs. So Nebius will need longer-term money behind it soon. It says it has over $40B of investment-grade contracts to borrow against, which is how it gets to pick its timing.\n\nThen Meta. $34.9B of capex last quarter, free cash flow of negative $2.1B versus $10.6B a year ago, and a new nonvoting Class C stock to help fund the buildout.\n\nWe talk about GPU supply and power. This week the number setting the pace looks like the interest rate.\n\nOn the call, Zuckerberg said it's \"going to be very important to get the math on all of this to work out.\" I'd read that literally."
+  },
+  {
+   "id": "own-derm-edited",
+   "label": "Shivam's edit of the skin-lesion data-moat post, hashtags cut from 4 to his usual 2",
+   "kind": "own",
+   "sources": "3fcc2862c829",
+   "expect": {
+    "guardrails": "pass",
+    "editor": "pass",
+    "fact_checker": "pass",
+    "logic_checker": "pass",
+    "final_check": "pass"
+   },
+   "accept": [
+    "copies a source's words"
+   ],
+   "post": "Is \"data\" a moat?\nI get asked this question a lot.\n\nDr Magnus Lynch, a consultant dermatologist at Guy's Hospital, ran 200 biopsy-proven skin lesions past three models.\n\nA fine-tuned Inception v3, Google's 2015 CNN, got 125 of 200 right (62%).\n\nOpenAI's GPT-6 Astra got 84. Anthropic's Claude Fable 5.1 got 85. Both 42%.\n\nThe CNN was fine-tuned on 68,011 ISIC images on a single H100 for about twenty minutes.\nIt caught 13 of 30 melanomas. The LLMs caught 8 and 11. GPT-6 Astra predicted basal cell carcinoma 75 times when the true count was 25.\n\nTwo hundred lesions is small, and each LLM ran once. Inception v3 is a baseline, and state-of-the-art dermatology AI does better.\n\nBut a ten-year-old architecture fine-tuned on public labeled data beat two frontier models on a narrow visual task.\n\nTwenty points on 200 biopsies is what a data moat looks like when you actually measure it.\n\nIn a nutshell, general frontier models still lose to small specialist models in narrow visual domains that have lots of labeled data, which is the argument for vertical AI companies that own their own data.\n\n#ai #healthcare"
+  },
+  {
+   "id": "own-tokens-edited",
+   "label": "Shivam's rewrite of the open-models token-share post (also the logic prompt's bar), hashtags cut to 2; his \"$3 job now under $1\" example is his own illustration",
+   "kind": "own",
+   "sources": "942e36b0112d",
+   "expect": {
+    "guardrails": "pass",
+    "editor": "pass",
+    "fact_checker": "pass",
+    "logic_checker": "pass",
+    "final_check": "pass"
+   },
+   "accept": [
+    "$3"
+   ],
+   "post": "Open models now handle 72% of the tokens on OpenRouter, up from 28% a year ago.\n\nTotal traffic grew about 27x in that time, to around 165T tokens a week. Closed models grew too, but open models grew much faster, so the closed share fell to 28%.\n\nBut more work doesn't mean more money. Vercel's AI gateway shows both. In August, open models handled 56% of its tokens but earned only 14 cents of every dollar.\n\nSo most of the money still goes to closed models. The likely reason: open models win cheap, high-volume work, and closed models keep expensive, lower-volume work.\n\nThat split only lasts while the top closed models are worth the extra price. And the gap is shrinking from both sides. Top models are getting cheaper - OpenAI's GPT-6.1 Terra costs $1 per million input tokens, half the $2 of GPT-5.6 Terra, and a job that used to cost $3 now costs less than $1. Cheaper models are also getting better.\n\nWatch the 14 cents. It shows who is winning the money.\n\n#ai #opensource"
+  },
+  {
+   "id": "bad-tokens-agent",
+   "label": "Agent draft Shivam rewrote: guess stated as fact, unclear gap, vague ending, abstract phrasing",
+   "kind": "bad",
+   "sources": "942e36b0112d",
+   "expect": {
+    "logic_checker": [
+     "closing the gap",
+     "came apart",
+     "vague_ending"
+    ],
+    "guardrails": [
+     "more than 2 hashtags"
+    ]
+   },
+   "gate": true,
+   "post": "Open-weight models serve 72% of OpenRouter's tokens, up from 28% a year ago.\n\nOn Vercel's gateway in August, they handled 56% of tokens and took 14 cents of every dollar.\n\nVolume and revenue came apart. OpenRouter traffic is up roughly 27x since last November, to about 165T tokens a week. Closed models grew too, 13x by one count, and their share still fell from 74% to 28%.\n\nBut the dollars stayed with the frontier. The open models win the cheap, high-volume work and the closed ones keep the expensive, low-volume work.\n\nThat split only holds while the frontier is worth the premium. OpenAI's GPT-6.1 Terra costs $1 per million input tokens against $2 for GPT-5.6 Terra, and less than a third the cost per task. If the mid-tier keeps closing the gap, the 14 cents becomes the whole question.\n\n#ai #opensource #inference"
+  },
+  {
+   "id": "rejected-notion",
+   "label": "Rejected: \"Sounds like AI\" (seat-just-became hook, My read:, before-your-next-renewal closer)",
+   "kind": "bad",
+   "sources": "59788df1bfbd",
+   "expect": {
+    "guardrails": [
+     "template move"
+    ],
+    "editor": "flag"
+   },
+   "post": "Your Notion seat just became a usage bucket.\n\nBusiness and Enterprise seats now include 1,500 Standard and 500 Select credits a month. Existing customers move over on November 2.\n\nNotion built the credits around its new agent harness. Tasks that used to cap out at five minutes can now run 24+ hours on a queue-backed worker service. My read: a flat seat price can't cover a 24-hour task, so metering comes with it.\n\nNotion is also trying to keep the meter low. Its Auto router sends each task to the model that fits, and Notion says it matched Opus 5.5 and Astra across 20+ use cases at about 90% lower average cost. That's their own benchmark, so read it that way.\n\nAdmins will soon get an AI Command Center with usage by member, feature, and agent, plus spending limits.\n\nI'd bet every SaaS seat ends up here. The per-user price becomes the entry fee, and agent usage becomes the real bill.\n\nBefore your next renewal, who in your workspace will be running 24-hour agents, and who sets their limit?"
+  },
+  {
+   "id": "rejected-coding-index",
+   "label": "Rejected: \"Sounds like AI\" (My read: pivot, stacked one-liners)",
+   "kind": "bad",
+   "sources": "36eb482a4936",
+   "expect": {
+    "guardrails": [
+     "template move"
+    ],
+    "editor": "flag"
+   },
+   "post": "Claude Code with Opus 5.5 leads the Artificial Analysis Coding Agent Index v2.0 at 61.7. It costs $11.42 per task.\n\nDeepSeek V4.1 Flash in Codex scores 47.3. It costs $0.39 per task.\n\n14 points for 29x the money.\n\nThe index scores the model together with its agent harness, not the raw model, and it now runs on Cognition's FrontierCode v1.1 instead of DeepSWE. Sonnet 5.5 in Claude Code sits at 59.3, Muse Wonder Full in Muse Code at 58.9, both cheaper than the leader.\n\nMy read: the quality gap here is real but small, and the price gap is enormous. If I were picking a stack for high-volume coding work right now, I'd take the 47.3 at $0.39 and spend the savings on review."
+  },
+  {
+   "id": "rejected-replit",
+   "label": "Rejected: \"Sounds like AI\", \"Recap, no real take\"",
+   "kind": "bad",
+   "sources": "a02c890bc277",
+   "expect": {
+    "editor": "flag",
+    "final_check": "flag"
+   },
+   "post": "OpenAI reportedly gave Replit a discount above 30% off list to win its model spending, on a contract worth over $100M a year.\n\nThe Information reported the deal on October 25th, citing one person familiar with the situation.\n\nThe same day Replit's CEO said ChatGPT models were now Replit Agent's default, he listed cost, performance and partnership. Claude models stayed on the platform.\n\nSo the tokens moved and nothing was removed. Claude is still sitting there as an option, which is the part worth noticing: a discount can steer usage without a platform ever dropping the rival model.\n\nReplit, OpenAI and Anthropic haven't confirmed any of the terms.\n\nI'd want to know what the 30% comes off. List price, or a rate nobody was actually paying.\n\n#aiagents #modelpricing"
+  },
+  {
+   "id": "planted-invented-number",
+   "label": "Invented number (\"40% cheaper per token\")",
+   "kind": "planted",
+   "sources": "4a50be497600",
+   "expect": {
+    "guardrails": [
+     "40%"
+    ],
+    "fact_checker": [
+     "40%"
+    ]
+   },
+   "accept": [
+    "copies a source's words"
+   ],
+   "post": "Vals AI ran its legal benchmark against the same open-weight model Kimi-K3 twice, once through Moonshot and once through Baseten.\n\n75.8% through Moonshot. 60.6% through Baseten.\n\nThe weights were identical. The serving wasn't. Quantization, chat templates and tool-call parsing all sit between the checkpoint and your API call, and Vals puts the cost of those choices at 15 points, on a run that was 40% cheaper per token.\n\nThat is a bigger swing than most people expect from anything outside the model itself. Two providers can hand you the same file and a different product, and the same model card across both won't tell you which one you got.\n\nWith open weights, it's tempting to pick whichever provider has the lowest token price. But this benchmark comparison shows that the cheaper serving can cost real accuracy, so evaluate the model on the provider you'll actually use.\n\n#opensource #openweight"
+  },
+  {
+   "id": "planted-wrong-lender",
+   "label": "Wrong name, no number for the code to catch (\"loan from JPMorgan\"; it was Citi)",
+   "kind": "planted",
+   "sources": "977b5049c201",
+   "expect": {
+    "fact_checker": [
+     "JPMorgan"
+    ]
+   },
+   "post": "Some CoreWeave bonds were issued at 9.675%. They now reportedly yield around 15%, and the stock closed at a 52-week low of $55.60 after Bernstein estimated it needs about $85B to fund its backlog.\n\nSame week, Nebius took a $3.5B loan from JPMorgan at SOFR + 2.75%, which can step up to 3.50%. It matures in 364 days and pays for data centers and GPUs. So Nebius will need longer-term money behind it soon. It says it has over $40B of investment-grade contracts to borrow against, which is how it gets to pick its timing.\n\nThen Meta. $34.9B of capex last quarter, free cash flow of negative $2.1B versus $10.6B a year ago, and a new nonvoting Class C stock to help fund the buildout.\n\nWe talk about GPU supply and power. This week the number setting the pace looks like the interest rate.\n\nOn the call, Zuckerberg said it's \"going to be very important to get the math on all of this to work out.\" I'd read that literally."
+  },
+  {
+   "id": "planted-copied-span",
+   "label": "15 words copied from the brief's read without quotes",
+   "kind": "planted",
+   "sources": "942e36b0112d",
+   "expect": {
+    "guardrails": [
+     "copies a source's words"
+    ]
+   },
+   "post": "Open models now handle 72% of the tokens on OpenRouter, up from 28% a year ago.\n\nTotal traffic grew about 27x in that time, to around 165T tokens a week. Closed models grew too, but open models grew much faster, so the closed share fell to 28%.\n\nBut more work doesn't mean more money. Vercel's AI gateway shows both. In August, open models handled 56% of its tokens but earned only 14 cents of every dollar.\n\nSo most of the money still goes to closed models. The likely reason: open models win cheap, high-volume work, and closed models keep expensive, lower-volume work.\n\nThat split only lasts while the top closed models are worth the extra price. And the gap is shrinking from both sides. Top models are getting cheaper - OpenAI's GPT-6.1 Terra costs $1 per million input tokens, half the $2 of GPT-5.6 Terra, and a job that used to cost $3 now costs less than $1. Cheaper models are also getting better, and Terra's price undercuts open-weight competitors on the work where they have been gaining share.\n\nWatch the 14 cents. It shows who is winning the money.\n\n#ai #opensource"
+  },
+  {
+   "id": "planted-my-read",
+   "label": "Template move: \"My read:\" pivot",
+   "kind": "planted",
+   "sources": "977b5049c201",
+   "expect": {
+    "guardrails": [
+     "labelled pivot"
+    ]
+   },
+   "post": "Some CoreWeave bonds were issued at 9.675%. They now reportedly yield around 15%, and the stock closed at a 52-week low of $55.60 after Bernstein estimated it needs about $85B to fund its backlog.\n\nSame week, Nebius took a $3.5B loan from Citi at SOFR + 2.75%, which can step up to 3.50%. It matures in 364 days and pays for data centers and GPUs. So Nebius will need longer-term money behind it soon. It says it has over $40B of investment-grade contracts to borrow against, which is how it gets to pick its timing.\n\nThen Meta. $34.9B of capex last quarter, free cash flow of negative $2.1B versus $10.6B a year ago, and a new nonvoting Class C stock to help fund the buildout.\n\nWe talk about GPU supply and power. This week the number setting the pace looks like the interest rate.\n\nOn the call, Zuckerberg said it's \"going to be very important to get the math on all of this to work out.\" My read: the interest rate is now the real limit."
+  },
+  {
+   "id": "planted-vendor-closer",
+   "label": "Template move: \"Next time a vendor pitches you\" closer",
+   "kind": "planted",
+   "sources": "4a50be497600",
+   "expect": {
+    "guardrails": [
+     "next time a vendor"
+    ]
+   },
+   "accept": [
+    "copies a source's words"
+   ],
+   "post": "Vals AI ran its legal benchmark against the same open-weight model Kimi-K3 twice, once through Moonshot and once through Baseten.\n\n75.8% through Moonshot. 60.6% through Baseten.\n\nThe weights were identical. The serving wasn't. Quantization, chat templates and tool-call parsing all sit between the checkpoint and your API call, and Vals puts the cost of those choices at 15 points.\n\nThat is a bigger swing than most people expect from anything outside the model itself. Two providers can hand you the same file and a different product, and the same model card across both won't tell you which one you got.\n\nWith open weights, it's tempting to pick whichever provider has the lowest token price. But this benchmark comparison shows that the cheaper serving can cost real accuracy, so evaluate the model on the provider you'll actually use.\n\n#opensource #openweight\n\nNext time a vendor pitches you a cheaper endpoint, ask what it runs."
+  },
+  {
+   "id": "planted-negation-pivot",
+   "label": "Negation pivot (\"X isn't the story. It's Y.\")",
+   "kind": "planted",
+   "sources": "942e36b0112d",
+   "expect": {
+    "guardrails": [
+     "negation pivot"
+    ]
+   },
+   "post": "Open models now handle 72% of the tokens on OpenRouter, up from 28% a year ago.\n\nTotal traffic grew about 27x in that time, to around 165T tokens a week. Closed models grew too, but open models grew much faster, so the closed share fell to 28%.\n\nBut more work doesn't mean more money. Vercel's AI gateway shows both. In August, open models handled 56% of its tokens but earned only 14 cents of every dollar.\n\nSo most of the money still goes to closed models. The likely reason: open models win cheap, high-volume work, and closed models keep expensive, lower-volume work.\n\nThat split only lasts while the top closed models are worth the extra price. And the gap is shrinking from both sides. Top models are getting cheaper - OpenAI's GPT-6.1 Terra costs $1 per million input tokens, half the $2 of GPT-5.6 Terra, and a job that used to cost $3 now costs less than $1. Cheaper models are also getting better.\n\nThe token count isn't the story. It's the 14 cents.\n\n#ai #opensource"
+  },
+  {
+   "id": "planted-hashtags",
+   "label": "Four hashtags (the rule is at most 2)",
+   "kind": "planted",
+   "sources": "977b5049c201",
+   "expect": {
+    "guardrails": [
+     "more than 2 hashtags"
+    ]
+   },
+   "post": "Some CoreWeave bonds were issued at 9.675%. They now reportedly yield around 15%, and the stock closed at a 52-week low of $55.60 after Bernstein estimated it needs about $85B to fund its backlog.\n\nSame week, Nebius took a $3.5B loan from Citi at SOFR + 2.75%, which can step up to 3.50%. It matures in 364 days and pays for data centers and GPUs. So Nebius will need longer-term money behind it soon. It says it has over $40B of investment-grade contracts to borrow against, which is how it gets to pick its timing.\n\nThen Meta. $34.9B of capex last quarter, free cash flow of negative $2.1B versus $10.6B a year ago, and a new nonvoting Class C stock to help fund the buildout.\n\nWe talk about GPU supply and power. This week the number setting the pace looks like the interest rate.\n\nOn the call, Zuckerberg said it's \"going to be very important to get the math on all of this to work out.\" I'd read that literally.\n\n#ai #infra #debt #gpus"
+  },
+  {
+   "id": "planted-repeat",
+   "label": "Near-copy of a recent post (novelty check)",
+   "kind": "planted",
+   "sources": "977b5049c201",
+   "expect": {
+    "guardrails": [
+     "recent post"
+    ]
+   },
+   "recent": [
+    "Some CoreWeave bonds were issued at 9.675%. They now reportedly yield around 15%, and the stock closed at a 52-week low of $55.60 after Bernstein estimated it needs about $85B to fund its backlog.\n\nSame week, Nebius took a $3.5B loan from Citi at SOFR + 2.75%, which can step up to 3.50%. It matures in 364 days and pays for data centers and GPUs. So Nebius will need longer-term money behind it soon. It says it has over $40B of investment-grade contracts to borrow against, which is how it gets to pick its timing.\n\nThen Meta. $34.9B of capex last quarter, free cash flow of negative $2.1B versus $10.6B a year ago, and a new nonvoting Class C stock to help fund the buildout.\n\nWe talk about GPU supply and power. This week the number setting the pace looks like the interest rate.\n\nOn the call, Zuckerberg said it's \"going to be very important to get the math on all of this to work out.\" I'd read that literally."
+   ],
+   "post": "CoreWeave sold some bonds at 9.675%. They now reportedly yield around 15%, and the stock closed at a 52-week low of $55.60 after Bernstein estimated it needs about $85B to fund its backlog.\n\nSame week, Nebius took a $3.5B loan from Citi at SOFR + 2.75%, which can step up to 3.50%. It matures in 364 days and pays for data centers and GPUs. So Nebius will need longer-term money behind it soon. It says it has over $40B of investment-grade contracts to borrow against, which is how it gets to pick its timing.\n\nThen Meta. $34.9B of capex last quarter, free cash flow of negative $2.1B versus $10.6B a year ago, and a new nonvoting Class C stock to help fund the buildout.\n\nWe talk about GPU supply and power. This week the number setting the pace looks like the interest rate.\n\nOn the call, Zuckerberg said it's \"going to be very important to get the math on all of this to work out.\" I'd read that literally."
+  },
+  {
+   "id": "planted-broken-so",
+   "label": "Broken \"so\": a conclusion the evidence contradicts",
+   "kind": "planted",
+   "sources": "4a50be497600",
+   "expect": {
+    "logic_checker": [
+     "Baseten"
+    ]
+   },
+   "accept": [
+    "copies a source's words"
+   ],
+   "post": "Vals AI ran its legal benchmark against the same open-weight model Kimi-K3 twice, once through Moonshot and once through Baseten.\n\n75.8% through Moonshot. 60.6% through Baseten.\n\nThe weights were identical. The serving wasn't. Quantization, chat templates and tool-call parsing all sit between the checkpoint and your API call, and Vals puts the cost of those choices at 15 points.\n\nSo Baseten is the better pick for legal work. That is a bigger swing than most people expect from anything outside the model itself. Two providers can hand you the same file and a different product, and the same model card across both won't tell you which one you got.\n\nWith open weights, it's tempting to pick whichever provider has the lowest token price. But this benchmark comparison shows that the cheaper serving can cost real accuracy, so evaluate the model on the provider you'll actually use.\n\n#opensource #openweight"
+  },
+  {
+   "id": "planted-guess-as-fact",
+   "label": "Guess stated as fact (\"because lenders have decided AI is a bubble\")",
+   "kind": "planted",
+   "sources": "977b5049c201",
+   "expect": {
+    "logic_checker": [
+     "lenders"
+    ]
+   },
+   "post": "Some CoreWeave bonds were issued at 9.675%. They now reportedly yield around 15%, and the stock closed at a 52-week low of $55.60 after Bernstein estimated it needs about $85B to fund its backlog.\n\nSame week, Nebius took a $3.5B loan from Citi at SOFR + 2.75%, which can step up to 3.50%. It matures in 364 days and pays for data centers and GPUs. So Nebius will need longer-term money behind it soon. It says it has over $40B of investment-grade contracts to borrow against, which is how it gets to pick its timing.\n\nThen Meta. $34.9B of capex last quarter, free cash flow of negative $2.1B versus $10.6B a year ago, and a new nonvoting Class C stock to help fund the buildout.\n\nWe talk about GPU supply and power. This week the interest rate sets the pace, because lenders have decided AI is a bubble.\n\nOn the call, Zuckerberg said it's \"going to be very important to get the math on all of this to work out.\" I'd read that literally."
+  },
+  {
+   "id": "planted-vague-ending",
+   "label": "Vague ending (\"serving becomes the whole question. Time will tell.\")",
+   "kind": "planted",
+   "sources": "4a50be497600",
+   "expect": {
+    "logic_checker": [
+     "vague_ending"
+    ]
+   },
+   "accept": [
+    "copies a source's words"
+   ],
+   "post": "Vals AI ran its legal benchmark against the same open-weight model Kimi-K3 twice, once through Moonshot and once through Baseten.\n\n75.8% through Moonshot. 60.6% through Baseten.\n\nThe weights were identical. The serving wasn't. Quantization, chat templates and tool-call parsing all sit between the checkpoint and your API call, and Vals puts the cost of those choices at 15 points.\n\nThat is a bigger swing than most people expect from anything outside the model itself. Two providers can hand you the same file and a different product, and the same model card across both won't tell you which one you got.\n\nIn the end, serving becomes the whole question. Time will tell.\n\n#opensource #openweight"
+  },
+  {
+   "id": "planted-sweeping-prediction",
+   "label": "Breaks a lesson: sweeping industry prediction",
+   "kind": "planted",
+   "sources": "977b5049c201",
+   "expect": {
+    "final_check": [
+     "2028"
+    ]
+   },
+   "post": "Some CoreWeave bonds were issued at 9.675%. They now reportedly yield around 15%, and the stock closed at a 52-week low of $55.60 after Bernstein estimated it needs about $85B to fund its backlog.\n\nSame week, Nebius took a $3.5B loan from Citi at SOFR + 2.75%, which can step up to 3.50%. It matures in 364 days and pays for data centers and GPUs. So Nebius will need longer-term money behind it soon. It says it has over $40B of investment-grade contracts to borrow against, which is how it gets to pick its timing.\n\nThen Meta. $34.9B of capex last quarter, free cash flow of negative $2.1B versus $10.6B a year ago, and a new nonvoting Class C stock to help fund the buildout.\n\nWe talk about GPU supply and power. This week the number setting the pace looks like the interest rate.\n\nOn the call, Zuckerberg said it's \"going to be very important to get the math on all of this to work out.\" I'd read that literally. By 2028 every AI company will be a debt company."
+  }
+ ]
+}

@@ -49,7 +49,7 @@ class DB:
         else:
             self.pg = False
             path = os.environ.get("SQLITE_PATH", str(ROOT / "local.db"))
-            self.conn = sqlite3.connect(path, isolation_level=None)
+            self.conn = sqlite3.connect(path, isolation_level=None, check_same_thread=False)  # evals open one per worker thread, closed by the main one
             self.conn.row_factory = sqlite3.Row
             self.conn.executescript(_sqlite_schema())
             self._sqlite_migrate()
