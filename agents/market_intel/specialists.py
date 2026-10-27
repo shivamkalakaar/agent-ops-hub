@@ -147,6 +147,10 @@ def _feedback(state) -> str:
             parts.append("# Fact check: unsupported (must fix)\n" + "\n".join(bad))
         if hedge:
             parts.append("# Fact check: state more carefully (should fix)\n" + "\n".join(hedge))
+    if (lg := state.get("logic_report")) and lg.get("version") == v and lg.get("issues"):
+        label = "must fix" if lg.get("blocking") else "should fix"
+        parts.append(f"# Logic check (logic {lg['logic']}/5, plain words {lg['plain']}/5; {label})\n"
+                     + "\n".join(f'- {i["kind"]}: "{i["quote"]}": {i["problem"]} → {i["fix"]}' for i in lg["issues"]))
     if (fr := state.get("final_report")) and fr.get("version") == v and not fr.get("passed"):
         parts.append("# Final check blockers (must fix)\n" + "\n".join(f"- {b}" for b in fr.get("blockers", [])))
     return "\n\n".join(parts)
@@ -261,6 +265,36 @@ def fact_checker(state, ctx, cfg):
     return {"fact_report": report, "candidates": cands}, summary, report
 
 
+# --------------------------------------------------------------------------- logic check
+
+LOGIC_KINDS = ("non_sequitur", "guess_as_fact", "unclear_comparison", "contradiction", "vague_ending", "jargon")
+MIN_LOGIC = 4  # logic or plain words below this sends the draft back; the owner's own posts score 4-5
+
+
+def logic_checker(state, ctx, cfg):
+    """Does each step follow, are guesses marked, are comparisons clear, are the words plain. Facts are the
+    fact-checker's job; this reads the argument the way a reader would."""
+    draft = current(state)
+    try:
+        r = llm.call_json(ctx, _tier(cfg, "logic"), "logic_checker", drafting.fill(cfg.prompt, AUTHOR=AUTHOR),
+                          f"# Post\n{draft['post']}", model=cfg.model)
+    except ValueError:
+        r = {}
+    score = lambda k: max(1, min(5, int(r[k]))) if str(r.get(k, "")).isdigit() else 5  # noqa: E731
+    issues = [{"kind": i.get("kind"), **{k: str(i.get(k) or "")[:300] for k in ("quote", "problem", "fix")}}
+              for i in r.get("issues") or [] if isinstance(i, dict) and i.get("kind") in LOGIC_KINDS][:5]
+    logic, plain = score("logic"), score("plain")
+    report = {"version": draft["version"], "logic": logic, "plain": plain, "issues": issues,
+              "chain": [str(c)[:200] for c in r.get("chain") or [] if isinstance(c, str)][:6],
+              "blocking": bool(issues) and min(logic, plain) < MIN_LOGIC}
+    cands = dict(state.get("candidates", {}))
+    if report["blocking"] and (key := str(draft["version"])) in cands:
+        cands[key] = {**cands[key], "logic_issues": [f"logic ({i['kind']}): {i['quote']}" for i in issues]}
+    summary = (f"v{draft['version']}: logic {logic}/5, plain words {plain}/5, {len(issues)} issue{'s' * (len(issues) != 1)}"
+               + (f". {issues[0]['kind']}: \"{issues[0]['quote'][:80]}\"" if issues else ""))
+    return {"logic_report": report, "candidates": cands}, summary, report
+
+
 # --------------------------------------------------------------------------- final check
 
 def final_check(state, ctx, cfg):
@@ -271,6 +305,10 @@ def final_check(state, ctx, cfg):
     f = state.get("fact_report") or {}
     if f.get("version") == v and f.get("blocking"):
         blockers.append(f"{f['blocking']} unsupported claim{'s' * (f['blocking'] != 1)} from the fact check")
+    lg = state.get("logic_report") or {}
+    if lg.get("version") == v and lg.get("blocking"):
+        blockers.append(f"the argument doesn't hold together (logic {lg['logic']}/5, plain words {lg['plain']}/5): "
+                        + "; ".join(f'{i["kind"]} "{i["quote"]}"' for i in lg["issues"][:3]))
     try:
         r = llm.call_json(ctx, _tier(cfg, "check"), "final_check", drafting.fill(cfg.prompt, AUTHOR=AUTHOR),
                           f"# Post\n{draft['post']}\n\n# Fact sheet\n{fact_sheet(state)}{_lessons(state)}", model=cfg.model)
@@ -295,4 +333,4 @@ def onepager(state, ctx, cfg, post: str | None = None):
 
 
 RUNNERS = {"scout": scout, "researcher": researcher, "writer": writer, "editor": editor, "fact_checker": fact_checker,
-           "final_check": final_check, "onepager": onepager}
+           "logic_checker": logic_checker, "final_check": final_check, "onepager": onepager}

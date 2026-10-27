@@ -37,7 +37,7 @@ TEMPLATE_MOVES = [
     (r"\bI'd stop \w+.{0,80}?\band start\b", "the \"I'd stop X and start Y\" line"),
     (r"\bjust became an?\b", "the \"X just became Y\" hook"),
     (r"\bread it that way\b", "\"read it that way\""),
-    (r"(?:^|\n|\. )(?:my read|my bet|my guess|here's my take|the real story)\s*(?::|is that)", "a labelled pivot (\"My read:\", \"The real story is…\")"),
+    (r"(?:^|\n|[.!?][\"”')]? )(?:my read|my bet|my guess|here's my take|the real story)\s*(?::|is that)", "a labelled pivot (\"My read:\", \"The real story is…\")"),
     (r"(?:^|\n)\s*(?:why [\w' ]{1,30}|the (?:catch|kicker|twist|takeaway|upshot|point|bottom line)|here's (?:why|what|the thing))\s*:",
      "a labelled lead-in (\"Why it matters:\", \"The catch:\")"),
     (r"\bthat's the (?:part|number|thing|detail|bit|line|question|real \w+) (?:that matters|to (?:sit with|watch|remember|notice))",
@@ -144,6 +144,7 @@ class DraftState(TypedDict, total=False):
     drafts: list[dict]    # [{"version", "post"}]
     edit_report: dict
     fact_report: dict
+    logic_report: dict
     final_report: dict
     candidates: dict      # str(version) -> editor + fact-check results, for picking the best version
     onepager: dict
@@ -235,7 +236,8 @@ def best(state: DraftState) -> dict | None:
     """The version to save when none passed: fact-checked beats unchecked, then fewest problems, then the weighted
     score, then the more human one (core.drafting.rank). Same rule as the Substack agent (agents/substack/ranking.py)."""
     on = state["settings"]["fact_checker"].enabled
-    entries = [{**e, "violations": e["violations"] + e.get("fact_issues", []) + ([] if e.get("fact_checked") or not on else ["not fact-checked"])}
+    entries = [{**e, "violations": e["violations"] + e.get("fact_issues", []) + e.get("logic_issues", [])
+                + ([] if e.get("fact_checked") or not on else ["not fact-checked"])}
                for e in state.get("candidates", {}).values()]
     return max(entries, key=lambda e: (bool(e.get("fact_checked")) or not on, drafting.rank(e))) if entries else None
 
@@ -252,7 +254,8 @@ def finish_node(persist: bool):
                           "accent": humanizer.scan(cur["post"]), "version": cur["version"]}
                 chosen["overall"] = drafting.overall_score({}, chosen["accent"]["score"])
             update = {}
-            if state.get("onepager_for") != chosen["post"]:  # the one-pager must describe the saved version
+            if persist and state.get("onepager_for") != chosen["post"]:  # the one-pager must describe the saved version
+                # (evals don't save or score a one-pager, so they skip it)
                 update, _, _ = specialists.onepager(state, ctx, state["settings"]["onepager"], post=chosen["post"])
             page = update.get("onepager") or state.get("onepager") or {}
             out = {"post": chosen["post"], "scores": chosen["scores"], "critique": chosen.get("critique", ""),
@@ -283,4 +286,5 @@ def finish_node(persist: bool):
 
 
 def build_draft(persist: bool = True):
+    """persist=False (evals): nothing is saved, and the finish step doesn't write a one-pager for the chosen post."""
     return orchestrator.build(supervisor.TEAM, DraftState, specialists.RUNNERS, load_items, finish_node(persist))

@@ -26,6 +26,13 @@ class RunContext:
     db: object
     run_id: str
     callbacks: list = field(default_factory=list)
+    seq_offset: int = 0  # added to every step's seq, so concurrent eval cases in one run don't share seq numbers
+    spent: list = field(default_factory=lambda: [0.0])  # USD logged through this context; shared by replace() copies
+
+    def log_call(self, **c):
+        """Log an LLM/image call and count its cost toward this context (core/steps.py reads it per step)."""
+        self.db.log_llm_call(**c)
+        self.spent[0] += float(c.get("cost_usd") or 0.0)
 
 
 def allowed(model: str | None, kind: str = "text") -> bool:
@@ -71,17 +78,17 @@ def call(ctx: RunContext, tier: str, node: str, system: str, user: str, *,
     log = {"run_id": ctx.run_id, "node": node, "tier": tier}
     if os.environ.get("LLM_MODE") == "fake":
         text = FAKE_RESPONSES[node](messages)
-        ctx.db.log_llm_call(**log, model="fake", prompt_tokens=0, completion_tokens=0, cost_usd=0.0,
+        ctx.log_call(**log, model="fake", prompt_tokens=0, completion_tokens=0, cost_usd=0.0,
                             latency_ms=int((time.monotonic() - start) * 1000), ok=True)
         return text
     try:
         msg = _model(tier, model).invoke(messages, config={"callbacks": ctx.callbacks, "run_name": node,
                                                     "metadata": {"tier": tier}})
     except Exception:
-        ctx.db.log_llm_call(**log, ok=False, latency_ms=int((time.monotonic() - start) * 1000))
+        ctx.log_call(**log, ok=False, latency_ms=int((time.monotonic() - start) * 1000))
         raise
     model, pt, ct, cost = _usage(msg)
-    ctx.db.log_llm_call(**log, model=model, prompt_tokens=pt, completion_tokens=ct,
+    ctx.log_call(**log, model=model, prompt_tokens=pt, completion_tokens=ct,
                         cost_usd=cost if cost is not None else budget.estimate_cost(pt, ct),
                         latency_ms=int((time.monotonic() - start) * 1000), ok=True)
     return msg.content if isinstance(msg.content, str) else str(msg.content)

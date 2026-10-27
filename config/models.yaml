@@ -35,6 +35,17 @@ tiers:
     temperature: 0.0
     reasoning: {effort: low}   # hidden reasoning tokens were ~75% of critic cost; a rubric score doesn't need them
     max_tokens: 8000   # one fact check looped to 99k output tokens ($0.12, 4 min) before this cap
+  logic:   # LinkedIn logic check: the judge's model with reasoning off. 2026-10-27 on draft 942e36b0112d: the agent's draft
+           # still fails 3/3 runs (logic 3, plain 3: the guess stated as fact, the mid-tier gap, the vague ending, jargon),
+           # the owner's edit still passes (logic 4, plain 5; 5/5 with effort low), ~6 s instead of ~37 s a call, ~1/10
+           # the cost. On 4 approved posts + 2 eval posts the pass/block call matched effort low on 4 of 6; off blocked fewer
+           # of the owner's approved posts (1/4 vs 2/4). Nemotron (free) missed the guess stated as fact.
+    primary: deepseek/deepseek-v4.1-flash
+    fallbacks: [qwen/qwen3.7-flash]
+    temperature: 0.0
+    reasoning: {enabled: false}
+    reasoning_by_model: {z-ai/glm-5.3: {effort: low}}   # a dashboard override to GLM: it can't turn reasoning off
+    max_tokens: 4000
   check:   # newsroom editor, fact-checker, final check, reasoning OFF: with effort "low", DeepSeek and Qwen spent all
            # 8,000 tokens thinking over a fact check and returned nothing. Nemotron caught a planted false claim 2/2 like
            # DeepSeek, flags more claims, and scores ~0.5 higher as editor.

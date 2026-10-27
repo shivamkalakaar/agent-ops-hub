@@ -63,6 +63,10 @@ def offline(monkeypatch, tmp_path):
         "writer": lambda m: GOOD_POST,
         "editor": critic,
         "fact_checker": lambda m: json.dumps({"claims": [{"claim": "scored 88 on X", "verdict": "supported"}]}),
+        "logic_checker": lambda m: json.dumps({"chain": ["open model matches", "at a tenth of the price"], "logic": 5, "plain": 5, "issues": []}),
+        "reference_judge": lambda m: json.dumps({"scores": dict.fromkeys(["plain", "logic", "one_idea", "hook", "grounded", "human"], 4),
+                                                 "chain": ["a", "so b"], "unsupported": [], "fix": ""}),
+        "reference_compare": lambda m: json.dumps({"better": "B", "why": "clearer"}),
         "final_check": lambda m: json.dumps({"passed": True, "blockers": [], "polish": []}),
         "supervisor": lambda m: json.dumps({"next": supervisor.canonical(_allowed(m)), "reason": "next in line"}),
         "onepager": lambda m: json.dumps({"title": "Open models <script>x</script>", "dek": "d",
@@ -93,14 +97,15 @@ def test_collect_then_draft_end_to_end():
         calls = db.all("select node from llm_calls where run_id=%s order by id", (run["id"],))
         # the coordinator is only asked when more than one move is allowed
         assert [c["node"] for c in calls] == ["scout", "researcher", "writer", "supervisor", "editor", "supervisor", "fact_checker",
-                                              "supervisor", "writer", "supervisor", "editor", "fact_checker", "final_check", "onepager"]
+                                              "supervisor", "logic_checker", "supervisor", "writer", "supervisor", "editor", "supervisor",
+                                              "fact_checker", "logic_checker", "final_check", "onepager"]
         steps = db.all("select specialist, kind, status from agent_steps where run_id=%s order by seq", (run["id"],))
         assert steps[0]["specialist"] == "supervisor" and steps[-1]["specialist"] == "supervisor"
         assert {s["specialist"] for s in steps if s["kind"] == "work"} == {"supervisor", "scout", "researcher", "writer", "editor",
-                                                                           "fact_checker", "final_check", "onepager"}
+                                                                           "fact_checker", "logic_checker", "final_check", "onepager"}
         assert d["judge_scores"]["passed_review"] is True
         reg = db.all("select specialist from agent_registry where agent='market_intel'")
-        assert len(reg) == 8  # the dashboard sees the whole team
+        assert len(reg) == 9  # the dashboard sees the whole team
         assert "article_text" in graph._sources_block([{"source": "s", "title": "t", "summary": "x", "body": "b"}])
 
 
@@ -167,11 +172,12 @@ def test_evals_offline(monkeypatch, tmp_path):
         steps = db.all("select * from agent_steps where run_id=%s order by seq", (run["id"],))
     s = run["stats"]
     assert run["status"] == "succeeded" and s["trigger"] == "pr" and s["pr"] == "7" and s["passed"] is True
-    assert len(s["results"]) == 2 and s["results"][0]["post"] and s["gate"] == []
+    assert len(s["results"]) == 3 and s["results"][0]["post"] and s["gate"] == []  # the PR set: three of Shivam's posts
+    assert s["judge"]["cases"] == 3 and s["judge"]["vs_shivam"] == 0.5 and s["judge"]["judge_mean"] == 4  # one fake judge, both orders
     cases = [x for x in steps if x["specialist"] == "eval_case"]
-    assert len(cases) == 2 and cases[0]["summary"].startswith("2026-") and cases[0]["seq"] == 900
+    assert len(cases) == 3 and cases[0]["summary"].startswith("ref ") and cases[0]["seq"] == 900
     md = (tmp_path / "results" / "market_intel.md").read_text()
-    assert "Evals: LinkedIn agent passed" in md and "| Case |" in md
+    assert "Evals: LinkedIn agent passed" in md and "| Case | Judge | vs Shivam |" in md
 
 
 def test_keeps_more_human_version_when_rewrite_is_worse():
@@ -351,6 +357,41 @@ def test_unsupported_claims_go_back_to_the_writer_and_final_check_gates_the_save
         assert d["judge_scores"]["passed_review"] is True and d["revisions"] == 2  # v3 passed the final check
 
 
+def test_a_gap_in_the_argument_goes_back_to_the_writer_and_blocks_until_fixed():
+    from core.db import connect
+    seen = []
+    gap = {"chain": ["open models carry the tokens", "?"], "logic": 3, "plain": 3, "issues": [
+        {"kind": "unclear_comparison", "quote": "if the mid-tier keeps closing the gap", "problem": "whose gap?",
+         "fix": "say top models get cheaper and cheap models get better"}]}
+    logic = iter([gap, gap])
+    llm.FAKE_RESPONSES["editor"] = lambda m: json.dumps({"scores": dict.fromkeys(["hook", "focus", "brevity", "concreteness", "voice", "grounding"], 5),
+                                                          "critique": "Good."})
+    llm.FAKE_RESPONSES["logic_checker"] = lambda m: json.dumps(next(logic, {"chain": ["a", "so b"], "logic": 5, "plain": 4, "issues": []}))
+    llm.FAKE_RESPONSES["writer"] = lambda m: (seen.append(m[-1].content), GOOD_POST)[1]
+    assert cli.run("collect") == 0 and cli.run("draft") == 0
+    assert len(seen) >= 2 and "Logic check (logic 3/5, plain words 3/5; must fix)" in seen[1] and "whose gap?" in seen[1]
+    with connect() as db:
+        d = db.one("select * from drafts")
+        assert d["judge_scores"]["passed_review"] is True and d["revisions"] == 2  # v3's argument held together
+
+
+def test_logic_check_blocks_the_final_check_and_minor_notes_dont():
+    from agents.market_intel import specialists
+    state = {"drafts": [{"version": 1, "post": GOOD_POST}], "sources": [], "facts": [],
+             "logic_report": {"version": 1, "logic": 2, "plain": 4, "blocking": True,
+                              "issues": [{"kind": "non_sequitur", "quote": "so the money", "problem": "p", "fix": "f"}]}}
+    assert specialists.version(state) == 1
+    from agents.market_intel import supervisor
+    from core import settings
+    from agents.market_intel.roster import PROMPTS, SPECIALISTS
+    cfg = settings.from_files(SPECIALISTS, PROMPTS)
+    done = {"edit_report": {"version": 1, "scores": dict.fromkeys(["hook", "voice"], 5), "accent": {"score": 5}, "violations": []},
+            "fact_report": {"version": 1, "blocking": 0}, "angle": {"angle": "a"}, "researched": True, "calls": {}}
+    assert "writer" in supervisor.allowed({**state, **done}, cfg)
+    minor = {**state["logic_report"], "logic": 4, "blocking": False}
+    assert "writer" not in supervisor.allowed({**state, **done, "logic_report": minor}, cfg)
+
+
 def test_a_failing_final_check_is_flagged_not_hidden():
     from core.db import connect
     llm.FAKE_RESPONSES["final_check"] = lambda m: json.dumps({"passed": False, "blockers": ["1: breaks the lesson on recaps"]})
@@ -449,6 +490,70 @@ def test_rejected_drafts_become_eval_cases(monkeypatch, tmp_path):
     assert r["rejected"]["repeats"] and any("repeats what was rejected (Sounds like AI)" in v for v in r["violations"])
 
 
+
+def _fake_case(n: int, gate=None, fail=None):
+    from core.steps import step
+
+    def fn(ctx):
+        if gate:
+            gate.wait()  # every case has to be running at once to get past this
+        if fail:
+            raise fail
+        for i in (1, 2):
+            with step(ctx, "market_intel", "writer", "work", i):
+                ctx.log_call(run_id=ctx.run_id, node="writer", tier="voice", cost_usd=0.01 * (n + 1), ok=True)
+        return {"case": f"c{n}", "mean": 4.5, "scores": {"hook": 5}, "violations": [], "humanizer": 5}
+    return fn
+
+
+def test_eval_cases_run_concurrently_with_their_own_steps_and_costs(monkeypatch, tmp_path):
+    import threading
+    from evals import run_evals
+    from core.db import connect
+    monkeypatch.setattr(run_evals, "HERE", tmp_path)
+    monkeypatch.setattr(run_evals, "BASELINES", {"market_intel": tmp_path / "baseline.json"})
+    gate = threading.Barrier(3, timeout=10)
+    cases = [(f"c{n}", _fake_case(n, gate)) for n in range(3)]
+    assert run_evals.run_suite("market_intel", cases, lambda r: r["case"], False, workers=3) == 0
+    with connect() as db:
+        run = db.one("select * from runs where kind='eval'")
+        steps = db.all("select * from agent_steps where run_id=%s order by seq", (run["id"],))
+    assert [r["case"] for r in run["stats"]["results"]] == ["c0", "c1", "c2"]  # in case order, however they finished
+    work = {x["seq"]: float(x["cost_usd"]) for x in steps if x["specialist"] == "writer"}
+    assert work == {1: 0.01, 2: 0.01, 101: 0.02, 102: 0.02, 201: 0.03, 202: 0.03}  # own seq block, own cost
+    evals = [x for x in steps if x["specialist"] == "eval_case"]
+    assert [(x["seq"], round(float(x["cost_usd"]), 4), x["summary"]) for x in evals] == [
+        (900, 0.02, "c0"), (901, 0.04, "c1"), (902, 0.06, "c2")]
+    assert float(run["cost_usd"]) == pytest.approx(0.12)
+
+
+def test_a_budget_stop_in_one_case_keeps_the_finished_ones(monkeypatch, tmp_path):
+    from evals import run_evals
+    from core.budget import BudgetExceeded
+    from core.db import connect
+    monkeypatch.setattr(run_evals, "HERE", tmp_path)
+    cases = [("c0", _fake_case(0)), ("c1", _fake_case(1, fail=BudgetExceeded("daily cap"))), ("c2", _fake_case(2))]
+    assert run_evals.run_suite("market_intel", cases, lambda r: r["case"], False, workers=1) == 1
+    with connect() as db:
+        run = db.one("select * from runs where kind='eval'")
+    done = [r["case"] for r in run["stats"]["results"]]
+    assert run["status"] == "budget_exceeded" and run["error"] == "daily cap" and done[0] == "c0" and "c1" not in done
+
+
+def test_evals_skip_the_one_pager_and_the_logic_check_has_its_own_tier():
+    from evals import run_evals
+    from core.db import connect
+
+    def no_onepager(m):
+        raise AssertionError("evals never score the one-pager")
+    llm.FAKE_RESPONSES["onepager"] = no_onepager
+    with connect() as db:
+        ctx = llm.RunContext(db=db, run_id=db.start_run("market_intel", "eval", "t"))
+        r = run_evals.run_case(ctx, "2026-10-27", [dict(i, importance=5) for i in ITEMS])
+        calls = db.all("select node, tier from llm_calls where run_id=%s", (ctx.run_id,))
+    assert r["passed_final"] and "onepager" not in r["calls"]
+    assert {c["tier"] for c in calls if c["node"] == "logic_checker"} == {"logic"}
+    assert load_yaml("models.yaml")["tiers"]["logic"]["reasoning"] == {"enabled": False}
 
 def test_writer_keeps_the_best_of_several_candidates(monkeypatch):
     from agents.market_intel import specialists

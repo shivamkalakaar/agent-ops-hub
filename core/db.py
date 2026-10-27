@@ -6,6 +6,7 @@ import json
 import os
 import re
 import sqlite3
+import threading
 import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -40,7 +41,9 @@ def _sqlite_schema() -> str:
 
 
 class DB:
+    """One connection, safe to share across threads (evals run cases concurrently): each query and its fetch hold a lock."""
     def __init__(self):
+        self.lock = threading.RLock()
         if _is_pg():
             import psycopg
             from psycopg.rows import dict_row
@@ -49,7 +52,7 @@ class DB:
         else:
             self.pg = False
             path = os.environ.get("SQLITE_PATH", str(ROOT / "local.db"))
-            self.conn = sqlite3.connect(path, isolation_level=None)
+            self.conn = sqlite3.connect(path, isolation_level=None, check_same_thread=False)
             self.conn.row_factory = sqlite3.Row
             self.conn.executescript(_sqlite_schema())
             self._sqlite_migrate()
@@ -72,10 +75,12 @@ class DB:
     def execute(self, sql: str, params=()):
         if not self.pg:
             sql = sql.replace("%s", "?")
-        return self.conn.execute(sql, params)
+        with self.lock:
+            return self.conn.execute(sql, params)
 
     def all(self, sql: str, params=()) -> list[dict]:
-        rows = [dict(r) for r in self.execute(sql, params).fetchall()]
+        with self.lock:
+            rows = [dict(r) for r in self.execute(sql, params).fetchall()]
         if not self.pg:  # SQLite hands jsonb columns back as text
             for r in rows:
                 for k, v in r.items():
@@ -221,16 +226,10 @@ class DB:
 
     # --- agent steps (live timeline) -------------------------------------------
     def _insert_id(self, sql: str, params) -> int:
-        if self.pg:
-            return self.execute(sql + " returning id", params).fetchone()["id"]
-        return self.execute(sql, params).lastrowid
-
-    def last_call_id(self, run_id: str) -> int:
-        return int(self.one("select coalesce(max(id),0) as m from llm_calls where run_id=%s", (run_id,))["m"])
-
-    def run_cost_after(self, run_id: str, call_id: int) -> float:
-        return float(self.one("select coalesce(sum(cost_usd),0) as c from llm_calls where run_id=%s and id>%s",
-                              (run_id, call_id))["c"])
+        with self.lock:
+            if self.pg:
+                return self.execute(sql + " returning id", params).fetchone()["id"]
+            return self.execute(sql, params).lastrowid
 
     def start_step(self, run_id: str, seq: int, agent: str, specialist: str, kind: str, reason: str | None = None) -> int:
         return self._insert_id("insert into agent_steps (run_id, seq, agent, specialist, kind, reason, status, started_at)"

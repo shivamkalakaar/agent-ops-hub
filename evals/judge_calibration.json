@@ -1,0 +1,370 @@
+{
+ "version": "413eb67c97",
+ "model": "deepseek/deepseek-v4.1-flash",
+ "date": "2026-10-27",
+ "note": "In-sample: judge.md/compare.md were written from these same edits (3 pairs). Rerun with `python -m evals.reference calibrate` after changing the judge; agent editor's own overall on the same drafts: rejected 3.99, approved 4.41 (AUC 0.85).",
+ "absolute_means": {
+  "rejected": 2.96,
+  "published": 3.7,
+  "agent_original_of_edited": 3.44,
+  "shivam_edited": 3.56,
+  "well": 3.92
+ },
+ "absolute_auc_published_vs_rejected": 0.84,
+ "pairwise": {
+  "runs": 2,
+  "orders_prefer_shivam": "9/12",
+  "pair_results": {
+   "loss (prefers Shivam both orders)": 3,
+   "tie": 3,
+   "win": 0
+  },
+  "detail": [
+   {
+    "id": "4a50be497600",
+    "orders": [
+     "B",
+     "A"
+    ]
+   },
+   {
+    "id": "3fcc2862c829",
+    "orders": [
+     "A",
+     "A"
+    ]
+   },
+   {
+    "id": "942e36b0112d",
+    "orders": [
+     "B",
+     "A"
+    ]
+   },
+   {
+    "id": "4a50be497600",
+    "orders": [
+     "A",
+     "A"
+    ]
+   },
+   {
+    "id": "3fcc2862c829",
+    "orders": [
+     "B",
+     "A"
+    ]
+   },
+   {
+    "id": "942e36b0112d",
+    "orders": [
+     "B",
+     "B"
+    ]
+   }
+  ],
+  "orders_key": "orders[0]: A = agent draft, orders[1]: A = Shivam's post"
+ },
+ "first_prompt_generic_taste": {
+  "orders_prefer_shivam": "0/6",
+  "absolute_means": {
+   "rejected": 3.24,
+   "published": 3.83,
+   "agent_original_of_edited": 4.06,
+   "shivam_edited": 3.56,
+   "well": 3.75
+  }
+ },
+ "deepseek_v4_pro_pairs": {
+  "orders_prefer_shivam": "4/6",
+  "cost_usd_per_call": 0.007
+ },
+ "groups": {
+  "rejected": [
+   {
+    "id": "6b10635d7876",
+    "overall": 3.17,
+    "scores": {
+     "plain": 3,
+     "logic": 3,
+     "one_idea": 4,
+     "hook": 3,
+     "grounded": 4,
+     "human": 2
+    },
+    "flags": [
+     "humanizer 2/5"
+    ]
+   },
+   {
+    "id": "b1da3a2adcbc",
+    "overall": 2.17,
+    "scores": {
+     "plain": 2,
+     "logic": 2,
+     "one_idea": 2,
+     "hook": 2,
+     "grounded": 3,
+     "human": 2
+    },
+    "flags": []
+   },
+   {
+    "id": "b7af87333c37",
+    "overall": 2,
+    "scores": {
+     "plain": 2,
+     "logic": 2,
+     "one_idea": 2,
+     "hook": 2,
+     "grounded": 2,
+     "human": 2
+    },
+    "flags": [
+     "not grounded: The two Hugging Face posts shipped in the same week; the sources do not give that timing.; The real comparison is cost per token on your own traffic, not spec s"
+    ]
+   },
+   {
+    "id": "471399ffe6ca",
+    "overall": 3.33,
+    "scores": {
+     "plain": 3,
+     "logic": 3,
+     "one_idea": 3,
+     "hook": 3,
+     "grounded": 5,
+     "human": 3
+    },
+    "flags": []
+   },
+   {
+    "id": "d3c3e3c71641",
+    "overall": 3.5,
+    "scores": {
+     "plain": 3,
+     "logic": 4,
+     "one_idea": 4,
+     "hook": 2,
+     "grounded": 5,
+     "human": 3
+    },
+    "flags": []
+   },
+   {
+    "id": "67334b8d23cc",
+    "overall": 2.17,
+    "scores": {
+     "plain": 2,
+     "logic": 2,
+     "one_idea": 2,
+     "hook": 2,
+     "grounded": 3,
+     "human": 2
+    },
+    "flags": []
+   },
+   {
+    "id": "59788df1bfbd",
+    "overall": 3.83,
+    "scores": {
+     "plain": 3,
+     "logic": 4,
+     "one_idea": 5,
+     "hook": 3,
+     "grounded": 5,
+     "human": 3
+    },
+    "flags": []
+   },
+   {
+    "id": "36eb482a4936",
+    "overall": 3.33,
+    "scores": {
+     "plain": 3,
+     "logic": 4,
+     "one_idea": 4,
+     "hook": 3,
+     "grounded": 3,
+     "human": 3
+    },
+    "flags": []
+   },
+   {
+    "id": "a02c890bc277",
+    "overall": 3.17,
+    "scores": {
+     "plain": 4,
+     "logic": 3,
+     "one_idea": 3,
+     "hook": 4,
+     "grounded": 2,
+     "human": 3
+    },
+    "flags": [
+     "not grounded: 'The Information reported the deal on October 25th' \u2014 no report date appears in the sources.; 'The same day Replit's CEO said ChatGPT models were now Replit Age"
+    ]
+   }
+  ],
+  "published": [
+   {
+    "id": "e34da8a5ad8f",
+    "overall": 4,
+    "scores": {
+     "plain": 4,
+     "logic": 4,
+     "one_idea": 4,
+     "hook": 4,
+     "grounded": 5,
+     "human": 3
+    },
+    "flags": []
+   },
+   {
+    "id": "80e0eaadb67b",
+    "overall": 3.5,
+    "scores": {
+     "plain": 4,
+     "logic": 3,
+     "one_idea": 4,
+     "hook": 3,
+     "grounded": 4,
+     "human": 3
+    },
+    "flags": []
+   },
+   {
+    "id": "b9829b5dac61",
+    "overall": 3.5,
+    "scores": {
+     "plain": 4,
+     "logic": 4,
+     "one_idea": 2,
+     "hook": 3,
+     "grounded": 5,
+     "human": 3
+    },
+    "flags": []
+   },
+   {
+    "id": "977b5049c201",
+    "overall": 3.67,
+    "scores": {
+     "plain": 3,
+     "logic": 4,
+     "one_idea": 4,
+     "hook": 3,
+     "grounded": 4,
+     "human": 4
+    },
+    "flags": []
+   },
+   {
+    "id": "7aa5c8942906",
+    "overall": 3.83,
+    "scores": {
+     "plain": 3,
+     "logic": 4,
+     "one_idea": 3,
+     "hook": 5,
+     "grounded": 5,
+     "human": 3
+    },
+    "flags": []
+   }
+  ],
+  "agent_original_of_edited": [
+   {
+    "id": "4a50be497600",
+    "overall": 3,
+    "scores": {
+     "plain": 2,
+     "logic": 4,
+     "one_idea": 5,
+     "hook": 2,
+     "grounded": 2,
+     "human": 3
+    },
+    "flags": [
+     "not grounded: The exact gap is provisional \u2014 the sources do not say the result is provisional.; You'd never see it on a pricing page \u2014 not stated in the sources."
+    ]
+   },
+   {
+    "id": "3fcc2862c829",
+    "overall": 3.33,
+    "scores": {
+     "plain": 3,
+     "logic": 3,
+     "one_idea": 4,
+     "hook": 4,
+     "grounded": 3,
+     "human": 3
+    },
+    "flags": []
+   },
+   {
+    "id": "942e36b0112d",
+    "overall": 4,
+    "scores": {
+     "plain": 4,
+     "logic": 4,
+     "one_idea": 4,
+     "hook": 3,
+     "grounded": 5,
+     "human": 4
+    },
+    "flags": []
+   }
+  ],
+  "shivam_edited": [
+   {
+    "id": "4a50be497600",
+    "overall": 4.17,
+    "scores": {
+     "plain": 4,
+     "logic": 4,
+     "one_idea": 5,
+     "hook": 4,
+     "grounded": 4,
+     "human": 4
+    },
+    "flags": []
+   },
+   {
+    "id": "3fcc2862c829",
+    "overall": 2.83,
+    "scores": {
+     "plain": 3,
+     "logic": 2,
+     "one_idea": 3,
+     "hook": 3,
+     "grounded": 3,
+     "human": 3
+    },
+    "flags": []
+   },
+   {
+    "id": "942e36b0112d",
+    "overall": 3.67,
+    "scores": {
+     "plain": 4,
+     "logic": 3,
+     "one_idea": 4,
+     "hook": 4,
+     "grounded": 3,
+     "human": 4
+    },
+    "flags": []
+   }
+  ],
+  "well": [
+   {
+    "id": "977b5049c201",
+    "overall": 3.67
+   },
+   {
+    "id": "4a50be497600",
+    "overall": 4.17
+   }
+  ]
+ }
+}
