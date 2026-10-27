@@ -254,7 +254,8 @@ def finish_node(persist: bool):
                           "accent": humanizer.scan(cur["post"]), "version": cur["version"]}
                 chosen["overall"] = drafting.overall_score({}, chosen["accent"]["score"])
             update = {}
-            if state.get("onepager_for") != chosen["post"]:  # the one-pager must describe the saved version
+            if persist and state.get("onepager_for") != chosen["post"]:  # the one-pager must describe the saved version
+                # (evals don't save or score a one-pager, so they skip it)
                 update, _, _ = specialists.onepager(state, ctx, state["settings"]["onepager"], post=chosen["post"])
             page = update.get("onepager") or state.get("onepager") or {}
             out = {"post": chosen["post"], "scores": chosen["scores"], "critique": chosen.get("critique", ""),
@@ -285,4 +286,5 @@ def finish_node(persist: bool):
 
 
 def build_draft(persist: bool = True):
+    """persist=False (evals): nothing is saved, and the finish step doesn't write a one-pager for the chosen post."""
     return orchestrator.build(supervisor.TEAM, DraftState, specialists.RUNNERS, load_items, finish_node(persist))

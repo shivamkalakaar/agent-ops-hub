@@ -1,22 +1,26 @@
 """Prompt regression evals: run the draft workflow (no save) on golden weeks and score the results.
 
-uv run python -m evals.run_evals [--agent market_intel|substack] [--cases 5] [--update-baseline] [--images]
+uv run python -m evals.run_evals [--agent market_intel|substack] [--cases 5] [--workers 4] [--update-baseline] [--images]
 
 Fails (exit 1) if the mean critic score drops more than TOLERANCE below the baseline,
 or if any final post still breaks a deterministic guardrail. For the Substack agent it also checks
 each run's trajectory: within the step limit, and the fact-checker and final check both ran.
 
 Each eval is one `runs` row (kind 'eval') with one step per case, so the dashboard's /evals page and the run's
-timeline show it live. The row's stats carry the trigger (pr / main / local), PR number, commit, baseline, gate
+timeline show it live. Cases run concurrently (--workers), each case's own steps in its own block of seq numbers. The row's stats carry the trigger (pr / main / local), PR number, commit, baseline, gate
 result and every case's post and scores. evals/results/<agent>.md is a summary for the PR comment.
 
 Evals never learn from the queue and read a frozen set of lessons (evals/lessons.fixture.md), so the same
 code and prompts always get the same inputs.
 """
 import argparse
+import contextvars
 import json
 import os
 import sys
+from concurrent.futures import FIRST_EXCEPTION, ThreadPoolExecutor, wait
+from dataclasses import replace
+from functools import partial
 from pathlib import Path
 from statistics import mean
 from typing import Callable
@@ -37,6 +41,8 @@ TOLERANCE = 0.3
 MIN_GUARDRAIL_PASS = {"market_intel": 1.0, "substack": 2 / 3}
 DAYS_PER_SUBSTACK_CASE = 3  # a Wed/Sat post covers 3-4 days of news
 REJECTION_CASES = 3  # the owner's latest rejected LinkedIn drafts (with a reason) are rerun as "don't do this again" cases
+WORKERS = 4  # cases at once: ~4x faster; more starts to hit the free models' rate limits (then their paid fallbacks)
+CASE_SEQ = 100  # each case's own steps get a block of seq numbers (case n: 100n+1...), so they don't interleave
 
 
 def rejections(db, n: int = REJECTION_CASES) -> list[dict]:
@@ -70,9 +76,11 @@ def run_rejection_case(ctx, case: dict) -> dict:
 def run_case(ctx, name: str, items: list[dict]) -> dict:
     from agents.market_intel.roster import PROMPTS, SPECIALISTS
     from core import settings
+    cfg = settings.from_files(SPECIALISTS, PROMPTS)
+    cfg["onepager"] = replace(cfg["onepager"], enabled=False)  # never scored; it only runs once the post is final
     state = graph.build_draft(persist=False).invoke(
         {"items": items, "week": name, "recent_angles": [], "recent_posts": [], "top_posts": [], "learn": False, "lessons": LESSONS},
-        config={"configurable": {"ctx": ctx, "settings": settings.from_files(SPECIALISTS, PROMPTS)}, "callbacks": ctx.callbacks,
+        config={"configurable": {"ctx": ctx, "settings": cfg}, "callbacks": ctx.callbacks,
                 "run_name": f"eval.{name}", "recursion_limit": 60})
     scores = state["scores"]
     return {"case": name, "mean": state["overall"], "critic_mean": round(mean(scores.values()), 2) if scores else 0.0,
@@ -101,7 +109,6 @@ def run_substack_case(ctx, name: str, items: list[dict], images: bool) -> dict:
     from agents.substack import graph as newsroom
     from agents.substack.roster import MAX_STEPS, PROMPTS, SPECIALISTS
     from core import settings
-    from dataclasses import replace
     cfg = settings.from_files(SPECIALISTS, PROMPTS)
     if not images:
         cfg["illustrator"] = replace(cfg["illustrator"], enabled=False)  # images cost ~$0.13/post; --images opts in
@@ -184,28 +191,45 @@ def comment(agent: str, run_id: str, summary: dict, results: list[dict], reasons
     return f"{head}\n\n{line}{why}\n\n| Case | Overall | Humanizer | Flags |\n|---|---|---|---|\n{rows}{link}\n"
 
 
-def run_suite(agent: str, cases: list[tuple[str, Callable]], describe: Callable[[dict], str], update: bool) -> int:
-    """Run each case as a step of one eval run, then record the summary and gate result on the run."""
-    results, info = [], meta()
+def concurrently(fns: list[Callable], workers: int):
+    """Run fns on a thread pool, each in a copy of the caller's context (so Langfuse spans nest under the eval's trace).
+    The first failure cancels what hasn't started and is raised once the running ones finish."""
+    with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
+        futures = [pool.submit(contextvars.copy_context().run, fn) for fn in fns]
+        wait(futures, return_when=FIRST_EXCEPTION)
+        for f in futures:
+            f.cancel()
+    if err := next((f.exception() for f in futures if not f.cancelled() and f.exception()), None):
+        raise err
+
+
+def run_suite(agent: str, cases: list[tuple[str, Callable]], describe: Callable[[dict], str], update: bool,
+              workers: int = WORKERS) -> int:
+    """Run the cases (concurrently) as steps of one eval run, then record the summary and gate result on the run."""
+    done, info = {}, meta()
     baseline = BASELINES[agent] if agent in BASELINES else HERE / f"baseline.{agent}.json"
     with connect() as db:
         run_id = db.start_run(agent, "eval", info["commit"])
         with tracing.trace(f"{agent}.eval", run_id=run_id, tags=[agent, "eval", info["trigger"]], metadata=info) as t:
-            ctx = llm.RunContext(db=db, run_id=run_id, callbacks=t.callbacks)
-            first = 900  # case steps sit after the agents' own steps on the timeline (each case logs its own from seq 1)
+            first = max(900, CASE_SEQ * len(cases))  # case steps sit after the agents' own steps on the timeline
+
+            def run_one(n: int, name: str, fn: Callable):
+                ctx = llm.RunContext(db=db, run_id=run_id, callbacks=t.callbacks, seq_offset=CASE_SEQ * n)  # its own cost meter
+                with step(replace(ctx, seq_offset=0), agent, "eval_case", "work", first + n,
+                          reason=f"case {n + 1} of {len(cases)}: {name}") as s:
+                    done[n] = r = fn(ctx)
+                    s.summary = describe(r)
+                    s.status = "degraded" if r["violations"] else "ok"
+                    s.output = {"case": name, "mean": r["mean"], "humanizer": r["humanizer"], "violations": r["violations"]}
+                print(describe(r), flush=True)
             try:
-                for n, (name, fn) in enumerate(cases):
-                    with step(ctx, agent, "eval_case", "work", first + n, reason=f"case {n + 1} of {len(cases)}: {name}") as s:
-                        r = fn(ctx)
-                        results.append(r)
-                        s.summary = describe(r)
-                        s.status = "degraded" if r["violations"] else "ok"
-                        s.output = {"case": name, "mean": r["mean"], "humanizer": r["humanizer"], "violations": r["violations"]}
-                    print(describe(r))
+                concurrently([partial(run_one, n, name, fn) for n, (name, fn) in enumerate(cases)], workers)
             except BudgetExceeded as ex:
+                results = [done[n] for n in sorted(done)]
                 db.finish_run(run_id, "budget_exceeded", trace_url=t.url, error=str(ex), stats={**info, "results": results})
                 print(f"stopped: {ex}", file=sys.stderr)
                 return 1
+            results = [done[n] for n in sorted(done)]
             if not results:
                 db.finish_run(run_id, "failed", trace_url=t.url, error="no golden cases", stats=info)
                 print("no golden cases", file=sys.stderr)
@@ -230,6 +254,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--agent", choices=["market_intel", "substack"], default="market_intel")
     ap.add_argument("--cases", type=int, default=5, help="newest N golden weeks (cost scales linearly)")
+    ap.add_argument("--workers", type=int, default=WORKERS, help="cases run at once")
     ap.add_argument("--update-baseline", action="store_true")
     ap.add_argument("--images", action="store_true", help="substack: keep the illustrator on (adds ~$0.13 per case)")
     args = ap.parse_args()
@@ -246,7 +271,7 @@ def main() -> int:
             cases += [(f"rejected {c['id']}", lambda ctx, c=c: run_rejection_case(ctx, c)) for c in rejections(db)]
         describe = lambda r: (f"{r['case']}: overall {r['mean']}, humanizer {r['humanizer']}/5, {r['chars']} chars, "  # noqa: E731
                               f"{r['revisions']} rewrites" + (f". Flags: {'; '.join(r['violations'])}" if r["violations"] else ""))
-    return run_suite(args.agent, cases, describe, args.update_baseline)
+    return run_suite(args.agent, cases, describe, args.update_baseline, args.workers)
 
 
 if __name__ == "__main__":

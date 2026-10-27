@@ -276,7 +276,7 @@ def logic_checker(state, ctx, cfg):
     fact-checker's job; this reads the argument the way a reader would."""
     draft = current(state)
     try:
-        r = llm.call_json(ctx, _tier(cfg, "judge"), "logic_checker", drafting.fill(cfg.prompt, AUTHOR=AUTHOR),
+        r = llm.call_json(ctx, _tier(cfg, "logic"), "logic_checker", drafting.fill(cfg.prompt, AUTHOR=AUTHOR),
                           f"# Post\n{draft['post']}", model=cfg.model)
     except ValueError:
         r = {}

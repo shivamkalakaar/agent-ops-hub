@@ -487,6 +487,70 @@ def test_rejected_drafts_become_eval_cases(monkeypatch, tmp_path):
 
 
 
+def _fake_case(n: int, gate=None, fail=None):
+    from core.steps import step
+
+    def fn(ctx):
+        if gate:
+            gate.wait()  # every case has to be running at once to get past this
+        if fail:
+            raise fail
+        for i in (1, 2):
+            with step(ctx, "market_intel", "writer", "work", i):
+                ctx.log_call(run_id=ctx.run_id, node="writer", tier="voice", cost_usd=0.01 * (n + 1), ok=True)
+        return {"case": f"c{n}", "mean": 4.5, "scores": {"hook": 5}, "violations": [], "humanizer": 5}
+    return fn
+
+
+def test_eval_cases_run_concurrently_with_their_own_steps_and_costs(monkeypatch, tmp_path):
+    import threading
+    from evals import run_evals
+    from core.db import connect
+    monkeypatch.setattr(run_evals, "HERE", tmp_path)
+    monkeypatch.setattr(run_evals, "BASELINES", {"market_intel": tmp_path / "baseline.json"})
+    gate = threading.Barrier(3, timeout=10)
+    cases = [(f"c{n}", _fake_case(n, gate)) for n in range(3)]
+    assert run_evals.run_suite("market_intel", cases, lambda r: r["case"], False, workers=3) == 0
+    with connect() as db:
+        run = db.one("select * from runs where kind='eval'")
+        steps = db.all("select * from agent_steps where run_id=%s order by seq", (run["id"],))
+    assert [r["case"] for r in run["stats"]["results"]] == ["c0", "c1", "c2"]  # in case order, however they finished
+    work = {x["seq"]: float(x["cost_usd"]) for x in steps if x["specialist"] == "writer"}
+    assert work == {1: 0.01, 2: 0.01, 101: 0.02, 102: 0.02, 201: 0.03, 202: 0.03}  # own seq block, own cost
+    evals = [x for x in steps if x["specialist"] == "eval_case"]
+    assert [(x["seq"], round(float(x["cost_usd"]), 4), x["summary"]) for x in evals] == [
+        (900, 0.02, "c0"), (901, 0.04, "c1"), (902, 0.06, "c2")]
+    assert float(run["cost_usd"]) == pytest.approx(0.12)
+
+
+def test_a_budget_stop_in_one_case_keeps_the_finished_ones(monkeypatch, tmp_path):
+    from evals import run_evals
+    from core.budget import BudgetExceeded
+    from core.db import connect
+    monkeypatch.setattr(run_evals, "HERE", tmp_path)
+    cases = [("c0", _fake_case(0)), ("c1", _fake_case(1, fail=BudgetExceeded("daily cap"))), ("c2", _fake_case(2))]
+    assert run_evals.run_suite("market_intel", cases, lambda r: r["case"], False, workers=1) == 1
+    with connect() as db:
+        run = db.one("select * from runs where kind='eval'")
+    done = [r["case"] for r in run["stats"]["results"]]
+    assert run["status"] == "budget_exceeded" and run["error"] == "daily cap" and done[0] == "c0" and "c1" not in done
+
+
+def test_evals_skip_the_one_pager_and_the_logic_check_has_its_own_tier():
+    from evals import run_evals
+    from core.db import connect
+
+    def no_onepager(m):
+        raise AssertionError("evals never score the one-pager")
+    llm.FAKE_RESPONSES["onepager"] = no_onepager
+    with connect() as db:
+        ctx = llm.RunContext(db=db, run_id=db.start_run("market_intel", "eval", "t"))
+        r = run_evals.run_case(ctx, "2026-10-27", [dict(i, importance=5) for i in ITEMS])
+        calls = db.all("select node, tier from llm_calls where run_id=%s", (ctx.run_id,))
+    assert r["passed_final"] and "onepager" not in r["calls"]
+    assert {c["tier"] for c in calls if c["node"] == "logic_checker"} == {"logic"}
+    assert load_yaml("models.yaml")["tiers"]["logic"]["reasoning"] == {"enabled": False}
+
 def test_writer_keeps_the_best_of_several_candidates(monkeypatch):
     from agents.market_intel import specialists
     from agents.market_intel.roster import PROMPTS, SPECIALISTS

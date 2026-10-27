@@ -50,7 +50,7 @@ def generate(ctx: RunContext, node: str, prompt: str, *, model: str | None = Non
     log = {"run_id": ctx.run_id, "node": node, "tier": "image"}
     start = time.monotonic()
     if os.environ.get("LLM_MODE") == "fake":
-        ctx.db.log_llm_call(**log, model="fake", prompt_tokens=0, completion_tokens=0, cost_usd=0.0, latency_ms=0, ok=True)
+        ctx.log_call(**log, model="fake", prompt_tokens=0, completion_tokens=0, cost_usd=0.0, latency_ms=0, ok=True)
         return {"bytes": FAKE_PNG, "mime": "image/png", "model": "fake", "cost_usd": 0.0}
     body = {"messages": [{"role": "user", "content": prompt}],
             "modalities": ["image", "text"], "usage": {"include": True},
@@ -62,12 +62,12 @@ def generate(ctx: RunContext, node: str, prompt: str, *, model: str | None = Non
             raise RuntimeError(f"no image in reply: {str(data['choices'][0]['message'].get('content'))[:200]}")
         raw, mime = _decode(images[0]["image_url"]["url"])
     except Exception:
-        ctx.db.log_llm_call(**log, model=primary, ok=False, latency_ms=int((time.monotonic() - start) * 1000))
+        ctx.log_call(**log, model=primary, ok=False, latency_ms=int((time.monotonic() - start) * 1000))
         raise
     usage = data.get("usage") or {}
     pt, ct = usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
     cost = usage.get("cost")
     cost = float(cost) if cost is not None else budget.estimate_cost(pt, ct)
-    ctx.db.log_llm_call(**log, model=data.get("model", primary), prompt_tokens=pt, completion_tokens=ct, cost_usd=cost,
+    ctx.log_call(**log, model=data.get("model", primary), prompt_tokens=pt, completion_tokens=ct, cost_usd=cost,
                         latency_ms=int((time.monotonic() - start) * 1000), ok=True)
     return {"bytes": raw, "mime": mime, "model": data.get("model", primary), "cost_usd": cost}

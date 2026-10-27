@@ -23,7 +23,7 @@ SPECIALISTS = [
     Specialist("fact_checker", "Fact-checker", "Checks every claim in the post against the fact sheet, on a"
                " different model family from the writer.", "check", max_calls=3),
     Specialist("logic_checker", "Logic check", "Checks that each step of the argument follows from the last, guesses"
-               " are marked as guesses, comparisons say what is compared, and the words are plain.", "judge", max_calls=3),
+               " are marked as guesses, comparisons say what is compared, and the words are plain.", "logic", max_calls=3),
     Specialist("final_check", "Final check", "Repeats against recent posts, template moves, and the lessons from"
                " your feedback. Nothing is saved as passing without it.", "check", max_calls=3, required=True),
     Specialist("onepager", "One-pager", "Writes the companion page linked in the first comment, from the fact"
