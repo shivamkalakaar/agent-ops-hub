@@ -222,6 +222,11 @@ class DB:
         rows = self.all("select angle from drafts order by created_at desc limit %s", (limit,))
         return [r["angle"].get("angle", "") for r in rows if isinstance(r["angle"], dict)]
 
+    def recent_formats(self, limit: int = 2) -> list[str]:
+        """Post shapes (agents/market_intel/prompts/formats.md) of the latest LinkedIn drafts, newest first."""
+        rows = self.all("select angle from drafts order by created_at desc limit %s", (limit,))
+        return [r["angle"].get("format", "") for r in rows if isinstance(r["angle"], dict) and r["angle"].get("format")]
+
     def search_items(self, terms: list[str], since_iso: str, limit: int = 8) -> list[dict]:
         """Recent items whose title or summary mentions any of the terms (research follow-ups; no paid web search)."""
         terms = [t.strip().lower() for t in terms if t.strip()][:6]

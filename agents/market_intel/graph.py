@@ -129,6 +129,7 @@ class DraftState(TypedDict, total=False):
     items: list[dict]
     recent_posts: list[str]
     recent_angles: list[str]
+    recent_formats: list[str]  # post shapes of the last two drafts, so the scout rotates
     top_posts: list[str]  # published posts the owner said did well with readers
     lessons: str          # what the owner's past decisions taught the agent (core/lessons.py)
     examples: list[dict]  # the owner's rewrites: [{"id", "draft", "post"}], newest first
@@ -200,6 +201,7 @@ def load_items(state: DraftState, config: RunnableConfig) -> DraftState:
             "lessons": state["lessons"] if "lessons" in state else lessons.block(db, AGENT, AUTHOR),
             "examples": state["examples"] if "examples" in state else db.voice_examples(),
             "recent_angles": state["recent_angles"] if "recent_angles" in state else db.recent_angles(5),
+            "recent_formats": state["recent_formats"] if "recent_formats" in state else db.recent_formats(2),
             "seq": 1, "work_steps": 0, "calls": {}, "history": [], "drafts": [], "candidates": {}}
 
 

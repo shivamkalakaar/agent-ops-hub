@@ -686,3 +686,23 @@ def test_a_passing_rewrite_that_reads_worse_doesnt_replace_the_better_version():
     assert g.best({"settings": cfg, "candidates": {"1": v(1, 4.6, True), "2": v(2, 4.1, True)}})["version"] == 1
     assert g.best({"settings": cfg, "candidates": {"1": v(1, 4.6, False), "2": v(2, 4.1, True)}})["version"] == 2
     assert g.best({"settings": cfg, "candidates": {"1": v(1, 4.3, True), "2": v(2, 4.3, True)}})["version"] == 2  # tie: the fixed one
+
+
+def test_scout_rotates_post_shapes_and_the_writer_gets_the_chosen_one():
+    from agents.market_intel import specialists
+    from core import settings
+    from core.db import connect
+    from agents.market_intel.roster import PROMPTS, SPECIALISTS
+    good = {"kind": "reaction", "take": "I'd like to see it hold up for a year", "detail": "The arm is strong enough to hurt itself"}
+    llm.FAKE_RESPONSES["scout"] = lambda m: json.dumps({"candidates": [
+        {**good, "item_ids": [0], "angle": "a", "format": "one_pattern"},
+        {**good, "item_ids": [1], "angle": "b", "format": "the_hard_part"}], "pick": 0})
+    cfg = settings.from_files(SPECIALISTS, PROMPTS)["scout"]
+    with connect() as db:
+        ctx = llm.RunContext(db=db, run_id=db.start_run("market_intel", "draft", "t"))
+        items = [dict(i, importance=5) for i in ITEMS]
+        fresh, _, _ = specialists.scout({"items": items, "recent_formats": ["the_hard_part"]}, ctx, cfg)
+        used, _, out = specialists.scout({"items": items, "recent_formats": ["one_pattern"]}, ctx, cfg)
+    assert fresh["angle"]["format"] == "one_pattern"
+    assert used["angle"]["format"] is None  # just used: the writer goes without a shape rather than repeat it
+    assert "the_hard_part" in specialists.FORMATS and specialists.format_line("the_hard_part").startswith("the_hard_part:")

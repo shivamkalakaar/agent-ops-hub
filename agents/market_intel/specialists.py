@@ -67,7 +67,9 @@ def _numbered(sources: list[dict]) -> str:
 
 def scout(state, ctx, cfg):
     recent = "\n".join(f"- {a}" for a in state.get("recent_angles") or []) or "(none yet)"
-    r = llm.call_json(ctx, _tier(cfg, "judge"), "scout", drafting.fill(cfg.prompt, AUTHOR=AUTHOR, RECENT=recent, VIEWS=views()),
+    shapes = ", ".join(state.get("recent_formats") or []) or "(none yet)"
+    r = llm.call_json(ctx, _tier(cfg, "judge"), "scout", drafting.fill(cfg.prompt, AUTHOR=AUTHOR, RECENT=recent, VIEWS=views(),
+                                                                      FORMATS=formats(), RECENT_FORMATS=shapes),
                       listing(state["items"]) + _take(state), model=cfg.model)
     items = state["items"]
     cands = [c for c in (r.get("candidates") or ([r] if r.get("item_ids") else [])) if isinstance(c, dict)]
@@ -77,6 +79,8 @@ def scout(state, ctx, cfg):
         c["repeat"] = round(max([novelty.jaccard(text, novelty.words(a)) for a in state.get("recent_angles") or []] or [0]), 2)
         c["thesis"] = drafting.thesis_contrast(f"{c.get('angle', '')} {c.get('hook', '')}")
         c["passes"] = passes_take_test(c)
+        if c.get("format") not in FORMATS or c["format"] in (state.get("recent_formats") or []):
+            c["format"] = None  # an unknown or just-used shape: the writer goes without one
     cands = [c for c in cands if c["item_ids"]] or [{"item_ids": [0], "angle": items[0]["title"], "hook": "", "why_now": "",
                                                      "repeat": 0, "passes": False}]
     pick = r.get("pick") if isinstance(r.get("pick"), int) and 0 <= r.get("pick") < len(cands) else 0
@@ -101,12 +105,24 @@ def scout(state, ctx, cfg):
     return {"angle": angle, "sources": sources}, summary, {"candidates": cands, "pick": pick, "why": note}
 
 
-ANGLE_KEYS = ("angle", "take", "detail", "hook", "why_now", "view")
+ANGLE_KEYS = ("angle", "take", "detail", "format", "hook", "why_now", "view")
 WORDS_PER_SOURCE = 700  # the best posts' details came from deep in the article; 1,200 words split five ways didn't reach them
 
 
 def views() -> str:
     return (PROMPTS / "views.md").read_text().strip()
+
+
+def formats() -> str:
+    return (PROMPTS / "formats.md").read_text().strip()
+
+
+FORMATS = {line.split(":", 1)[0][2:] for line in formats().splitlines() if line.startswith("- ") and ":" in line}
+
+
+def format_line(name: str | None) -> str:
+    """The one shape the scout chose, as the writer sees it."""
+    return next((l[2:] for l in formats().splitlines() if name and l.startswith(f"- {name}:")), "")
 
 
 def passes_take_test(c: dict) -> bool:
@@ -212,7 +228,9 @@ def writer(state, ctx, cfg):
     g = _g()
     a = state["angle"]
     user = (f"Angle: {a.get('angle')}\nThe take (the post's one idea): {a.get('take') or a.get('angle')}\n"
-            f"The striking detail: {a.get('detail') or '(see the fact sheet)'}\nCandidate hook: {a.get('hook')}\nWhy now: {a.get('why_now')}\n\n"
+            f"The striking detail: {a.get('detail') or '(see the fact sheet)'}\n"
+            + (f"The shape (use it, loosely): {format_line(a.get('format'))}\n" if a.get("format") else "")
+            + f"Candidate hook: {a.get('hook')}\nWhy now: {a.get('why_now')}\n\n"
             f"# Fact sheet\n{fact_sheet(state)}\n\n# Source items\n"
             # summaries only: the researcher already pulled the facts and quotes out of the article text, and with
             # 700 words a source in front of it the writer copied whole sentences and picked up stray figures

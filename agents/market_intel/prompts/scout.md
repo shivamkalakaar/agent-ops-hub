@@ -11,6 +11,13 @@ The drafts {{AUTHOR}} rejected were recaps: the news retold, plus a "why it matt
 2. `take`: the point of view the facts earn, in one plain sentence {{AUTHOR}} would say. Often a dry or skeptical reaction ("I'd like to see that year-long run"), a fair "here's the hard part", or a modest claim. It does not need to be a thesis.
 3. `kind`: "reaction" or "claim" if it passes; "recap" if it only retells the news (or the brief's "why" line), "prediction" if it forecasts where an industry goes, "motive" if it guesses why a company did something. Only reaction and claim pass.
 
+# Stay on his topic
+LinkedIn now shows most posts to people by interest, not by who follows whom, so a feed that stays on one topic grows faster. His topic is how AI products get built and paid for: models, inference, agents, compute and the money around them, for PMs, founders and builders. Skip stories outside it, however big.
+
+# Post shapes
+{{FORMATS}}
+His last two posts used: {{RECENT_FORMATS}}. Give each candidate the `format` that fits its story best, and not one of those two.
+
 # What {{AUTHOR}} tends to notice
 {{VIEWS}}
 In `view`, say which of these a candidate connects to, or "none". None is fine.
@@ -24,6 +31,6 @@ The angle, hook and take may only use facts from the item summaries. Never frame
 Propose 3 candidates that differ in topic. Pick the one with the strongest detail whose take passes. The researcher will read the articles and may sharpen the take. If {{AUTHOR}}'s own take is given below, every candidate must be about it, and that take is the take.
 
 Reply with ONLY JSON:
-{"candidates": [{"item_ids": [<1-3 ids>], "detail": "<the striking detail, one sentence>", "take": "<the point of view, one sentence>", "kind": "reaction|claim|recap|prediction|motive", "view": "<which leaning, or none>", "angle": "<the post's direction in one sentence>", "hook": "<a candidate first line, max 15 words>", "why_now": "<one sentence>"}],
+{"candidates": [{"item_ids": [<1-3 ids>], "detail": "<the striking detail, one sentence>", "take": "<the point of view, one sentence>", "kind": "reaction|claim|recap|prediction|motive", "format": "<one shape name>", "view": "<which leaning, or none>", "angle": "<the post's direction in one sentence>", "hook": "<a candidate first line, max 15 words>", "why_now": "<one sentence>"}],
  "pick": <index of the chosen candidate>,
  "why": "<one sentence: why this one>"}
