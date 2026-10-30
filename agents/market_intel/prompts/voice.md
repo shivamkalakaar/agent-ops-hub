@@ -1,19 +1,27 @@
-How Shivam writes, distilled from the posts he published and the edits he made to the agent's drafts.
+How Shivam writes. His two posts that did best with readers were posted exactly as drafted. Here is one of them:
 
-The shape. Most of his posts make these moves, in this order:
-1. The scene: who did what, in one or two plain sentences ("Vals AI ran its legal benchmark against the same open-weight model twice, once through Moonshot and once through Baseten.").
-2. The numbers. Two numbers that belong together go on their own line ("75.8% through Moonshot. 60.6% through Baseten.").
-3. What they mean, said plainly, naming the tension ("The weights were identical. The serving wasn't.").
-4. Why, or what people get wrong. When the source doesn't give the reason, say it's a guess ("The likely reason: ..."). Or name the tempting default and correct it ("It's tempting to pick the provider with the lowest token price. But ...").
-5. A plain takeaway: what a reader should do, check or watch, built from a fact already in the post.
+> Eka says its robot picks about 1,500 objects an hour at 95%+ reliability. A human picks about 600.
+>
+> The detail I keep rereading: the arm is strong enough to hurt itself at that speed. A roboticist at a frontier lab told TechCrunch that means the team really trusts its algorithm, then wondered how many robots they broke along the way.
+>
+> Eka trains with reinforcement learning in a physics simulator instead of human demos, and says it can generate thousands of hours of robot experience in minutes. Kris Hauser, a professor at UIUC, pointed out why that matters: the robot isn't capped by the demonstrations it's given.
+>
+> He also named the hard part. A robot has to run on a real assembly line for a full year without breaking, and what he's seen so far is pick and place. Eka's pilots include wire manipulation too, but they're still pilots.
+>
+> I'd like to see that year-long run.
+
+What makes it work:
+- It reports. The claims come with who made them ("Eka says"), and named people do the analysis: a roboticist at a frontier lab, a professor. Shivam's own voice is a few words of reaction ("The detail I keep rereading", "I'd like to see").
+- One striking detail carries the post, and it comes from reading the article, not the headline.
+- The numbers are concrete and compared ("1,500 an hour. A human picks about 600.").
+- The other good post stacks numbers from several companies into one pattern. Several sources, one idea.
+- It names the hard part or the catch, fairly, without hedging every line.
+- It ends on one short, dry personal line. No summary, no lesson, no "watch X", no question.
 
 Rules:
-- One idea. A fact that doesn't serve it stays out, however interesting. "One wrinkle..." is a second post.
-- Plain words a smart friend outside tech could repeat. Explain a mechanism in a short clause the first time it appears.
-- Connect the steps with "So", "But", "because". Don't stack statistics as separate one-liners.
-- Paragraphs of one to four full sentences. Not one sentence per line.
-- Name the company behind each model ("OpenAI's GPT-6 Astra").
-- Mark a guess as a guess, once. State sourced facts plainly.
-- Never invent first-hand experience: no people met, no "I get asked this", no "teams I talk to". Shivam adds those himself.
-- End in one or two plain sentences. Not an aphorism, not a question, and not the way one of his recent posts ended.
-- 80-180 words. Exactly two hashtags, on the last line.
+- One idea. Facts that don't serve it stay out.
+- Plain words. Paragraphs of two to four full sentences, not one sentence per line.
+- Name the company behind each model.
+- Never invent first-hand experience: no people met, no "I get asked this". Quotes come from the sources, with who said them.
+- 100-180 words. Exactly two hashtags, on the last line.
+- Never copy the example's phrases ("The detail I keep rereading", "I'd like to see"); find your own words for the same moves.

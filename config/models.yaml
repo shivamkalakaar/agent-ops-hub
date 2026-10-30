@@ -45,6 +45,15 @@ tiers:
     reasoning: {enabled: false}
     reasoning_by_model: {z-ai/glm-5.3: {effort: low}}   # a dashboard override to GLM: it can't turn reasoning off
     max_tokens: 4000
+  verify:  # LinkedIn researcher and fact-checker (2026-10-30): paid, off the free pool, where the fact sheets ran 4-8
+           # facts and the fact-checker missed a planted invented number on one of two runs. ~$0.004 a draft more.
+           # The final check stays on the free check tier: on this model it blocked 3 of Shivam's 5 posts over
+           # wording ("creating" vs "new"), on Nemotron 0 of 5 while catching both planted problems.
+    primary: deepseek/deepseek-v4.1-flash
+    fallbacks: [qwen/qwen3.7-flash, nvidia/nemotron-3-ultra-550b-a55b:free]
+    temperature: 0.0
+    reasoning: {enabled: false}
+    max_tokens: 6000
   check:   # newsroom editor, fact-checker, final check, reasoning OFF: with effort "low", DeepSeek and Qwen spent all
            # 8,000 tokens thinking over a fact check and returned nothing. Nemotron caught a planted false claim 2/2 like
            # DeepSeek, flags more claims, and scores ~0.5 higher as editor.

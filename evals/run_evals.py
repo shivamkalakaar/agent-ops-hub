@@ -47,8 +47,8 @@ REJECTION_CASES = 1  # the owner's latest rejected LinkedIn draft (with a reason
 # PR set: the agent writes on the stories behind three of Shivam's published posts, and the fixed judge (evals/reference.py)
 # compares it with his. --full adds the golden news days and the rest of the reference cases.
 PR_REFERENCES = ("3fcc2862c829", "942e36b0112d", "977b5049c201")
-# Quoted in the voice guide and the editor's prompt as the bar for a 5, so the agent has already seen it: never a case.
-IN_PROMPTS = ("4a50be497600",)
+# Quoted in the voice guide as the bar for a 5, so the agent has already seen it: never a case.
+IN_PROMPTS = ("b9829b5dac61",)
 WORKERS = 4  # cases at once: ~4x faster; more starts to hit the free models' rate limits (then their paid fallbacks)
 CASE_SEQ = 100  # each case's own steps get a block of seq numbers (case n: 100n+1...), so they don't interleave
 

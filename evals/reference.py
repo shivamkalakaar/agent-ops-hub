@@ -119,6 +119,9 @@ def summarize(rows: list[dict]) -> dict:
 
 
 TOLERANCE, VS_SHIVAM_DROP, KEPT_DROP, MAX_FLAGGED = 0.35, 0.25, 0.1, 1
+# An absolute floor too: the first baseline sat at 0.00 (three losses), where a relative drop can never fail.
+# 0.25 = on average a tie on half the cases, a loss on the rest.
+MIN_VS_SHIVAM = 0.25
 
 
 def gate(summary: dict, baseline: dict | None) -> list[str]:
@@ -130,6 +133,8 @@ def gate(summary: dict, baseline: dict | None) -> list[str]:
     if len(summary["flagged"]) > allowed:
         reasons.append(f"{len(summary['flagged'])} cases break a hard rule or aren't grounded (baseline allows {allowed}): "
                        f"{', '.join(summary['flagged'])}")
+    if "vs_shivam" in summary and summary["vs_shivam"] < MIN_VS_SHIVAM:
+        reasons.append(f"preferred over Shivam's post {summary['vs_shivam']:.2f} of the time; the floor is {MIN_VS_SHIVAM:.2f}")
     if not same:
         return reasons
     if summary["judge_mean"] < baseline["judge_mean"] - TOLERANCE:

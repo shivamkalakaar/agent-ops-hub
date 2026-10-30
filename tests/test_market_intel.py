@@ -649,13 +649,15 @@ def test_flags_a_brief_line_passed_off_as_the_authors_own():
 def test_take_test_prefers_a_real_claim_and_a_scheduled_run_skips_when_none_passes():
     from agents.market_intel import specialists
     from core.db import connect
-    claim = {"kind": "claim", "take": "Pick the provider by measured accuracy, not token price",
-             "disagree": "The cheapest provider is usually good enough", "decision": "Run your own eval on each provider"}
-    assert specialists.passes_take_test(claim)
+    claim = {"kind": "reaction", "take": "I'd like to see it run for a year on a real line",
+             "detail": "The arm is strong enough to hurt itself at that speed"}
+    assert specialists.passes_take_test(claim) and specialists.passes_take_test({**claim, "kind": "claim"})
     assert not specialists.passes_take_test({**claim, "kind": "recap"})
-    assert not specialists.passes_take_test({**claim, "take": "Every lab will charge per task by 2028"})  # a prediction
-    assert not specialists.passes_take_test({**claim, "decision": ""})
-    recap = {"item_ids": [0], "angle": "a launch", "kind": "recap", "take": "Google launched a model this week"}
+    assert not specialists.passes_take_test({**claim, "take": "Every lab will charge per task soon"})  # an industry forecast
+    assert not specialists.passes_take_test({**claim, "take": "Per-task pricing wins by 2028"})
+    assert not specialists.passes_take_test({**claim, "detail": ""})  # a take needs a detail under it
+    recap = {"item_ids": [0], "angle": "a launch", "kind": "recap", "take": "Google launched a model this week",
+             "detail": "It leads four of nine evals"}
     llm.FAKE_RESPONSES["scout"] = lambda m: json.dumps({"candidates": [recap, {**claim, "item_ids": [1], "angle": "b"}], "pick": 0})
     from core import settings
     from agents.market_intel.roster import PROMPTS, SPECIALISTS
@@ -674,3 +676,14 @@ def test_take_test_prefers_a_real_claim_and_a_scheduled_run_skips_when_none_pass
     assert cli.run("draft") == 0  # "Generate a new draft" always writes one
     with connect() as db:
         assert db.one("select count(*) as n from drafts")["n"] == 1
+
+
+def test_a_passing_rewrite_that_reads_worse_doesnt_replace_the_better_version():
+    from agents.market_intel import graph as g
+    from core import settings
+    from agents.market_intel.roster import PROMPTS, SPECIALISTS
+    cfg = settings.from_files(SPECIALISTS, PROMPTS)
+    v = lambda n, overall, passed: {"version": n, "post": f"v{n}", "violations": [], "overall": overall,  # noqa: E731
+                                    "accent": {"score": 5}, "fact_checked": True, "passed_final": passed}
+    assert g.best({"settings": cfg, "candidates": {"1": v(1, 4.6, True), "2": v(2, 4.1, True)}})["version"] == 1
+    assert g.best({"settings": cfg, "candidates": {"1": v(1, 4.6, False), "2": v(2, 4.1, True)}})["version"] == 2

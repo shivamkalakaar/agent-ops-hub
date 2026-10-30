@@ -1,5 +1,5 @@
 {
- "about": "Reviewer evals for the LinkedIn agent: posts with the sources they were written from and what each reviewer should say. own = Shivam's published or edited posts (every reviewer should pass them); bad = agent drafts he rewrote or rejected; planted = a good post with one defect added. expect: pass, flag, or a list of words the flags must mention. accept: flags on that case that are known and fine (substring match).",
+ "about": "Reviewer evals for the LinkedIn agent: posts with the sources they were written from and what each reviewer should say. own = Shivam's published or edited posts (every reviewer should pass them); bad = agent drafts he rewrote or rejected; planted = a good post with one defect added. expect: pass, flag, or a list of words the flags must mention. accept: flags on that case that are known and fine (substring match). Own posts: the editor must pass the debt post (one of his two best); his average posts check only the factual reviewers.",
  "sources": {
   "36eb482a4936": {
    "items": [
@@ -325,12 +325,11 @@
  "cases": [
   {
    "id": "own-kimi-edited",
-   "label": "Shivam's edit of the Kimi K3 provider-gap post (did well); he kept two of the brief's lines",
+   "label": "Shivam's edit of the Kimi K3 provider-gap post; he kept two of the brief's lines [an average post (Shivam, 2026-10-30): the editor's verdict on it isn't scored]",
    "kind": "own",
    "sources": "4a50be497600",
    "expect": {
     "guardrails": "pass",
-    "editor": "pass",
     "fact_checker": "pass",
     "final_check": "pass"
    },
@@ -341,12 +340,11 @@
   },
   {
    "id": "own-kimi-approved",
-   "label": "Approved Kimi K3 post as the agent wrote it (did well)",
+   "label": "Approved Kimi K3 post as the agent wrote it [an average post (Shivam, 2026-10-30): the editor's verdict on it isn't scored]",
    "kind": "own",
    "sources": "4a50be497600",
    "expect": {
     "guardrails": "pass",
-    "editor": "pass",
     "fact_checker": "pass",
     "final_check": "pass"
    },
@@ -357,7 +355,7 @@
   },
   {
    "id": "own-debt",
-   "label": "Approved CoreWeave/Nebius/Meta debt post (did well)",
+   "label": "Approved CoreWeave/Nebius/Meta debt post (one of his two posts that did best)",
    "kind": "own",
    "sources": "977b5049c201",
    "expect": {
@@ -370,12 +368,11 @@
   },
   {
    "id": "own-derm-edited",
-   "label": "Shivam's edit of the skin-lesion data-moat post, hashtags cut from 4 to his usual 2",
+   "label": "Shivam's edit of the skin-lesion data-moat post, hashtags cut from 4 to his usual 2 [an average post (Shivam, 2026-10-30): the editor's verdict on it isn't scored]",
    "kind": "own",
    "sources": "3fcc2862c829",
    "expect": {
     "guardrails": "pass",
-    "editor": "pass",
     "fact_checker": "pass",
     "final_check": "pass"
    },
@@ -386,12 +383,11 @@
   },
   {
    "id": "own-tokens-edited",
-   "label": "Shivam's rewrite of the open-models token-share post (also the logic prompt's bar), hashtags cut to 2; his \"$3 job now under $1\" example is his own illustration",
+   "label": "Shivam's rewrite of the open-models token-share post (also the logic prompt's bar), hashtags cut to 2; his \"$3 job now under $1\" example is his own illustration [an average post (Shivam, 2026-10-30): the editor's verdict on it isn't scored]",
    "kind": "own",
    "sources": "942e36b0112d",
    "expect": {
     "guardrails": "pass",
-    "editor": "pass",
     "fact_checker": "pass",
     "final_check": "pass"
    },

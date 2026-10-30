@@ -101,7 +101,8 @@ def scout(state, ctx, cfg):
     return {"angle": angle, "sources": sources}, summary, {"candidates": cands, "pick": pick, "why": note}
 
 
-ANGLE_KEYS = ("angle", "take", "contrast", "hook", "why_now", "view")
+ANGLE_KEYS = ("angle", "take", "detail", "hook", "why_now", "view")
+WORDS_PER_SOURCE = 700  # the best posts' details came from deep in the article; 1,200 words split five ways didn't reach them
 
 
 def views() -> str:
@@ -109,10 +110,11 @@ def views() -> str:
 
 
 def passes_take_test(c: dict) -> bool:
-    """The scout's own verdict, checked: a claim (not a prediction, a guess at a motive or a recap) that a reader
-    could argue with and that changes a decision. Rejected drafts were mostly recaps with a "why it matters" line."""
-    return (c.get("kind") == "claim" and all(len(str(c.get(k) or "").split()) >= 4 for k in ("take", "disagree", "decision"))
-            and not re.search(r"\b(?:will|by 20\d\d)\b", str(c.get("take") or ""), flags=re.I))
+    """The scout's own verdict, checked: a point of view (a reaction or a claim, not a recap, a forecast or a guess
+    at a motive) built on a specific detail. Rejected drafts were mostly recaps with a "why it matters" line; the two
+    posts that did best were reported stories with one striking detail and a dry one-line reaction."""
+    return (c.get("kind") in ("reaction", "claim") and all(len(str(c.get(k) or "").split()) >= 4 for k in ("take", "detail"))
+            and not re.search(r"\bby 20\d\d\b|\b(?:every|all|the whole) [\w ]{0,20}\bwill\b", str(c.get("take") or ""), flags=re.I))
 
 
 def _with_corroboration(sources: list[dict], cap: int = MAX_SOURCES) -> list[dict]:
@@ -134,7 +136,7 @@ def _norm(s: str) -> str:
 
 
 def researcher(state, ctx, cfg):
-    sources = drafting.read_sources(state["sources"], fetch=_g().fetch_article)
+    sources = drafting.read_sources(state["sources"], words=WORDS_PER_SOURCE * len(state["sources"]), fetch=_g().fetch_article)
     user = (f"# Angle\n{state['angle'].get('angle')}\n\n# Source items\n{_numbered(sources)}" + _take(state))
     try:
         r = llm.call_json(ctx, _tier(cfg, "check"), "researcher", drafting.fill(cfg.prompt, AUTHOR=AUTHOR), user, model=cfg.model)
@@ -152,10 +154,15 @@ def researcher(state, ctx, cfg):
         else:
             dropped += 1
     context = [str(c)[:300] for c in (r.get("context") or []) if isinstance(c, str)][:3]
+    angle = dict(state["angle"])  # with the articles read, the researcher sharpens the detail and the take
+    for k in ("detail", "take"):
+        if isinstance(r.get(k), str) and len(r[k].split()) >= 4 and not (k == "take" and state.get("take")):
+            angle[k] = r[k].strip()[:300]
     read = sum(bool(s.get("body")) for s in sources)
     summary = (f"Fact sheet: {len(facts)} facts with quotes from {len(sources)} sources ({read} read in full)"
                + (f"; dropped {dropped} without a matching quote" if dropped else ""))
-    return {"sources": sources, "facts": facts, "context": context, "researched": True}, summary, {"facts": facts, "context": context}
+    return ({"sources": sources, "facts": facts, "context": context, "angle": angle, "researched": True}, summary,
+            {"facts": facts, "context": context, "detail": angle.get("detail"), "take": angle.get("take")})
 
 
 # --------------------------------------------------------------------------- writer
@@ -205,7 +212,7 @@ def writer(state, ctx, cfg):
     g = _g()
     a = state["angle"]
     user = (f"Angle: {a.get('angle')}\nThe take (the post's one idea): {a.get('take') or a.get('angle')}\n"
-            f"The contrast: {a.get('contrast') or '(see the angle)'}\nCandidate hook: {a.get('hook')}\nWhy now: {a.get('why_now')}\n\n"
+            f"The striking detail: {a.get('detail') or '(see the fact sheet)'}\nCandidate hook: {a.get('hook')}\nWhy now: {a.get('why_now')}\n\n"
             f"# Fact sheet\n{fact_sheet(state)}\n\n# Source items\n{drafting.sources_block(state['sources'])}")
     if top := "\n\n---\n\n".join(state.get("top_posts") or []):
         user += (f"\n\n# {AUTHOR}'s posts that did well with readers (the best guide there is: use the same kind of moves,"
@@ -319,8 +326,11 @@ def final_check(state, ctx, cfg):
         blockers += [str(b)[:300] for b in r.get("blockers") or [] if isinstance(b, str)] or ["the final read didn't pass it"]
     report = {"version": v, "passed": not blockers, "blockers": blockers,
               "polish": [str(p)[:300] for p in r.get("polish") or [] if isinstance(p, str)][:4]}
+    cands = dict(state.get("candidates", {}))
+    if (key := str(v)) in cands:
+        cands[key] = {**cands[key], "passed_final": report["passed"]}
     summary = f"v{v}: " + ("passed" if report["passed"] else f"{len(blockers)} blocker{'s' * (len(blockers) != 1)}: {blockers[0][:120]}")
-    return {"final_report": report}, summary, report
+    return {"final_report": report, "candidates": cands}, summary, report
 
 
 # --------------------------------------------------------------------------- one-pager

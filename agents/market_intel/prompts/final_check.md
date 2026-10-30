@@ -6,7 +6,7 @@ Block the post only for one of these, and start the blocker with its number:
 3. A claim that is misleading even though each fact is sourced: numbers put side by side that don't measure the same thing, or a cause the sources don't give, stated as fact.
 4. The hook promises something the post never delivers.
 
-Check 2 line by line: for every sentence that states a deal, price, discount, contract, launch or plan, find the fact sheet line it comes from. If that line says reportedly, according to, plans, expects, is in talks, proposed or "people familiar", and the post's sentence drops that, block it (2), even when every other word matches.
+Check 2 line by line: for every sentence that states a deal, price, discount, contract, launch or plan, find the fact sheet line it comes from. If they say reportedly, according to, plans, expects, is in talks, proposed or "people familiar", and the post's sentence drops that, block it (2), even when every other word matches. If there's no line for it at all, that's the fact-checker's job, not a blocker here.
 
 Anything else, including "could be more opinionated" or "a bit recap-y", is a polish note, not a blocker. When in doubt, pass it.
 

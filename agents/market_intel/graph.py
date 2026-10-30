@@ -237,13 +237,15 @@ weak_scores = drafting.weak_scores
 
 
 def best(state: DraftState) -> dict | None:
-    """The version to save when none passed: fact-checked beats unchecked, then fewest problems, then the weighted
-    score, then the more human one (core.drafting.rank). Same rule as the Substack agent (agents/substack/ranking.py)."""
+    """The version to save: one that passed the final check beats one that didn't, then fact-checked beats unchecked,
+    then fewest problems, then the editor's weighted score, then the more human one (core.drafting.rank). A rewrite
+    that passes but reads worse than the version before it doesn't replace it."""
     on = state["settings"]["fact_checker"].enabled
     entries = [{**e, "violations": e["violations"] + e.get("fact_issues", [])
                 + ([] if e.get("fact_checked") or not on else ["not fact-checked"])}
                for e in state.get("candidates", {}).values()]
-    return max(entries, key=lambda e: (bool(e.get("fact_checked")) or not on, drafting.rank(e))) if entries else None
+    return max(entries, key=lambda e: (bool(e.get("passed_final")), bool(e.get("fact_checked")) or not on, drafting.rank(e))) \
+        if entries else None
 
 
 def finish_node(persist: bool):
@@ -255,8 +257,8 @@ def finish_node(persist: bool):
                 return {"post": "", "scores": {}, "violations": [], "unsupported": [], "accent": {"score": None},
                         "overall": None, "revisions": 0, "passed": False, "seq": seq, "draft_id": None}
             cur, fr = specialists.current(state), state.get("final_report") or {}
-            passed = bool(cur and fr.get("version") == cur["version"] and fr.get("passed"))
-            chosen = state["candidates"].get(str(cur["version"])) if passed else best(state)
+            chosen = best(state)
+            passed = bool(chosen and chosen.get("passed_final"))  # a failed save shows the latest final check's blockers
             if not chosen:  # the editor never ran (step limit): score what there is
                 chosen = {"post": cur["post"], "scores": {}, "critique": "", "unsupported": [], "violations": [],
                           "accent": humanizer.scan(cur["post"]), "version": cur["version"]}
