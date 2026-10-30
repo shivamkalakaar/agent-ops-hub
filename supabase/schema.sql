@@ -178,7 +178,8 @@ create index if not exists prompt_versions_idx on prompt_versions (agent, specia
 -- Learning loop (core/lessons.py): the owner's feedback in /queue, and what the agents learned from it.
 alter table drafts add column if not exists feedback jsonb;  -- {"reasons": [...], "note": "..."} on reject
 alter table drafts add column if not exists my_take text;  -- the owner's one-line take for a rewrite
-alter table drafts add column if not exists learned_at timestamptz;  
+alter table drafts add column if not exists learned_at timestamptz;
+alter table drafts add column if not exists image jsonb;  -- {url, alt, kind: chart|card}: drawn by code, posted with the text  
 alter table substack_drafts add column if not exists feedback jsonb;  
 alter table substack_drafts add column if not exists my_take text;  
 alter table substack_drafts add column if not exists learned_at timestamptz;  

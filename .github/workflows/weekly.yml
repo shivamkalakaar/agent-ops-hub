@@ -1,7 +1,7 @@
-name: linkedin draft (weekdays)   # file name kept: the dashboard dispatches weekly.yml
+name: linkedin draft (daily)   # file name kept: the dashboard dispatches weekly.yml
 on:
   schedule:
-    - cron: "0 15 * * 1-5"   # Mon-Fri 08:00 PT (PDT)
+    - cron: "0 15 * * *"   # every day 08:00 PT (PDT); the AI Stack Brief lands ~07:30 PT
   workflow_dispatch:
     inputs:
       revise_draft_id: { description: "Rewrite this saved draft around the owner's take (from the queue)", required: false, default: "" }
@@ -16,6 +16,8 @@ jobs:
       LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
       LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
       LANGFUSE_BASE_URL: ${{ secrets.LANGFUSE_BASE_URL }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}                   # the post's image (Storage)
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6

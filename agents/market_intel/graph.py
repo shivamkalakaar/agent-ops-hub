@@ -19,7 +19,7 @@ from core.config import CONFIG, load_json
 from core.drafting import (BANNED, HUMANIZER_WEIGHT, MIN_SCORE, SHORT_POST_WORDS, overall_score,  # noqa: F401 (re-exported)
                            style_examples)
 from core.feeds import fetch_all, fetch_article
-from agents.market_intel import specialists, supervisor
+from agents.market_intel import image, specialists, supervisor
 from agents.market_intel.roster import AGENT, AUTHOR, PROMPTS, SPECIALISTS
 
 prompt = drafting.prompt_loader(PROMPTS)
@@ -271,6 +271,7 @@ def finish_node(persist: bool):
                            for x in state["sources"]]
                 draft = {"week": state["week"], "angle": state["angle"], "post_md": chosen["post"],
                          "onepager_html": "",  # posts only since 2026-10-30; old drafts keep their page
+                         "image": image.make(ctx, chosen["post"], specialists.fact_sheet(state), state["week"]),
                          "sources": sources, "revisions": out["revisions"],
                          "judge_scores": {**chosen["scores"], "violations": chosen["violations"], "humanizer": chosen["accent"]["score"],
                                           "critique": out["critique"], "unsupported_claims": out["unsupported"],

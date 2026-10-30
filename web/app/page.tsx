@@ -49,7 +49,7 @@ export default async function Overview() {
   return (
     <div className="space-y-8">
       <PageTitle title="Overview">
-        Two writing agents. The LinkedIn agent writes one short post every weekday from your AI Stack Brief and about a dozen
+        Two writing agents. The LinkedIn agent writes one short post every day from your AI Stack Brief and about a dozen
         AI feeds. The Substack agent writes two long posts a week from the same stories. Each is a coordinator with specialists
         that research, write, edit and fact-check. Every model call is checked against the budget and traced, every prompt change is
         evaluated, and nothing is published until you approve it.
