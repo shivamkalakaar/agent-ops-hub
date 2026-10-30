@@ -687,3 +687,4 @@ def test_a_passing_rewrite_that_reads_worse_doesnt_replace_the_better_version():
                                     "accent": {"score": 5}, "fact_checked": True, "passed_final": passed}
     assert g.best({"settings": cfg, "candidates": {"1": v(1, 4.6, True), "2": v(2, 4.1, True)}})["version"] == 1
     assert g.best({"settings": cfg, "candidates": {"1": v(1, 4.6, False), "2": v(2, 4.1, True)}})["version"] == 2
+    assert g.best({"settings": cfg, "candidates": {"1": v(1, 4.3, True), "2": v(2, 4.3, True)}})["version"] == 2  # tie: the fixed one

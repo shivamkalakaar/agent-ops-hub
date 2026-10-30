@@ -244,8 +244,8 @@ def best(state: DraftState) -> dict | None:
     entries = [{**e, "violations": e["violations"] + e.get("fact_issues", [])
                 + ([] if e.get("fact_checked") or not on else ["not fact-checked"])}
                for e in state.get("candidates", {}).values()]
-    return max(entries, key=lambda e: (bool(e.get("passed_final")), bool(e.get("fact_checked")) or not on, drafting.rank(e))) \
-        if entries else None
+    return max(entries, key=lambda e: (bool(e.get("passed_final")), bool(e.get("fact_checked")) or not on, drafting.rank(e),
+                                       e.get("version") or 0)) if entries else None  # a tie goes to the rewrite: it has the fixes
 
 
 def finish_node(persist: bool):
