@@ -82,9 +82,12 @@ def run_rejection_case(ctx, case: dict) -> dict:
 
 
 def judged(ctx, r: dict, items: list[dict], reference: str | None = None) -> dict:
-    """The fixed judge's score, and with Shivam's post for the same stories, which of the two it prefers."""
-    r["judge"] = ref.judge(ctx, r["post"], items)
-    r["compare"] = ref.compare(ctx, r["post"], reference, items) if reference else None
+    """The fixed judge's score, and with Shivam's post for the same stories, which of the two it prefers. The judge
+    reads what the agent read (its sources with the article text it fetched), so a fact from deep in an article
+    isn't marked "not grounded" just because the item summary doesn't carry it."""
+    read = r.pop("read", None) or items
+    r["judge"] = ref.judge(ctx, r["post"], read)
+    r["compare"] = ref.compare(ctx, r["post"], reference, read) if reference else None
     if reference:  # how much of the draft Shivam would have kept: 1 - the share his own post changes
         r["kept"] = round(1 - lessons.edit_share(r["post"], reference), 2)
     return r
@@ -113,7 +116,7 @@ def run_case(ctx, name: str, items: list[dict], exclude: str | None = None) -> d
     return {"case": name, "mean": state["overall"], "critic_mean": round(mean(scores.values()), 2) if scores else 0.0,
             "scores": scores, "violations": state["violations"], "revisions": state["revisions"], "chars": len(state["post"]),
             "humanizer": humanizer.scan(state["post"])["score"], "post": state["post"], "passed_final": state["passed"],
-            "steps": state["work_steps"], "calls": state["calls"]}
+            "steps": state["work_steps"], "calls": state["calls"], "read": state.get("sources")}
 
 
 def substack_cases(n: int) -> list[tuple[str, list[dict]]]:

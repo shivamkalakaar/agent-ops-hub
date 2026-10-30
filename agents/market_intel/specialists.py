@@ -213,7 +213,10 @@ def writer(state, ctx, cfg):
     a = state["angle"]
     user = (f"Angle: {a.get('angle')}\nThe take (the post's one idea): {a.get('take') or a.get('angle')}\n"
             f"The striking detail: {a.get('detail') or '(see the fact sheet)'}\nCandidate hook: {a.get('hook')}\nWhy now: {a.get('why_now')}\n\n"
-            f"# Fact sheet\n{fact_sheet(state)}\n\n# Source items\n{drafting.sources_block(state['sources'])}")
+            f"# Fact sheet\n{fact_sheet(state)}\n\n# Source items\n"
+            # summaries only: the researcher already pulled the facts and quotes out of the article text, and with
+            # 700 words a source in front of it the writer copied whole sentences and picked up stray figures
+            f"{drafting.sources_block([{k: v for k, v in x.items() if k != 'body'} for x in state['sources']])}")
     if top := "\n\n---\n\n".join(state.get("top_posts") or []):
         user += (f"\n\n# {AUTHOR}'s posts that did well with readers (the best guide there is: use the same kind of moves,"
                  f" such as how they stack facts, where the opinion sits and how they end, on today's story. Don't copy their"
