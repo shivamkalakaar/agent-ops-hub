@@ -332,7 +332,6 @@
     "guardrails": "pass",
     "editor": "pass",
     "fact_checker": "pass",
-    "logic_checker": "pass",
     "final_check": "pass"
    },
    "accept": [
@@ -349,7 +348,6 @@
     "guardrails": "pass",
     "editor": "pass",
     "fact_checker": "pass",
-    "logic_checker": "pass",
     "final_check": "pass"
    },
    "accept": [
@@ -366,7 +364,6 @@
     "guardrails": "pass",
     "editor": "pass",
     "fact_checker": "pass",
-    "logic_checker": "pass",
     "final_check": "pass"
    },
    "post": "Some CoreWeave bonds were issued at 9.675%. They now reportedly yield around 15%, and the stock closed at a 52-week low of $55.60 after Bernstein estimated it needs about $85B to fund its backlog.\n\nSame week, Nebius took a $3.5B loan from Citi at SOFR + 2.75%, which can step up to 3.50%. It matures in 364 days and pays for data centers and GPUs. So Nebius will need longer-term money behind it soon. It says it has over $40B of investment-grade contracts to borrow against, which is how it gets to pick its timing.\n\nThen Meta. $34.9B of capex last quarter, free cash flow of negative $2.1B versus $10.6B a year ago, and a new nonvoting Class C stock to help fund the buildout.\n\nWe talk about GPU supply and power. This week the number setting the pace looks like the interest rate.\n\nOn the call, Zuckerberg said it's \"going to be very important to get the math on all of this to work out.\" I'd read that literally."
@@ -380,7 +377,6 @@
     "guardrails": "pass",
     "editor": "pass",
     "fact_checker": "pass",
-    "logic_checker": "pass",
     "final_check": "pass"
    },
    "accept": [
@@ -397,7 +393,6 @@
     "guardrails": "pass",
     "editor": "pass",
     "fact_checker": "pass",
-    "logic_checker": "pass",
     "final_check": "pass"
    },
    "accept": [
@@ -411,13 +406,12 @@
    "kind": "bad",
    "sources": "942e36b0112d",
    "expect": {
-    "logic_checker": [
-     "closing the gap",
-     "came apart",
-     "vague_ending"
-    ],
     "guardrails": [
      "more than 2 hashtags"
+    ],
+    "editor": [
+     "closing the gap",
+     "ending"
     ]
    },
    "gate": true,
@@ -574,7 +568,7 @@
    "kind": "planted",
    "sources": "4a50be497600",
    "expect": {
-    "logic_checker": [
+    "editor": [
      "Baseten"
     ]
    },
@@ -589,7 +583,7 @@
    "kind": "planted",
    "sources": "977b5049c201",
    "expect": {
-    "logic_checker": [
+    "editor": [
      "lenders"
     ]
    },
@@ -601,8 +595,8 @@
    "kind": "planted",
    "sources": "4a50be497600",
    "expect": {
-    "logic_checker": [
-     "vague_ending"
+    "editor": [
+     "ending"
     ]
    },
    "accept": [
@@ -612,7 +606,7 @@
   },
   {
    "id": "planted-sweeping-prediction",
-   "label": "Breaks a lesson: sweeping industry prediction",
+   "label": "Sweeping industry prediction stated as certain",
    "kind": "planted",
    "sources": "977b5049c201",
    "expect": {
@@ -621,6 +615,19 @@
     ]
    },
    "post": "Some CoreWeave bonds were issued at 9.675%. They now reportedly yield around 15%, and the stock closed at a 52-week low of $55.60 after Bernstein estimated it needs about $85B to fund its backlog.\n\nSame week, Nebius took a $3.5B loan from Citi at SOFR + 2.75%, which can step up to 3.50%. It matures in 364 days and pays for data centers and GPUs. So Nebius will need longer-term money behind it soon. It says it has over $40B of investment-grade contracts to borrow against, which is how it gets to pick its timing.\n\nThen Meta. $34.9B of capex last quarter, free cash flow of negative $2.1B versus $10.6B a year ago, and a new nonvoting Class C stock to help fund the buildout.\n\nWe talk about GPU supply and power. This week the number setting the pace looks like the interest rate.\n\nOn the call, Zuckerberg said it's \"going to be very important to get the math on all of this to work out.\" I'd read that literally. By 2028 every AI company will be a debt company."
+  },
+  {
+   "id": "planted-done-deal",
+   "label": "A reported deal stated as done (\"OpenAI gave Replit more than 30% off\")",
+   "kind": "planted",
+   "sources": "a02c890bc277",
+   "expect": {
+    "final_check": "flag"
+   },
+   "accept": [
+    "copies a source's words"
+   ],
+   "post": "OpenAI gave Replit more than 30% off list price to win its model spending, on a contract worth over $100M a year.\n\nThe same day, Replit's CEO said ChatGPT models are now Replit Agent's default. Claude models stayed on the platform.\n\nSo the discount moved the default without removing the rival. Replit kept both, and the cheaper one gets the traffic.\n\nFor a platform, the default slot is worth paying for, because most users never change it.\n\n#ai #openai"
   }
  ]
 }

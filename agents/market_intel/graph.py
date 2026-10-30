@@ -29,7 +29,6 @@ SCORE_BATCH = 20
 MAX_CHARS = 1300
 MAX_LIST_ITEMS = 8
 WORDS = (60, 200)  # guardrail band; the prompt targets 80–180
-EXAMPLE_MAX_WORDS = 550  # voice examples: short and mid-length posts, not the long essays
 # Moves the agent kept reusing until every post had the same shape. Any of them sends a draft back for a rewrite.
 TEMPLATE_MOVES = [
     (r"\bnext time (?:a|your) vendor\b", "the \"next time a vendor pitches you\" closer"),
@@ -54,7 +53,9 @@ def ctx_of(config: RunnableConfig) -> llm.RunContext:
 
 
 def style_guide() -> str:
-    return (CONFIG / "style" / "guide.md").read_text()
+    """The owner's voice, distilled from their own posts and edits. (config/style/guide.md was distilled from other
+    writers' posts, and its "one sentence per line, end on a comment prompt" advice is what the owner kept editing out.)"""
+    return (PROMPTS / "voice.md").read_text().strip()
 
 
 # --------------------------------------------------------------------------- collect
@@ -131,6 +132,9 @@ class DraftState(TypedDict, total=False):
     recent_angles: list[str]
     top_posts: list[str]  # published posts the owner said did well with readers
     lessons: str          # what the owner's past decisions taught the agent (core/lessons.py)
+    examples: list[dict]  # the owner's rewrites: [{"id", "draft", "post"}], newest first
+    can_skip: bool        # scheduled runs: finish without a draft when no take passes the scout's take test
+    skip: str             # why the scout found nothing worth posting
     learn: bool           # False in evals: don't consume the owner's queue decisions
     learned: dict
     take: str             # the owner's own one-line take, when they asked for a rewrite around it
@@ -144,7 +148,6 @@ class DraftState(TypedDict, total=False):
     drafts: list[dict]    # [{"version", "post"}]
     edit_report: dict
     fact_report: dict
-    logic_report: dict
     final_report: dict
     candidates: dict      # str(version) -> editor + fact-check results, for picking the best version
     onepager: dict
@@ -198,6 +201,7 @@ def load_items(state: DraftState, config: RunnableConfig) -> DraftState:
             "recent_posts": state["recent_posts"] if "recent_posts" in state else db.approved_posts(3),
             "top_posts": state["top_posts"] if "top_posts" in state else db.top_posts(3),
             "lessons": state["lessons"] if "lessons" in state else lessons.block(db, AGENT, AUTHOR),
+            "examples": state["examples"] if "examples" in state else db.voice_examples(),
             "recent_angles": state["recent_angles"] if "recent_angles" in state else db.recent_angles(5),
             "seq": 1, "work_steps": 0, "calls": {}, "history": [], "drafts": [], "candidates": {}}
 
@@ -236,7 +240,7 @@ def best(state: DraftState) -> dict | None:
     """The version to save when none passed: fact-checked beats unchecked, then fewest problems, then the weighted
     score, then the more human one (core.drafting.rank). Same rule as the Substack agent (agents/substack/ranking.py)."""
     on = state["settings"]["fact_checker"].enabled
-    entries = [{**e, "violations": e["violations"] + e.get("fact_issues", []) + e.get("logic_issues", [])
+    entries = [{**e, "violations": e["violations"] + e.get("fact_issues", [])
                 + ([] if e.get("fact_checked") or not on else ["not fact-checked"])}
                for e in state.get("candidates", {}).values()]
     return max(entries, key=lambda e: (bool(e.get("fact_checked")) or not on, drafting.rank(e))) if entries else None
@@ -246,6 +250,10 @@ def finish_node(persist: bool):
     def finish(state: DraftState, config: RunnableConfig) -> DraftState:
         ctx, seq = ctx_of(config), state["seq"] + 1
         with step(ctx, AGENT, "supervisor", "work", seq, reason=state.get("finish_reason")) as s:
+            if state.get("skip") and not state.get("drafts"):
+                s.summary, s.output = f"No draft today: {state['skip']}"[:300], {"skipped": state["skip"]}
+                return {"post": "", "scores": {}, "violations": [], "unsupported": [], "accent": {"score": None},
+                        "overall": None, "revisions": 0, "passed": False, "seq": seq, "draft_id": None}
             cur, fr = specialists.current(state), state.get("final_report") or {}
             passed = bool(cur and fr.get("version") == cur["version"] and fr.get("passed"))
             chosen = state["candidates"].get(str(cur["version"])) if passed else best(state)

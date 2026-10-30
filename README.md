@@ -109,7 +109,7 @@ uv run python -m agents.substack export <id>      # out/substack/<slot>-<id>.md 
 uv run python -m evals.run_evals --agent substack --cases 1
 ```
 
-**Writing style:** paste LinkedIn posts you admire into `config/style/examples.md`, separated by `---`. The file is git-ignored because the posts belong to their authors. Posts under 250 words are used as examples to imitate; longer essays only inform tone. Run `uv run python -m agents.market_intel style-guide` to distill them into `config/style/guide.md`.
+**Writing style:** the LinkedIn writer and editor work from `agents/market_intel/prompts/voice.md` (how Shivam writes, distilled from his published posts and edits) and see his rewrites as before/after pairs: in production the latest from the database, in evals the frozen `agents/market_intel/voice_examples.json`. The scout tests each take against `prompts/views.md` (his recurring positions). `config/style/examples.md` (git-ignored posts by other writers) and `guide.md` now only feed the Substack agent's long-form guide.
 
 ## Deploy
 

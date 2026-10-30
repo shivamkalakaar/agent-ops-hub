@@ -25,7 +25,7 @@ from pathlib import Path
 from statistics import mean
 from typing import Callable
 
-from core import drafting, humanizer, llm, tracing
+from core import drafting, humanizer, lessons, llm, tracing
 from core.budget import BudgetExceeded
 from core.config import git_sha
 from core.db import connect
@@ -36,6 +36,8 @@ from evals import reference as ref
 HERE = Path(__file__).parent
 BASELINES = {"market_intel": HERE / "baseline.json", "substack": HERE / "baseline.substack.json"}
 LESSONS = (HERE / "lessons.fixture.md").read_text().strip()
+# The owner's rewrites, frozen like the lessons. A reference case never sees the pair built from its own post.
+EXAMPLES = json.loads((HERE.parent / "agents" / "market_intel" / "voice_examples.json").read_text())
 TOLERANCE = 0.3
 # The Substack agent saves its best version even when nothing passes, flagged for the owner, so one flagged post in
 # the 2-case run isn't a regression; two are. LinkedIn is gated by the fixed judge instead (see check()).
@@ -44,7 +46,9 @@ DAYS_PER_SUBSTACK_CASE = 3  # a Wed/Sat post covers 3-4 days of news
 REJECTION_CASES = 1  # the owner's latest rejected LinkedIn draft (with a reason) is rerun as a "don't do this again" case
 # PR set: the agent writes on the stories behind three of Shivam's published posts, and the fixed judge (evals/reference.py)
 # compares it with his. --full adds the golden news days and the rest of the reference cases.
-PR_REFERENCES = ("4a50be497600", "942e36b0112d", "977b5049c201")
+PR_REFERENCES = ("3fcc2862c829", "942e36b0112d", "977b5049c201")
+# Quoted in the voice guide and the editor's prompt as the bar for a 5, so the agent has already seen it: never a case.
+IN_PROMPTS = ("4a50be497600",)
 WORKERS = 4  # cases at once: ~4x faster; more starts to hit the free models' rate limits (then their paid fallbacks)
 CASE_SEQ = 100  # each case's own steps get a block of seq numbers (case n: 100n+1...), so they don't interleave
 
@@ -81,11 +85,13 @@ def judged(ctx, r: dict, items: list[dict], reference: str | None = None) -> dic
     """The fixed judge's score, and with Shivam's post for the same stories, which of the two it prefers."""
     r["judge"] = ref.judge(ctx, r["post"], items)
     r["compare"] = ref.compare(ctx, r["post"], reference, items) if reference else None
+    if reference:  # how much of the draft Shivam would have kept: 1 - the share his own post changes
+        r["kept"] = round(1 - lessons.edit_share(r["post"], reference), 2)
     return r
 
 
 def run_reference_case(ctx, case: dict) -> dict:
-    return judged(ctx, run_case(ctx, f"ref {case['id']}", case["items"]), case["items"], case["reference"])
+    return judged(ctx, run_case(ctx, f"ref {case['id']}", case["items"], exclude=case["id"]), case["items"], case["reference"])
 
 
 def frozen_articles(cases: list[dict]):
@@ -94,13 +100,14 @@ def frozen_articles(cases: list[dict]):
     graph.fetch_article = lambda url, *a, **k: bodies.get(url) or live(url, *a, **k)
 
 
-def run_case(ctx, name: str, items: list[dict]) -> dict:
+def run_case(ctx, name: str, items: list[dict], exclude: str | None = None) -> dict:
     from agents.market_intel.roster import PROMPTS, SPECIALISTS
     from core import settings
     cfg = settings.from_files(SPECIALISTS, PROMPTS)
     cfg["onepager"] = replace(cfg["onepager"], enabled=False)  # never scored; it only runs once the post is final
     state = graph.build_draft(persist=False).invoke(
-        {"items": items, "week": name, "recent_angles": [], "recent_posts": [], "top_posts": [], "learn": False, "lessons": LESSONS},
+        {"items": items, "week": name, "recent_angles": [], "recent_posts": [], "top_posts": [], "learn": False, "lessons": LESSONS,
+         "examples": [e for e in EXAMPLES if e["id"] != exclude]},
         config={"configurable": {"ctx": ctx, "settings": cfg}, "callbacks": ctx.callbacks,
                 "run_name": f"eval.{name}", "recursion_limit": 60})
     scores = state["scores"]
@@ -166,7 +173,8 @@ def summarize(agent: str, results: list[dict]) -> dict:
          "per_dimension": {k: round(mean(r["scores"].get(k, 0) for r in results), 2) for k in results[0]["scores"]}}
     if rej := [r for r in results if "rejected" in r]:
         s["rejection_cases"], s["rejection_repeats"] = len(rej), sum(r["rejected"]["repeats"] for r in rej)
-    if judged_rows := [{"case": r["case"], "judge": r["judge"], "compare": r.get("compare")} for r in results if r.get("judge")]:
+    if judged_rows := [{"case": r["case"], "judge": r["judge"], "compare": r.get("compare"), "kept": r.get("kept")}
+                       for r in results if r.get("judge")]:
         s["judge"] = ref.summarize(judged_rows)
     if agent == "substack":
         s |= {"final_pass_rate": round(sum(r["passed_final"] for r in results) / len(results), 3),
@@ -218,15 +226,17 @@ def comment(agent: str, run_id: str, summary: dict, results: list[dict], reasons
     if j := summary.get("judge"):
         line = (f"Judge **{j['judge_mean']}**/5" + (f" · preferred over Shivam's post {j['vs_shivam']:.2f} of the time "
                 f"({j['results']['win']} win, {j['results']['tie']} tie, {j['results']['loss']} loss; 0.50 = as good as Shivam)" if "vs_shivam" in j else "")
+                + (f" · Shivam would keep **{j['kept']:.0%}** of the draft" if "kept" in j else "")
                 + f" · {len(j['flagged'])} case(s) break a hard rule · agent's own editor {summary['mean']} (reported, not gated)"
                 + (f" · repeats a rejected problem: {summary['rejection_repeats']} of {summary['rejection_cases']}" if summary.get("rejection_cases") else ""))
         vs = lambda r: (r.get("compare") or {}).get("result", "–")  # noqa: E731
-        rows = "\n".join(f"| {r['case']} | {r['judge']['overall']} | {vs(r)} | {r['mean']} | {'; '.join(r['judge']['flags'] + r['violations'])[:160] or '–'} |"
-                         for r in results)
+        kept = lambda r: f"{r['kept']:.0%}" if r.get("kept") is not None else "–"  # noqa: E731
+        rows = "\n".join(f"| {r['case']} | {r['judge']['overall']} | {vs(r)} | {kept(r)} | {r['mean']} | "
+                         f"{'; '.join(r['judge']['flags'] + r['violations'])[:160] or '–'} |" for r in results)
         url = os.environ.get("DASHBOARD_URL", "").rstrip("/")
         link = f"\n\n[Posts and scores for each case]({url}/runs/{run_id})" if url else f"\n\nDashboard run `{run_id}`"
         why = "\n\n" + "\n".join(f"- {r}" for r in reasons) if reasons else ""
-        return (f"{head}\n\n{line}{why}\n\n| Case | Judge | vs Shivam | Editor | Flags |\n|---|---|---|---|---|\n{rows}{link}\n")
+        return (f"{head}\n\n{line}{why}\n\n| Case | Judge | vs Shivam | Kept | Editor | Flags |\n|---|---|---|---|---|---|\n{rows}{link}\n")
     rows = "\n".join(f"| {r['case']} | {r['mean']} | {r['humanizer']}/5 | {'; '.join(r['violations'])[:160] or '–'} |" for r in results)
     url = os.environ.get("DASHBOARD_URL", "").rstrip("/")
     link = f"\n\n[Posts and scores for each case]({url}/runs/{run_id})" if url else f"\n\nDashboard run `{run_id}`"
@@ -309,7 +319,7 @@ def main() -> int:
                               f"final check {'passed' if r['passed_final'] else 'failed'}: \"{r['title']}\""
                               + (f". Flags: {'; '.join(r['violations'])}" if r["violations"] else ""))
     else:
-        refs = [c for c in ref.reference_cases() if args.full or c["id"] in PR_REFERENCES]
+        refs = [c for c in ref.reference_cases() if (args.full or c["id"] in PR_REFERENCES) and c["id"] not in IN_PROMPTS]
         frozen_articles(refs)
         cases = [(f"ref {c['id']}", lambda ctx, c=c: run_reference_case(ctx, c)) for c in refs]
         if args.full:

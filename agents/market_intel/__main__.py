@@ -30,7 +30,8 @@ def run(kind: str, skip_if_pending: int | None = None, redraft: str | None = Non
                 db.finish_run(run_id, "skipped", stats={"reason": f"{n} drafts already waiting for approval"})
                 print(f"[{run_id}] skipped: {n} drafts already waiting for approval")
                 return 0
-    init = redraft_state(redraft) if redraft else {}
+    # a scheduled run may skip a day with no take worth posting; "Generate a new draft" and redrafts always write
+    init = redraft_state(redraft) if redraft else {"can_skip": bool(skip_if_pending)}
     return runner.run_graph(AGENT, kind, builder(), init, lambda state: summarize(kind, state),
                             prompt_version=PROMPT_VERSION, scores=trace_scores)
 
@@ -51,7 +52,8 @@ def summarize(kind: str, state: dict) -> dict:
     return {"draft_id": state.get("draft_id"), "week": state.get("week"), "revisions": state.get("revisions"),
             "chars": len(state.get("post", "")), "overall": state.get("overall"),
             "humanizer": (state.get("accent") or {}).get("score"), "scores": state.get("scores"), "violations": state.get("violations"),
-            "learned": state.get("learned"), "redraft": bool(state.get("redraft_id")), "with_take": bool(state.get("take"))}
+            "learned": state.get("learned"), "redraft": bool(state.get("redraft_id")), "with_take": bool(state.get("take")),
+            **({"skipped": state["skip"]} if state.get("skip") else {})}
 
 
 def build_style_guide() -> int:

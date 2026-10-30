@@ -13,7 +13,7 @@ POST = ("An open-weight model from Acme scored 88 on X.\n\nIt costs $0.20 per mi
         "Last year that score came at frontier prices, so teams rationed their agent calls and checked each one by hand.\n\n"
         "At this price you can run ten passes and let the model check itself, which changes what's worth building for "
         "agent workflows with a lot of retries.\n\n#AI")
-ALL = dict.fromkeys(["guardrails", "editor", "fact_checker", "logic_checker", "final_check"], "pass")
+ALL = dict.fromkeys(["guardrails", "editor", "fact_checker", "final_check"], "pass")
 
 
 def fixture(*cases):
@@ -28,12 +28,13 @@ def offline(monkeypatch, tmp_path):
     monkeypatch.setattr(rev, "HERE", tmp_path)
     post = lambda m: m[-1].content.split("# Post\n")[-1]  # noqa: E731
     fakes = {
-        "editor": lambda m: json.dumps({"scores": dict.fromkeys(["hook", "focus", "brevity", "concreteness", "voice", "human", "grounding"],
-                                                                2 if "game-changer" in post(m) else 5), "critique": "ok"}),
+        "editor": lambda m: json.dumps(
+            {"scores": dict.fromkeys(["take", "focus", "plain", "voice", "ending", "grounding"], 5) | {"logic": 2},
+             "fixes": [{"kind": "logic", "quote": "So prices", "problem": "doesn't follow", "fix": "f"}]} if "So prices" in post(m)
+            else {"scores": dict.fromkeys(["take", "focus", "logic", "plain", "voice", "ending", "grounding"],
+                                          2 if "game-changer" in post(m) else 5), "fixes": []}),
         "fact_checker": lambda m: json.dumps({"claims": [{"claim": "from Globex", "verdict": "unsupported"}] if "Globex" in post(m)
                                              else [{"claim": "from Acme", "verdict": "supported"}]}),
-        "logic_checker": lambda m: json.dumps({"logic": 2, "plain": 4, "issues": [{"kind": "non_sequitur", "quote": "So prices", "problem": "p", "fix": "f"}]}
-                                              if "So prices" in post(m) else {"logic": 5, "plain": 5, "issues": []}),
         "final_check": lambda m: json.dumps({"passed": "everyone will" not in post(m), "blockers": ["1: sweeping prediction"]}),
     }
     for k, v in fakes.items():
@@ -44,16 +45,16 @@ def test_catches_planted_defects_and_passes_own_posts(tmp_path):
     f = fixture({"id": "own", "kind": "own", "post": POST, "expect": ALL},
                 {"id": "planted-lender", "kind": "planted", "post": POST.replace("Acme", "Globex"), "expect": {"fact_checker": ["Globex"]}},
                 {"id": "planted-so", "kind": "planted", "post": POST.replace("I had to", "So prices will fall. I had to"),
-                 "expect": {"logic_checker": ["non_sequitur"]}},
+                 "expect": {"editor": ["logic: So prices"]}},
                 {"id": "planted-tags", "kind": "planted", "post": POST + " #a #b", "expect": {"guardrails": ["more than 2 hashtags"]}})
     (tmp_path / "f.json").write_text(json.dumps(f))
     assert rev.run("market_intel", 4, tmp_path / "f.json") == 0
     out = json.loads((tmp_path / "results" / "reviewers.json").read_text())
     s = out["summary"]["reviewers"]
-    assert s["fact_checker"]["caught"] == 1 and s["logic_checker"]["caught"] == 1 and s["guardrails"]["caught"] == 1
+    assert s["fact_checker"]["caught"] == 1 and s["editor"]["caught"] == 1 and s["guardrails"]["caught"] == 1
     assert all(v["false_alarms"] == 0 for v in s.values()) and s["editor"]["own"] == 1
     by_id = {r["id"]: r for r in out["results"]}
-    assert set(by_id["planted-so"]["reviewers"]) == {"guardrails", "logic_checker"}  # LLM reviewers run only where expected
+    assert set(by_id["planted-so"]["reviewers"]) == {"guardrails", "editor"}  # LLM reviewers run only where expected
     md = (tmp_path / "results" / "reviewers.md").read_text()
     assert "Reviewer evals: LinkedIn agent passed" in md and "| fact_checker | 1/1 | 0/1 |" in md
     from core.db import connect
@@ -65,7 +66,7 @@ def test_catches_planted_defects_and_passes_own_posts(tmp_path):
 def test_gate_fails_on_a_missed_planted_defect_or_too_many_false_alarms(tmp_path):
     f = fixture(*[{"id": f"own{n}", "kind": "own", "post": POST + (" everyone will" if n < 2 else ""), "expect": ALL} for n in range(4)],
                 {"id": "planted-wrong-word", "kind": "planted", "post": POST, "expect": {"fact_checker": "flag"}},
-                {"id": "bad-real", "kind": "bad", "post": POST, "expect": {"logic_checker": "flag"}})
+                {"id": "bad-real", "kind": "bad", "post": POST, "expect": {"editor": "flag"}})
     (tmp_path / "f.json").write_text(json.dumps(f))
     assert rev.run("market_intel", 4, tmp_path / "f.json") == 1
     out = json.loads((tmp_path / "results" / "reviewers.json").read_text())
@@ -73,7 +74,7 @@ def test_gate_fails_on_a_missed_planted_defect_or_too_many_false_alarms(tmp_path
     assert any(r.startswith("fact_checker missed planted-wrong-word") for r in reasons)
     assert any(r.startswith("final_check flagged 2 of 4") for r in reasons)  # 50% > 25%
     assert not any("bad-real" in r for r in reasons)  # real bad drafts are reported, not gated
-    assert out["summary"]["reviewers"]["logic_checker"]["missed"] == 1
+    assert out["summary"]["reviewers"]["editor"]["missed"] == 1
     assert "Reviewer evals: LinkedIn agent failed" in (tmp_path / "results" / "reviewers.md").read_text()
 
 

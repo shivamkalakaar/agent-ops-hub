@@ -1,9 +1,9 @@
 """The LinkedIn coordinator's rules: code decides what is *allowed*, the coordinator picks among it (core/orchestrator.py).
 
 - scout, then researcher, then the first draft: one allowed move each, so no LLM call.
-- editor and fact-checker review each new version; the writer comes back only for real issues, and its last call
-  is kept for the final check's blockers.
-- Only a passing final check (or running out of moves) leads to the one-pager and FINISH.
+- editor, fact-checker and final check review each version. The writer gets one rewrite, after all three have
+  reported, so it fixes every note in one pass instead of chasing one reviewer at a time.
+- Then the one-pager and FINISH. A scheduled run whose scout found no take worth posting finishes without a draft.
 """
 import json
 
@@ -12,10 +12,12 @@ from core.orchestrator import FINISH, done_or_off, on
 from agents.market_intel.roster import AGENT, AUTHOR, MAX_STEPS, WORKERS
 from agents.market_intel.specialists import version, weak
 
-PREFERENCE = ["editor", "fact_checker", "logic_checker", "writer", "final_check", "onepager", FINISH, "scout", "researcher"]
+PREFERENCE = ["editor", "fact_checker", "final_check", "writer", "onepager", FINISH, "scout", "researcher"]
 
 
 def allowed(state, settings) -> list[str]:
+    if state.get("skip"):
+        return [FINISH]
     if not state.get("angle"):
         return ["scout"]
     if not state.get("researched"):
@@ -24,32 +26,25 @@ def allowed(state, settings) -> list[str]:
     if v == 0:
         return ["writer"]
     e, f, fr = state.get("edit_report") or {}, state.get("fact_report") or {}, state.get("final_report") or {}
-    lg = state.get("logic_report") or {}
     edited, checked, finaled = e.get("version") == v, f.get("version") == v, fr.get("version") == v
-    reasoned = lg.get("version") == v
-    issues = ((edited and (weak(e) or e.get("violations") or e.get("unsupported"))) or (checked and f.get("blocking"))
-              or (reasoned and lg.get("blocking")) or (finaled and not fr.get("passed")))
-    if finaled and fr.get("passed"):
-        issues = False  # cleared for publishing: no more rewrites
     opts = []
     if not edited and on(state, settings, "editor"):
         opts.append("editor")
     if not checked and on(state, settings, "fact_checker"):
         opts.append("fact_checker")
-    if not reasoned and on(state, settings, "logic_checker"):
-        opts.append("logic_checker")
-    w = settings["writer"]
-    writer_left = w.max_calls - state.get("calls", {}).get("writer", 0)
-    if issues and on(state, settings, "writer") and (writer_left > 1 or (finaled and not fr.get("passed"))):
-        opts.append("writer")
-    ready = (done_or_off(state, settings, "editor", edited) and done_or_off(state, settings, "fact_checker", checked)
-             and done_or_off(state, settings, "logic_checker", reasoned))
+    ready = done_or_off(state, settings, "editor", edited) and done_or_off(state, settings, "fact_checker", checked)
     if ready and not finaled and on(state, settings, "final_check"):
         opts.append("final_check")
-    if (finaled and fr.get("passed")) or not opts:
+    reviewed = ready and done_or_off(state, settings, "final_check", finaled)
+    issues = ((edited and (weak(e) or e.get("violations") or e.get("unsupported"))) or (checked and f.get("blocking"))
+              or (finaled and not fr.get("passed")))
+    writer_left = settings["writer"].max_calls - state.get("calls", {}).get("writer", 0)
+    if reviewed and issues and writer_left > 0 and on(state, settings, "writer"):
+        opts.append("writer")
+    if reviewed and not opts:
         page_done = state.get("onepager") and state.get("onepager_for") == state["drafts"][-1]["post"]
         opts.append("onepager" if not page_done and on(state, settings, "onepager") else FINISH)
-    return list(dict.fromkeys(opts))
+    return list(dict.fromkeys(opts)) or [FINISH]
 
 
 def canonical(opts: list[str]) -> str:
@@ -59,16 +54,14 @@ def canonical(opts: list[str]) -> str:
 def workspace(state) -> str:
     v = version(state)
     e, f, fr = state.get("edit_report") or {}, state.get("fact_report") or {}, state.get("final_report") or {}
-    lines = [f"Angle: {(state.get('angle') or {}).get('angle')}", f"Fact sheet: {len(state.get('facts') or [])} facts",
+    a = state.get("angle") or {}
+    lines = [f"Angle: {a.get('angle')}", f"Take: {a.get('take')}", f"Fact sheet: {len(state.get('facts') or [])} facts",
              f"Current draft: v{v}"]
     if e:
         lines.append(f"Editor on v{e['version']}: overall {e['overall']}/5, scores {json.dumps(e['scores'])}, "
                      f"{len(e.get('violations', []))} guardrail flags. {e.get('critique', '')}")
     if f:
         lines.append(f"Fact check on v{f['version']}: {f['blocking']} unsupported, {f['hedges']} to state more carefully")
-    if lg := state.get("logic_report"):
-        lines.append(f"Logic check on v{lg['version']}: logic {lg['logic']}/5, plain {lg['plain']}/5, "
-                     f"{'must fix' if lg['blocking'] else 'ok'}: {len(lg['issues'])} issues")
     if fr:
         lines.append(f"Final check on v{fr['version']}: {'PASS' if fr['passed'] else 'FAIL: ' + '; '.join(fr['blockers'][:3])}")
     return "\n".join(lines)

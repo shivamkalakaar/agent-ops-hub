@@ -15,6 +15,10 @@ from core import drafting, llm
 from core.db import new_id, now
 
 MAX_ACTIVE = 15
+# Per agent: how many lessons stay active and how many decisions must back one before the writer sees it. The
+# LinkedIn agent's 19 one-off lessons contradicted each other (three different required endings), so its lessons
+# need two decisions behind them and stay few; its voice guide (agents/market_intel/prompts/voice.md) is the base.
+LIMITS = {"market_intel": {"max_active": 8, "min_evidence": 2}}
 MAX_EVENTS = 8  # decisions read per run; the rest wait for the next run
 prompt = drafting.prompt_loader(Path(__file__).parent / "prompts")
 
@@ -120,7 +124,7 @@ def apply(db, agent: str, ops: dict, draft_ids: set[str], strong: set[str] | Non
         if i in known:
             db.execute("update lessons set active=%s, updated_at=%s where id=%s", (False, now(), i))
             retired += 1
-    for extra in active(db, agent)[MAX_ACTIVE:]:  # keep the best-supported ones
+    for extra in active(db, agent)[LIMITS.get(agent, {}).get("max_active", MAX_ACTIVE):]:  # keep the best-supported ones
         db.execute("update lessons set active=%s, updated_at=%s where id=%s", (False, now(), extra["id"]))
         retired += 1
     return {"added": added, "confirmed": confirmed, "revised": revised, "retired": retired}
@@ -128,9 +132,9 @@ def apply(db, agent: str, ops: dict, draft_ids: set[str], strong: set[str] | Non
 
 def block(db, agent: str, author: str) -> str:
     """The active lessons, for the writer's and the critic's prompts ('' when there are none yet)."""
-    rows = active(db, agent)
+    rows = [r for r in active(db, agent) if r["evidence"] >= LIMITS.get(agent, {}).get("min_evidence", 1)]
     if not rows:
         return ""
     lines = "\n".join(f"- {r['lesson']}" + (f" (seen {r['evidence']}×)" if r["evidence"] > 1 else "") for r in rows)
     return (f"# What {author}'s feedback has taught you (from drafts they approved, edited or rejected)\n"
-            f"These come from the actual person; they outrank the style guide and the examples when they disagree.\n{lines}")
+            f"These come from the actual person and refine the voice guide; follow them where they apply.\n{lines}")
