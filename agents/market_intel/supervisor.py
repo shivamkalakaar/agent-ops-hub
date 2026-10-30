@@ -3,7 +3,7 @@
 - scout, then researcher, then the first draft: one allowed move each, so no LLM call.
 - editor, fact-checker and final check review each version. The writer gets one rewrite, after all three have
   reported, so it fixes every note in one pass instead of chasing one reviewer at a time.
-- Then the one-pager and FINISH. A scheduled run whose scout found no take worth posting finishes without a draft.
+- Then FINISH (posts only: the one-pager was dropped 2026-10-30). A scheduled run whose scout found no take worth posting finishes without a draft.
 """
 import json
 
@@ -12,7 +12,7 @@ from core.orchestrator import FINISH, done_or_off, on
 from agents.market_intel.roster import AGENT, AUTHOR, MAX_STEPS, WORKERS
 from agents.market_intel.specialists import version, weak
 
-PREFERENCE = ["editor", "fact_checker", "final_check", "writer", "onepager", FINISH, "scout", "researcher"]
+PREFERENCE = ["editor", "fact_checker", "final_check", "writer", FINISH, "scout", "researcher"]
 
 
 def allowed(state, settings) -> list[str]:
@@ -42,8 +42,7 @@ def allowed(state, settings) -> list[str]:
     if reviewed and issues and writer_left > 0 and on(state, settings, "writer"):
         opts.append("writer")
     if reviewed and not opts:
-        page_done = state.get("onepager") and state.get("onepager_for") == state["drafts"][-1]["post"]
-        opts.append("onepager" if not page_done and on(state, settings, "onepager") else FINISH)
+        opts.append(FINISH)
     return list(dict.fromkeys(opts)) or [FINISH]
 
 

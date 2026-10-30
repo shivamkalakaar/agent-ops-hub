@@ -1,6 +1,6 @@
 """The LinkedIn team's specialists. Each one is fn(state, ctx, cfg) -> (update, summary, output); see core/orchestrator.py.
 
-scout → researcher → writer ⇄ {editor, fact_checker, final_check} → onepager, in the order the coordinator picks.
+scout → researcher → writer ⇄ {editor, fact_checker, final_check}, in the order the coordinator picks.
 """
 import hashlib
 import json
@@ -333,15 +333,5 @@ def final_check(state, ctx, cfg):
     return {"final_report": report, "candidates": cands}, summary, report
 
 
-# --------------------------------------------------------------------------- one-pager
-
-def onepager(state, ctx, cfg, post: str | None = None):
-    post = post or current(state)["post"]
-    page = llm.call_json(ctx, _tier(cfg, "writer"), "onepager", cfg.prompt,
-                         f"# Post\n{post}\n\n# Fact sheet\n{fact_sheet(state)}\n\n# Source items\n{drafting.sources_block(state['sources'])}",
-                         model=cfg.model)
-    return {"onepager": page, "onepager_for": post}, f"One-pager: \"{page.get('title', '')}\"", {"title": page.get("title")}
-
-
 RUNNERS = {"scout": scout, "researcher": researcher, "writer": writer, "editor": editor, "fact_checker": fact_checker,
-           "final_check": final_check, "onepager": onepager}
+           "final_check": final_check}

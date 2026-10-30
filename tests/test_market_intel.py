@@ -68,9 +68,7 @@ def offline(monkeypatch, tmp_path):
         "reference_compare": lambda m: json.dumps({"better": "B", "why": "clearer"}),
         "final_check": lambda m: json.dumps({"passed": True, "blockers": [], "polish": []}),
         "supervisor": lambda m: json.dumps({"next": supervisor.canonical(_allowed(m)), "reason": "next in line"}),
-        "onepager": lambda m: json.dumps({"title": "Open models <script>x</script>", "dek": "d",
-                                          "key_numbers": [{"value": "$0.20", "label": "per M tokens"}],
-                                          "sections": [{"heading": "h", "body": "b"}] * 3, "takeaway": "t"}),
+        "onepager": lambda m: (_ for _ in ()).throw(AssertionError("the LinkedIn agent writes posts only")),
     })
 
 
@@ -89,7 +87,7 @@ def test_collect_then_draft_end_to_end():
         d = db.one("select * from drafts")
         assert d["status"] == "pending" and d["revisions"] == 1
         assert d["post_md"] == GOOD_POST and d["judge_scores"]["violations"] == []
-        assert "<script>" not in d["onepager_html"] and "&lt;script&gt;" in d["onepager_html"]
+        assert d["onepager_html"] == ""  # posts only
         assert d["sources"][0]["url"] == "https://example.com/a"
         run = db.one("select * from runs where kind='draft'")
         assert run["status"] == "succeeded"
@@ -97,14 +95,14 @@ def test_collect_then_draft_end_to_end():
         # the coordinator is only asked when more than one move is allowed
         # the coordinator is only asked when more than one move is allowed; one rewrite, after every reviewer reported
         assert [c["node"] for c in calls] == ["scout", "researcher", "writer", "supervisor", "editor", "fact_checker", "final_check",
-                                              "writer", "supervisor", "editor", "fact_checker", "final_check", "onepager"]
+                                              "writer", "supervisor", "editor", "fact_checker", "final_check"]
         steps = db.all("select specialist, kind, status from agent_steps where run_id=%s order by seq", (run["id"],))
         assert steps[0]["specialist"] == "supervisor" and steps[-1]["specialist"] == "supervisor"
         assert {s["specialist"] for s in steps if s["kind"] == "work"} == {"supervisor", "scout", "researcher", "writer", "editor",
-                                                                           "fact_checker", "final_check", "onepager"}
+                                                                           "fact_checker", "final_check"}
         assert d["judge_scores"]["passed_review"] is True
         reg = db.all("select specialist from agent_registry where agent='market_intel'")
-        assert len(reg) == 8  # the dashboard sees the whole team
+        assert len(reg) == 7  # the dashboard sees the whole team
         assert "article_text" in graph._sources_block([{"source": "s", "title": "t", "summary": "x", "body": "b"}])
 
 
@@ -397,7 +395,7 @@ def test_one_rewrite_after_every_review_then_finish():
     v2 = {**passed, "drafts": passed["drafts"] + [{"version": 2, "post": GOOD_POST}], "calls": {"writer": 2},
           "edit_report": {**weak, "version": 2}, "fact_report": {"version": 2, "blocking": 0},
           "final_report": {"version": 2, "passed": False, "blockers": ["1: by 2028"]}}
-    assert supervisor.allowed(v2, cfg) == ["onepager"]  # out of rewrites: save the best version
+    assert supervisor.allowed(v2, cfg) == ["FINISH"]  # out of rewrites: save the best version
     assert supervisor.allowed({**base, "skip": "no take passed"}, cfg) == ["FINISH"]
 
 def test_a_failing_final_check_is_flagged_not_hidden():
@@ -548,12 +546,12 @@ def test_a_budget_stop_in_one_case_keeps_the_finished_ones(monkeypatch, tmp_path
     assert run["status"] == "budget_exceeded" and run["error"] == "daily cap" and done[0] == "c0" and "c1" not in done
 
 
-def test_evals_skip_the_one_pager_and_the_editor_reviews_on_its_own_tier():
+def test_evals_run_posts_only_and_the_editor_reviews_on_its_own_tier():
     from evals import run_evals
     from core.db import connect
 
     def no_onepager(m):
-        raise AssertionError("evals never score the one-pager")
+        raise AssertionError("the LinkedIn agent writes posts only")
     llm.FAKE_RESPONSES["onepager"] = no_onepager
     prompts = []
     write = llm.FAKE_RESPONSES["writer"]

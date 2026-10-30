@@ -104,7 +104,6 @@ def run_case(ctx, name: str, items: list[dict], exclude: str | None = None) -> d
     from agents.market_intel.roster import PROMPTS, SPECIALISTS
     from core import settings
     cfg = settings.from_files(SPECIALISTS, PROMPTS)
-    cfg["onepager"] = replace(cfg["onepager"], enabled=False)  # never scored; it only runs once the post is final
     state = graph.build_draft(persist=False).invoke(
         {"items": items, "week": name, "recent_angles": [], "recent_posts": [], "top_posts": [], "learn": False, "lessons": LESSONS,
          "examples": [e for e in EXAMPLES if e["id"] != exclude]},

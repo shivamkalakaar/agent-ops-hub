@@ -24,7 +24,5 @@ SPECIALISTS = [
                " different model family from the writer.", "verify", max_calls=2),
     Specialist("final_check", "Final check", "Blocks sweeping predictions, reports stated as done deals, misleading"
                " comparisons and hooks the post doesn't deliver. Nothing is saved as passing without it.", "check", max_calls=2, required=True),
-    Specialist("onepager", "One-pager", "Writes the companion page linked in the first comment, from the fact"
-               " sheet.", "writer", max_calls=1),
 ]
 WORKERS = [s.name for s in SPECIALISTS if s.name != "supervisor"]

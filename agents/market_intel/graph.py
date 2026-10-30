@@ -1,8 +1,8 @@
 """LinkedIn agent: two LangGraph workflows.
 
 collect (daily):  fetch → dedupe → score → store
-draft (weekdays): a coordinator and seven specialists (core/orchestrator.py, agents/market_intel/supervisor.py):
-                  load_items → coordinator ⇄ {scout, researcher, writer, editor, fact_checker, final_check, onepager}
+draft (weekdays): a coordinator and six specialists (core/orchestrator.py, agents/market_intel/supervisor.py):
+                  load_items → coordinator ⇄ {scout, researcher, writer, editor, fact_checker, final_check}
                   → finish (pending approval). Every decision and turn is a row in agent_steps: the live timeline.
 """
 import json
@@ -19,7 +19,6 @@ from core.config import CONFIG, load_json
 from core.drafting import (BANNED, HUMANIZER_WEIGHT, MIN_SCORE, SHORT_POST_WORDS, overall_score,  # noqa: F401 (re-exported)
                            style_examples)
 from core.feeds import fetch_all, fetch_article
-from agents.market_intel.render import render_onepager
 from agents.market_intel import specialists, supervisor
 from agents.market_intel.roster import AGENT, AUTHOR, PROMPTS, SPECIALISTS
 
@@ -150,8 +149,6 @@ class DraftState(TypedDict, total=False):
     fact_report: dict
     final_report: dict
     candidates: dict      # str(version) -> editor + fact-check results, for picking the best version
-    onepager: dict
-    onepager_for: str
     # orchestration
     settings: dict
     seq: int
@@ -263,20 +260,15 @@ def finish_node(persist: bool):
                 chosen = {"post": cur["post"], "scores": {}, "critique": "", "unsupported": [], "violations": [],
                           "accent": humanizer.scan(cur["post"]), "version": cur["version"]}
                 chosen["overall"] = drafting.overall_score({}, chosen["accent"]["score"])
-            update = {}
-            if persist and state.get("onepager_for") != chosen["post"]:  # the one-pager must describe the saved version
-                # (evals don't save or score a one-pager, so they skip it)
-                update, _, _ = specialists.onepager(state, ctx, state["settings"]["onepager"], post=chosen["post"])
-            page = update.get("onepager") or state.get("onepager") or {}
             out = {"post": chosen["post"], "scores": chosen["scores"], "critique": chosen.get("critique", ""),
                    "violations": chosen["violations"], "unsupported": chosen.get("unsupported", []), "accent": chosen["accent"],
-                   "overall": chosen["overall"], "revisions": len(state["drafts"]) - 1, "passed": passed, "seq": seq, **update}
+                   "overall": chosen["overall"], "revisions": len(state["drafts"]) - 1, "passed": passed, "seq": seq}
             draft_id = None
             if persist:
                 sources = [{"url": x["url"], "title": x["title"], "source": x["source"], "origin": x.get("origin", "rss")}
                            for x in state["sources"]]
                 draft = {"week": state["week"], "angle": state["angle"], "post_md": chosen["post"],
-                         "onepager_html": render_onepager(page, sources, state["week"], AUTHOR),
+                         "onepager_html": "",  # posts only since 2026-10-30; old drafts keep their page
                          "sources": sources, "revisions": out["revisions"],
                          "judge_scores": {**chosen["scores"], "violations": chosen["violations"], "humanizer": chosen["accent"]["score"],
                                           "critique": out["critique"], "unsupported_claims": out["unsupported"],
@@ -296,5 +288,5 @@ def finish_node(persist: bool):
 
 
 def build_draft(persist: bool = True):
-    """persist=False (evals): nothing is saved, and the finish step doesn't write a one-pager for the chosen post."""
+    """persist=False (evals): nothing is saved."""
     return orchestrator.build(supervisor.TEAM, DraftState, specialists.RUNNERS, load_items, finish_node(persist))

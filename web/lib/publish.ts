@@ -42,6 +42,8 @@ export async function publishDraft(sb: SupabaseClient, draftId: string, origin: 
   // Save first: the post is live even if the comment below fails.
   await sb.from("drafts").update({ published_at: new Date().toISOString(), linkedin_url: url, series_no: seriesNo }).eq("id", d.id);
 
+  if (!d.onepager_html)  // posts only since 2026-10-30: no one-pager, so no first comment linking to it
+    return { ok: true, url, seriesNo, tagged, tagsFailed: mentions.length > 0 && tagged.length === 0, comment: "none" };
   const c = await liFetch(`/rest/socialActions/${encodeURIComponent(urn)}/comments`, li.access_token, {
     method: "POST",
     body: JSON.stringify({ actor: li.person_urn, object: urn, message: { text: `Sources and the full breakdown: ${origin}/p/${d.week}` } }),
