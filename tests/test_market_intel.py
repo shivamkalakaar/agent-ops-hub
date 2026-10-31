@@ -63,15 +63,12 @@ def offline(monkeypatch, tmp_path):
         "writer": lambda m: GOOD_POST,
         "editor": critic,
         "fact_checker": lambda m: json.dumps({"claims": [{"claim": "scored 88 on X", "verdict": "supported"}]}),
-        "logic_checker": lambda m: json.dumps({"chain": ["open model matches", "at a tenth of the price"], "logic": 5, "plain": 5, "issues": []}),
         "reference_judge": lambda m: json.dumps({"scores": dict.fromkeys(["plain", "logic", "one_idea", "hook", "grounded", "human"], 4),
                                                  "chain": ["a", "so b"], "unsupported": [], "fix": ""}),
         "reference_compare": lambda m: json.dumps({"better": "B", "why": "clearer"}),
         "final_check": lambda m: json.dumps({"passed": True, "blockers": [], "polish": []}),
         "supervisor": lambda m: json.dumps({"next": supervisor.canonical(_allowed(m)), "reason": "next in line"}),
-        "onepager": lambda m: json.dumps({"title": "Open models <script>x</script>", "dek": "d",
-                                          "key_numbers": [{"value": "$0.20", "label": "per M tokens"}],
-                                          "sections": [{"heading": "h", "body": "b"}] * 3, "takeaway": "t"}),
+        "onepager": lambda m: (_ for _ in ()).throw(AssertionError("the LinkedIn agent writes posts only")),
     })
 
 
@@ -90,22 +87,22 @@ def test_collect_then_draft_end_to_end():
         d = db.one("select * from drafts")
         assert d["status"] == "pending" and d["revisions"] == 1
         assert d["post_md"] == GOOD_POST and d["judge_scores"]["violations"] == []
-        assert "<script>" not in d["onepager_html"] and "&lt;script&gt;" in d["onepager_html"]
+        assert d["onepager_html"] == ""  # posts only
         assert d["sources"][0]["url"] == "https://example.com/a"
         run = db.one("select * from runs where kind='draft'")
         assert run["status"] == "succeeded"
         calls = db.all("select node from llm_calls where run_id=%s order by id", (run["id"],))
         # the coordinator is only asked when more than one move is allowed
-        assert [c["node"] for c in calls] == ["scout", "researcher", "writer", "supervisor", "editor", "supervisor", "fact_checker",
-                                              "supervisor", "logic_checker", "supervisor", "writer", "supervisor", "editor", "supervisor",
-                                              "fact_checker", "logic_checker", "final_check", "onepager"]
+        # the coordinator is only asked when more than one move is allowed; one rewrite, after every reviewer reported
+        assert [c["node"] for c in calls] == ["scout", "researcher", "writer", "supervisor", "editor", "fact_checker", "final_check",
+                                              "writer", "supervisor", "editor", "fact_checker", "final_check"]
         steps = db.all("select specialist, kind, status from agent_steps where run_id=%s order by seq", (run["id"],))
         assert steps[0]["specialist"] == "supervisor" and steps[-1]["specialist"] == "supervisor"
         assert {s["specialist"] for s in steps if s["kind"] == "work"} == {"supervisor", "scout", "researcher", "writer", "editor",
-                                                                           "fact_checker", "logic_checker", "final_check", "onepager"}
+                                                                           "fact_checker", "final_check"}
         assert d["judge_scores"]["passed_review"] is True
         reg = db.all("select specialist from agent_registry where agent='market_intel'")
-        assert len(reg) == 9  # the dashboard sees the whole team
+        assert len(reg) == 7  # the dashboard sees the whole team
         assert "article_text" in graph._sources_block([{"source": "s", "title": "t", "summary": "x", "body": "b"}])
 
 
@@ -247,14 +244,14 @@ def test_flags_the_recap_template_and_repeated_endings():
     assert graph.guardrail_violations(GOOD_POST, set(), recent=recent) == []
 
 
-def test_voice_examples_rotate_by_seed():
-    a = graph.style_examples(n=4, short_only=False, max_words=graph.EXAMPLE_MAX_WORDS, seed="2026-10-22")
-    b = graph.style_examples(n=4, short_only=False, max_words=graph.EXAMPLE_MAX_WORDS, seed="2026-10-23")
-    assert a == graph.style_examples(n=4, short_only=False, max_words=graph.EXAMPLE_MAX_WORDS, seed="2026-10-22")
-    assert all(len(p.split()) <= graph.EXAMPLE_MAX_WORDS for p in a + b)
-    if len(graph.style_examples(n=99, short_only=False, max_words=graph.EXAMPLE_MAX_WORDS)) > 4:
-        assert a != b
-
+def test_writer_sees_the_owners_rewrites_as_pairs_rotated_by_seed():
+    from agents.market_intel import specialists
+    ex = [{"id": f"d{i}", "draft": f"agent draft {i}", "post": f"posted {i}"} for i in range(5)]
+    a, b = specialists.pairs(ex, "2026-10-22-0"), specialists.pairs(ex, "2026-10-22-1")
+    assert a == specialists.pairs(ex, "2026-10-22-0") and a.count("## Pair") == specialists.PAIRS
+    assert "### The agent's draft\nagent draft" in a and "### What Shivam posted\nposted" in a
+    assert a != b  # each writer candidate sees a different set, so no one example gets copied
+    assert "none yet" in specialists.pairs([], "x")
 
 def test_learns_from_edits_and_rejections_then_uses_the_lessons():
     from core import lessons
@@ -283,7 +280,8 @@ def test_learns_from_edits_and_rejections_then_uses_the_lessons():
     assert cli.run("draft") == 0
     assert "I checked the pricing page myself" in seen["user"] and "Recap, no real take" in seen["user"]
     assert "where am I in this?" in seen["user"]
-    assert "own position" in prompts[0] and "feedback has taught you" in prompts[0]
+    # one decision isn't enough: the LinkedIn writer only sees a lesson two decisions back
+    assert "feedback has taught you" not in prompts[0]
     with connect() as db:
         assert db.one("select count(*) as n from drafts where learned_at is null and status != 'pending'")["n"] == 0
         assert len(lessons.active(db, "market_intel")) == 2
@@ -291,6 +289,10 @@ def test_learns_from_edits_and_rejections_then_uses_the_lessons():
                 if r["stats"]["learned"].get("read")] == [2]
         # the next run has nothing new to read, so it doesn't call the model again
         assert lessons.events(db, "market_intel") == [] and lessons.learn(db, None, "market_intel", "Shivam") == {"read": 0}
+        recap = next(r["id"] for r in lessons.active(db, "market_intel") if "recaps" in r["lesson"])
+        lessons.apply(db, "market_intel", {"confirm": [recap]}, set())
+        shown = lessons.block(db, "market_intel", "Shivam")
+        assert "own position" in shown and "first-hand check" not in shown
 
 
 def test_lessons_merge_and_stay_capped():
@@ -301,14 +303,18 @@ def test_lessons_merge_and_stay_capped():
         for _ in range(3):
             lessons.apply(db, "market_intel", {"add": [{"lesson": f"Another specific lesson {i}.", "from": []} for i in range(5)]}, set())
         rows = lessons.active(db, "market_intel")
-        assert len(rows) == lessons.MAX_ACTIVE
+        assert len(rows) == lessons.LIMITS["market_intel"]["max_active"] == 8
+        lessons.apply(db, "substack", {"add": [{"lesson": f"Substack lesson {i} is specific.", "from": []} for i in range(5)]}, set())
+        for _ in range(3):
+            lessons.apply(db, "substack", {"add": [{"lesson": f"More substack lesson {i}.", "from": []} for i in range(5)]}, set())
+        assert len(lessons.active(db, "substack")) == lessons.MAX_ACTIVE
         top = rows[-1]["id"]
         lessons.apply(db, "market_intel", {"confirm": [top, "nope"], "revise": [{"id": top, "lesson": "A sharper version of it."}]}, set())
         rows = lessons.active(db, "market_intel")
         assert rows[0]["id"] == top and rows[0]["evidence"] == 2 and rows[0]["lesson"] == "A sharper version of it."
         lessons.apply(db, "market_intel", {"retire": [top]}, set())
         assert top not in {r["id"] for r in lessons.active(db, "market_intel")}
-        assert "(seen" not in lessons.block(db, "substack", "Shivam") and lessons.block(db, "substack", "Shivam") == ""
+        assert "Substack lesson" in lessons.block(db, "substack", "Shivam")  # no evidence floor for the Substack agent
     assert lessons.edit_share("a b c d", None) == 0.0 and 0 < lessons.edit_share("a b c d", "a b x d") < 1
 
 
@@ -350,47 +356,47 @@ def test_unsupported_claims_go_back_to_the_writer_and_final_check_gates_the_save
     finals = iter([{"passed": False, "blockers": ["2: reads as a recap; say what Shivam thinks"]}, {"passed": True, "blockers": []}])
     llm.FAKE_RESPONSES["final_check"] = lambda m: json.dumps(next(finals, {"passed": True, "blockers": []}))
     assert cli.run("collect") == 0 and cli.run("draft") == 0
-    assert len(seen) >= 2 and '"costs $0.20" → drop it' in seen[1] and "Fact check: unsupported (must fix)" in seen[1]
-    assert any("Final check blockers (must fix)" in s and "reads as a recap" in s for s in seen[2:])
+    # one rewrite gets every reviewer's notes at once
+    assert len(seen) == 2 and '"costs $0.20" → drop it' in seen[1] and "Fact check: unsupported (must fix)" in seen[1]
+    assert "Final check blockers (must fix)" in seen[1] and "reads as a recap" in seen[1]
     with connect() as db:
         d = db.one("select * from drafts")
-        assert d["judge_scores"]["passed_review"] is True and d["revisions"] == 2  # v3 passed the final check
+        assert d["judge_scores"]["passed_review"] is True and d["revisions"] == 1  # v2 passed the final check
 
 
-def test_a_gap_in_the_argument_goes_back_to_the_writer_and_blocks_until_fixed():
+def test_a_gap_in_the_argument_goes_back_to_the_writer_with_the_editors_fixes():
     from core.db import connect
     seen = []
-    gap = {"chain": ["open models carry the tokens", "?"], "logic": 3, "plain": 3, "issues": [
-        {"kind": "unclear_comparison", "quote": "if the mid-tier keeps closing the gap", "problem": "whose gap?",
-         "fix": "say top models get cheaper and cheap models get better"}]}
-    logic = iter([gap, gap])
-    llm.FAKE_RESPONSES["editor"] = lambda m: json.dumps({"scores": dict.fromkeys(["hook", "focus", "brevity", "concreteness", "voice", "grounding"], 5),
-                                                          "critique": "Good."})
-    llm.FAKE_RESPONSES["logic_checker"] = lambda m: json.dumps(next(logic, {"chain": ["a", "so b"], "logic": 5, "plain": 4, "issues": []}))
+    gap = {"scores": dict.fromkeys(["take", "focus", "plain", "voice", "ending", "grounding"], 5) | {"logic": 3},
+           "fixes": [{"kind": "logic", "quote": "if the mid-tier keeps closing the gap", "problem": "whose gap?",
+                      "fix": "say top models get cheaper and cheap models get better"}]}
+    reviews = iter([gap])
+    llm.FAKE_RESPONSES["editor"] = lambda m: json.dumps(next(reviews, {
+        "scores": dict.fromkeys(["take", "focus", "logic", "plain", "voice", "ending", "grounding"], 5), "fixes": []}))
     llm.FAKE_RESPONSES["writer"] = lambda m: (seen.append(m[-1].content), GOOD_POST)[1]
     assert cli.run("collect") == 0 and cli.run("draft") == 0
-    assert len(seen) >= 2 and "Logic check (logic 3/5, plain words 3/5; must fix)" in seen[1] and "whose gap?" in seen[1]
+    assert len(seen) == 2 and '- logic: "if the mid-tier keeps closing the gap": whose gap?' in seen[1]
     with connect() as db:
         d = db.one("select * from drafts")
-        assert d["judge_scores"]["passed_review"] is True and d["revisions"] == 2  # v3's argument held together
+        assert d["judge_scores"]["passed_review"] is True and d["revisions"] == 1
+        assert "whose gap?" not in d["judge_scores"]["critique"]  # v2's review is the one saved
 
-
-def test_logic_check_blocks_the_final_check_and_minor_notes_dont():
-    from agents.market_intel import specialists
-    state = {"drafts": [{"version": 1, "post": GOOD_POST}], "sources": [], "facts": [],
-             "logic_report": {"version": 1, "logic": 2, "plain": 4, "blocking": True,
-                              "issues": [{"kind": "non_sequitur", "quote": "so the money", "problem": "p", "fix": "f"}]}}
-    assert specialists.version(state) == 1
+def test_one_rewrite_after_every_review_then_finish():
     from agents.market_intel import supervisor
     from core import settings
     from agents.market_intel.roster import PROMPTS, SPECIALISTS
     cfg = settings.from_files(SPECIALISTS, PROMPTS)
-    done = {"edit_report": {"version": 1, "scores": dict.fromkeys(["hook", "voice"], 5), "accent": {"score": 5}, "violations": []},
-            "fact_report": {"version": 1, "blocking": 0}, "angle": {"angle": "a"}, "researched": True, "calls": {}}
-    assert "writer" in supervisor.allowed({**state, **done}, cfg)
-    minor = {**state["logic_report"], "logic": 4, "blocking": False}
-    assert "writer" not in supervisor.allowed({**state, **done, "logic_report": minor}, cfg)
-
+    weak = {"version": 1, "scores": {"take": 2, "logic": 5}, "accent": {"score": 5}, "violations": []}
+    base = {"drafts": [{"version": 1, "post": GOOD_POST}], "angle": {"angle": "a"}, "researched": True, "calls": {"writer": 1},
+            "edit_report": weak, "fact_report": {"version": 1, "blocking": 0}}
+    assert supervisor.allowed(base, cfg) == ["final_check"]  # no rewrite until the final check has read it too
+    passed = {**base, "final_report": {"version": 1, "passed": True, "blockers": []}}
+    assert supervisor.allowed(passed, cfg) == ["writer"]  # a weak take is worth the one rewrite even when nothing blocks
+    v2 = {**passed, "drafts": passed["drafts"] + [{"version": 2, "post": GOOD_POST}], "calls": {"writer": 2},
+          "edit_report": {**weak, "version": 2}, "fact_report": {"version": 2, "blocking": 0},
+          "final_report": {"version": 2, "passed": False, "blockers": ["1: by 2028"]}}
+    assert supervisor.allowed(v2, cfg) == ["FINISH"]  # out of rewrites: save the best version
+    assert supervisor.allowed({**base, "skip": "no take passed"}, cfg) == ["FINISH"]
 
 def test_a_failing_final_check_is_flagged_not_hidden():
     from core.db import connect
@@ -540,20 +546,25 @@ def test_a_budget_stop_in_one_case_keeps_the_finished_ones(monkeypatch, tmp_path
     assert run["status"] == "budget_exceeded" and run["error"] == "daily cap" and done[0] == "c0" and "c1" not in done
 
 
-def test_evals_skip_the_one_pager_and_the_logic_check_has_its_own_tier():
+def test_evals_run_posts_only_and_the_editor_reviews_on_its_own_tier():
     from evals import run_evals
     from core.db import connect
 
     def no_onepager(m):
-        raise AssertionError("evals never score the one-pager")
+        raise AssertionError("the LinkedIn agent writes posts only")
     llm.FAKE_RESPONSES["onepager"] = no_onepager
+    prompts = []
+    write = llm.FAKE_RESPONSES["writer"]
+    llm.FAKE_RESPONSES["writer"] = lambda m: (prompts.append(m[0].content), write(m))[1]
     with connect() as db:
         ctx = llm.RunContext(db=db, run_id=db.start_run("market_intel", "eval", "t"))
-        r = run_evals.run_case(ctx, "2026-10-27", [dict(i, importance=5) for i in ITEMS])
+        r = run_evals.run_case(ctx, "2026-10-27", [dict(i, importance=5) for i in ITEMS], exclude="942e36b0112d")
         calls = db.all("select node, tier from llm_calls where run_id=%s", (ctx.run_id,))
     assert r["passed_final"] and "onepager" not in r["calls"]
-    assert {c["tier"] for c in calls if c["node"] == "logic_checker"} == {"logic"}
-    assert load_yaml("models.yaml")["tiers"]["logic"]["reasoning"] == {"enabled": False}
+    assert {c["tier"] for c in calls if c["node"] == "editor"} == {"review"}
+    assert load_yaml("models.yaml")["tiers"]["review"]["reasoning"] == {"enabled": False}
+    # the frozen rewrites reach the writer, but never the one built from the case's own reference post
+    assert "### What Shivam posted" in prompts[0] and "Open models now handle 72% of the tokens" not in prompts[0]
 
 def test_writer_keeps_the_best_of_several_candidates(monkeypatch):
     from agents.market_intel import specialists
@@ -631,3 +642,47 @@ def test_flags_a_brief_line_passed_off_as_the_authors_own():
     assert any("copies a source's words" in v for v in graph.guardrail_violations(post, set(), why))
     quoted = GOOD_POST.replace("#AI", 'Vals says "it\'s tempting to pick whichever provider has the lowest token price" too.')
     assert not any("copies a source's words" in v for v in graph.guardrail_violations(quoted, set(), why))
+
+
+def test_take_test_prefers_a_real_claim_and_a_scheduled_run_skips_when_none_passes():
+    from agents.market_intel import specialists
+    from core.db import connect
+    claim = {"kind": "reaction", "take": "I'd like to see it run for a year on a real line",
+             "detail": "The arm is strong enough to hurt itself at that speed"}
+    assert specialists.passes_take_test(claim) and specialists.passes_take_test({**claim, "kind": "claim"})
+    assert not specialists.passes_take_test({**claim, "kind": "recap"})
+    assert not specialists.passes_take_test({**claim, "take": "Every lab will charge per task soon"})  # an industry forecast
+    assert not specialists.passes_take_test({**claim, "take": "Per-task pricing wins by 2028"})
+    assert not specialists.passes_take_test({**claim, "detail": ""})  # a take needs a detail under it
+    recap = {"item_ids": [0], "angle": "a launch", "kind": "recap", "take": "Google launched a model this week",
+             "detail": "It leads four of nine evals"}
+    llm.FAKE_RESPONSES["scout"] = lambda m: json.dumps({"candidates": [recap, {**claim, "item_ids": [1], "angle": "b"}], "pick": 0})
+    from core import settings
+    from agents.market_intel.roster import PROMPTS, SPECIALISTS
+    with connect() as db:
+        ctx = llm.RunContext(db=db, run_id=db.start_run("market_intel", "draft", "t"))
+        out, summary, _ = specialists.scout({"items": [dict(i, importance=5) for i in ITEMS]}, ctx,
+                                            settings.from_files(SPECIALISTS, PROMPTS)["scout"])
+    assert out["angle"]["take"] == claim["take"] and "skip" not in out  # switched to the candidate whose take passes
+
+    llm.FAKE_RESPONSES["scout"] = lambda m: json.dumps({"candidates": [recap], "pick": 0})
+    assert cli.run("collect") == 0 and cli.run("draft", skip_if_pending=2) == 0
+    with connect() as db:
+        assert db.one("select count(*) as n from drafts")["n"] == 0  # nothing worth posting: no draft today
+        run = db.one("select * from runs where kind='draft' and status != 'running'")
+        assert run["status"] == "succeeded" and "take test" in run["stats"]["skipped"]
+    assert cli.run("draft") == 0  # "Generate a new draft" always writes one
+    with connect() as db:
+        assert db.one("select count(*) as n from drafts")["n"] == 1
+
+
+def test_a_passing_rewrite_that_reads_worse_doesnt_replace_the_better_version():
+    from agents.market_intel import graph as g
+    from core import settings
+    from agents.market_intel.roster import PROMPTS, SPECIALISTS
+    cfg = settings.from_files(SPECIALISTS, PROMPTS)
+    v = lambda n, overall, passed: {"version": n, "post": f"v{n}", "violations": [], "overall": overall,  # noqa: E731
+                                    "accent": {"score": 5}, "fact_checked": True, "passed_final": passed}
+    assert g.best({"settings": cfg, "candidates": {"1": v(1, 4.6, True), "2": v(2, 4.1, True)}})["version"] == 1
+    assert g.best({"settings": cfg, "candidates": {"1": v(1, 4.6, False), "2": v(2, 4.1, True)}})["version"] == 2
+    assert g.best({"settings": cfg, "candidates": {"1": v(1, 4.3, True), "2": v(2, 4.3, True)}})["version"] == 2  # tie: the fixed one

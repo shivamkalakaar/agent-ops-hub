@@ -1,15 +1,17 @@
 """The LinkedIn team's specialists. Each one is fn(state, ctx, cfg) -> (update, summary, output); see core/orchestrator.py.
 
-scout → researcher → writer ⇄ {editor, fact_checker, final_check} → onepager, in the order the coordinator picks.
+scout → researcher → writer ⇄ {editor, fact_checker, final_check}, in the order the coordinator picks.
 """
+import hashlib
 import json
 import re
 
 from core import drafting, humanizer, llm, novelty
-from agents.market_intel.roster import AUTHOR
+from agents.market_intel.roster import AUTHOR, PROMPTS
 
 SCOUT_REPEAT = 0.4  # an angle this close to a recent one loses to a fresher candidate
 MAX_SOURCES = 5  # chosen stories plus the brief's corroborating links, for the researcher
+PAIRS = 3  # the owner's rewrites shown to each writer candidate (rotated, so no one example gets copied)
 
 
 def current(state) -> dict | None:
@@ -65,8 +67,8 @@ def _numbered(sources: list[dict]) -> str:
 
 def scout(state, ctx, cfg):
     recent = "\n".join(f"- {a}" for a in state.get("recent_angles") or []) or "(none yet)"
-    r = llm.call_json(ctx, _tier(cfg, "judge"), "scout", drafting.fill(cfg.prompt, AUTHOR=AUTHOR, RECENT=recent),
-                      listing(state["items"]) + _take(state) + _lessons(state), model=cfg.model)
+    r = llm.call_json(ctx, _tier(cfg, "judge"), "scout", drafting.fill(cfg.prompt, AUTHOR=AUTHOR, RECENT=recent, VIEWS=views()),
+                      listing(state["items"]) + _take(state), model=cfg.model)
     items = state["items"]
     cands = [c for c in (r.get("candidates") or ([r] if r.get("item_ids") else [])) if isinstance(c, dict)]
     for c in cands:
@@ -74,17 +76,45 @@ def scout(state, ctx, cfg):
         text = novelty.words(f"{c.get('angle', '')} {c.get('hook', '')} " + " ".join(items[i]["title"] for i in c["item_ids"]))
         c["repeat"] = round(max([novelty.jaccard(text, novelty.words(a)) for a in state.get("recent_angles") or []] or [0]), 2)
         c["thesis"] = drafting.thesis_contrast(f"{c.get('angle', '')} {c.get('hook', '')}")
-    cands = [c for c in cands if c["item_ids"]] or [{"item_ids": [0], "angle": items[0]["title"], "hook": "", "why_now": "", "repeat": 0}]
+        c["passes"] = passes_take_test(c)
+    cands = [c for c in cands if c["item_ids"]] or [{"item_ids": [0], "angle": items[0]["title"], "hook": "", "why_now": "",
+                                                     "repeat": 0, "passes": False}]
     pick = r.get("pick") if isinstance(r.get("pick"), int) and 0 <= r.get("pick") < len(cands) else 0
     note = str(r.get("why", ""))[:200]
-    if cands[pick]["repeat"] >= SCOUT_REPEAT and (fresher := min(cands, key=lambda c: c["repeat"]))["repeat"] < SCOUT_REPEAT:
+    if not state.get("take") and not cands[pick]["passes"] and (good := [c for c in cands if c["passes"]]):
+        pick, note = cands.index(good[0]), f"switched: the first pick's take was a {cands[pick].get('kind') or 'recap'}"
+    if not state.get("take") and not cands[pick]["passes"] and state.get("can_skip"):
+        why = "; ".join(f"{c.get('kind') or 'no take'}: {str(c.get('take') or c.get('angle'))[:80]}" for c in cands)
+        return {"angle": {k: cands[pick].get(k) for k in ANGLE_KEYS}, "skip": f"no take passed the take test ({why})"}, \
+            f"No post today: none of {len(cands)} takes passed the take test", {"candidates": cands, "pick": None, "why": why}
+    if cands[pick]["repeat"] >= SCOUT_REPEAT and (fresher := min(cands, key=lambda c: (c["repeat"] >= SCOUT_REPEAT, not c["passes"],
+                                                                                       c["repeat"])))["repeat"] < SCOUT_REPEAT:
         pick, note = cands.index(fresher), f"switched: the first pick was too close to a recent post ({cands[pick]['repeat']})"
-    if cands[pick].get("thesis") and (plain := [c for c in cands if not c.get("thesis") and c["repeat"] < SCOUT_REPEAT]):
+    if cands[pick].get("thesis") and (plain := [c for c in cands if not c.get("thesis") and c["repeat"] < SCOUT_REPEAT
+                                                and c["passes"] >= cands[pick]["passes"]]):
         pick, note = cands.index(plain[0]), "switched: the first pick was an \"X, not Y\" thesis line"
-    angle = {k: cands[pick].get(k) for k in ("angle", "hook", "why_now")}
+    angle = {k: cands[pick].get(k) for k in ANGLE_KEYS}
+    if state.get("take"):
+        angle["take"] = state["take"]
     sources = _with_corroboration([items[i] for i in cands[pick]["item_ids"]])
     summary = f"Angle: \"{angle['angle']}\" from {len(sources)} stor{'y' if len(sources) == 1 else 'ies'} ({len(cands)} candidates)"
     return {"angle": angle, "sources": sources}, summary, {"candidates": cands, "pick": pick, "why": note}
+
+
+ANGLE_KEYS = ("angle", "take", "detail", "hook", "why_now", "view")
+WORDS_PER_SOURCE = 700  # the best posts' details came from deep in the article; 1,200 words split five ways didn't reach them
+
+
+def views() -> str:
+    return (PROMPTS / "views.md").read_text().strip()
+
+
+def passes_take_test(c: dict) -> bool:
+    """The scout's own verdict, checked: a point of view (a reaction or a claim, not a recap, a forecast or a guess
+    at a motive) built on a specific detail. Rejected drafts were mostly recaps with a "why it matters" line; the two
+    posts that did best were reported stories with one striking detail and a dry one-line reaction."""
+    return (c.get("kind") in ("reaction", "claim") and all(len(str(c.get(k) or "").split()) >= 4 for k in ("take", "detail"))
+            and not re.search(r"\bby 20\d\d\b|\b(?:every|all|the whole) [\w ]{0,20}\bwill\b", str(c.get("take") or ""), flags=re.I))
 
 
 def _with_corroboration(sources: list[dict], cap: int = MAX_SOURCES) -> list[dict]:
@@ -106,7 +136,7 @@ def _norm(s: str) -> str:
 
 
 def researcher(state, ctx, cfg):
-    sources = drafting.read_sources(state["sources"], fetch=_g().fetch_article)
+    sources = drafting.read_sources(state["sources"], words=WORDS_PER_SOURCE * len(state["sources"]), fetch=_g().fetch_article)
     user = (f"# Angle\n{state['angle'].get('angle')}\n\n# Source items\n{_numbered(sources)}" + _take(state))
     try:
         r = llm.call_json(ctx, _tier(cfg, "check"), "researcher", drafting.fill(cfg.prompt, AUTHOR=AUTHOR), user, model=cfg.model)
@@ -124,10 +154,15 @@ def researcher(state, ctx, cfg):
         else:
             dropped += 1
     context = [str(c)[:300] for c in (r.get("context") or []) if isinstance(c, str)][:3]
+    angle = dict(state["angle"])  # with the articles read, the researcher sharpens the detail and the take
+    for k in ("detail", "take"):
+        if isinstance(r.get(k), str) and len(r[k].split()) >= 4 and not (k == "take" and state.get("take")):
+            angle[k] = r[k].strip()[:300]
     read = sum(bool(s.get("body")) for s in sources)
     summary = (f"Fact sheet: {len(facts)} facts with quotes from {len(sources)} sources ({read} read in full)"
                + (f"; dropped {dropped} without a matching quote" if dropped else ""))
-    return {"sources": sources, "facts": facts, "context": context, "researched": True}, summary, {"facts": facts, "context": context}
+    return ({"sources": sources, "facts": facts, "context": context, "angle": angle, "researched": True}, summary,
+            {"facts": facts, "context": context, "detail": angle.get("detail"), "take": angle.get("take")})
 
 
 # --------------------------------------------------------------------------- writer
@@ -135,7 +170,8 @@ def researcher(state, ctx, cfg):
 def _feedback(state) -> str:
     v, parts = version(state), []
     if (e := state.get("edit_report")) and e.get("version") == v:
-        parts.append(f"# Editor (overall {e['overall']}/5, scores {json.dumps(e['scores'])})\n{e.get('critique', '')}")
+        fixes = "\n".join(f'- {x["kind"]}: "{x["quote"]}": {x["problem"]} → {x["fix"]}' for x in e.get("fixes") or [])
+        parts.append(f"# Editor (overall {e['overall']}/5, scores {json.dumps(e['scores'])})\n{fixes or e.get('critique', '')}")
         if e.get("violations"):
             parts.append("# Rule violations (must fix)\n" + "\n".join(f"- {x}" for x in e["violations"]))
         if e.get("unsupported"):
@@ -147,10 +183,6 @@ def _feedback(state) -> str:
             parts.append("# Fact check: unsupported (must fix)\n" + "\n".join(bad))
         if hedge:
             parts.append("# Fact check: state more carefully (should fix)\n" + "\n".join(hedge))
-    if (lg := state.get("logic_report")) and lg.get("version") == v and lg.get("issues"):
-        label = "must fix" if lg.get("blocking") else "should fix"
-        parts.append(f"# Logic check (logic {lg['logic']}/5, plain words {lg['plain']}/5; {label})\n"
-                     + "\n".join(f'- {i["kind"]}: "{i["quote"]}": {i["problem"]} → {i["fix"]}' for i in lg["issues"]))
     if (fr := state.get("final_report")) and fr.get("version") == v and not fr.get("passed"):
         parts.append("# Final check blockers (must fix)\n" + "\n".join(f"- {b}" for b in fr.get("blockers", [])))
     return "\n\n".join(parts)
@@ -161,7 +193,16 @@ def _clean(text: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", text)
 
 
-TARGET_WORDS = 130
+TARGET_WORDS = 150  # the owner's rewrites run longer than the agent's drafts: they explain what the agent skips
+
+
+def pairs(examples: list[dict], seed: str, n: int = PAIRS) -> str:
+    """The owner's rewrites as before/after pairs, a different PAIRS of them per seed."""
+    if not examples:
+        return "(none yet; follow the voice guide)"
+    picked = sorted(examples, key=lambda e: hashlib.sha1(f"{seed}{e['id']}".encode()).hexdigest())[:n]
+    return "\n\n".join(f"## Pair {k}\n### The agent's draft\n{e['draft']}\n\n### What {AUTHOR} posted\n{e['post']}"
+                       for k, e in enumerate(picked, 1))
 
 
 def writer(state, ctx, cfg):
@@ -170,8 +211,12 @@ def writer(state, ctx, cfg):
     then the length closest to TARGET_WORDS. First drafts use every candidate; rewrites use two."""
     g = _g()
     a = state["angle"]
-    user = (f"Angle: {a.get('angle')}\nCandidate hook: {a.get('hook')}\nWhy now: {a.get('why_now')}\n\n"
-            f"# Fact sheet\n{fact_sheet(state)}\n\n# Source items\n{drafting.sources_block(state['sources'])}")
+    user = (f"Angle: {a.get('angle')}\nThe take (the post's one idea): {a.get('take') or a.get('angle')}\n"
+            f"The striking detail: {a.get('detail') or '(see the fact sheet)'}\nCandidate hook: {a.get('hook')}\nWhy now: {a.get('why_now')}\n\n"
+            f"# Fact sheet\n{fact_sheet(state)}\n\n# Source items\n"
+            # summaries only: the researcher already pulled the facts and quotes out of the article text, and with
+            # 700 words a source in front of it the writer copied whole sentences and picked up stray figures
+            f"{drafting.sources_block([{k: v for k, v in x.items() if k != 'body'} for x in state['sources']])}")
     if top := "\n\n---\n\n".join(state.get("top_posts") or []):
         user += (f"\n\n# {AUTHOR}'s posts that did well with readers (the best guide there is: use the same kind of moves,"
                  f" such as how they stack facts, where the opinion sits and how they end, on today's story. Don't copy their"
@@ -190,9 +235,8 @@ def writer(state, ctx, cfg):
     tier = _tier(cfg, "voice")
 
     def make_system(i: int) -> str:
-        examples = drafting.style_examples(n=4, short_only=False, max_words=g.EXAMPLE_MAX_WORDS, seed=f"{state.get('week')}-{i}")
         return drafting.fill(cfg.prompt, AUTHOR=AUTHOR, STYLE_GUIDE=g.style_guide(), HUMANIZER=humanizer.rules(),
-                             EXAMPLES="\n\n---\n\n".join(examples) or "(no examples yet; follow the style guide)")
+                             EXAMPLES=pairs(state.get("examples") or [], f"{state.get('week')}-{i}"))
     outs = drafting.write_candidates(ctx, tier, "writer", drafting.candidates(tier, cfg.model, n=2 if draft else None),
                                      make_system, user, _clean, max_words=3 * g.WORDS[1], min_words=int(0.6 * g.WORDS[0]))
     urls, text = {s["url"] for s in state["sources"]}, sources_text(state)
@@ -216,32 +260,33 @@ def writer(state, ctx, cfg):
 
 def editor(state, ctx, cfg):
     g, draft = _g(), current(state)
-    user = f"# Source items\n{sources_text(state)}\n\n# Post\n{draft['post']}"
-    if state.get("lessons"):
-        user += (f"\n\n{state['lessons']}\nA draft that breaks one of these lessons loses a point on voice or human, "
-                 "and the critique must name the lesson.")
-    if state.get("top_posts"):
-        user += ("\n\n# Posts by the author that did well with readers\n" + "\n\n---\n\n".join(state["top_posts"])
-                 + "\nA draft that works the way these do (dry one-line reactions included) shouldn't lose points for it.")
-    review = llm.call_json(ctx, _tier(cfg, "judge"), "editor", drafting.fill(cfg.prompt, STYLE_GUIDE=g.style_guide()), user,
+    user = f"# Source items\n{sources_text(state)}\n\n# Post\n{draft['post']}" + _lessons(state)
+    review = llm.call_json(ctx, _tier(cfg, "review"), "editor", drafting.fill(cfg.prompt, STYLE_GUIDE=g.style_guide()), user,
                            model=cfg.model)
     scores = {k: max(1, min(5, int(v))) for k, v in (review.get("scores") or {}).items() if str(v).isdigit()}
+    fixes = [{"kind": str(x.get("kind") or ""), **{k: str(x.get(k) or "")[:300] for k in ("quote", "problem", "fix")}}
+             for x in review.get("fixes") or [] if isinstance(x, dict)][:3]
+    critique = " ".join(f'"{x["quote"]}": {x["problem"]} → {x["fix"]}' if x["quote"] else f'{x["problem"]} → {x["fix"]}'
+                        for x in fixes) or str(review.get("critique", ""))
     violations = g.guardrail_violations(draft["post"], {s["url"] for s in state["sources"]}, sources_text(state),
                                         state.get("recent_posts"))
     accent = humanizer.scan(draft["post"])
     overall = drafting.overall_score(scores, accent["score"])
-    report = {"version": draft["version"], "scores": scores, "critique": str(review.get("critique", "")),
+    report = {"version": draft["version"], "scores": scores, "critique": critique, "fixes": fixes,
               "unsupported": [c for c in review.get("unsupported_claims") or [] if isinstance(c, str)],
               "violations": violations, "accent": accent, "overall": overall}
     entry = {**report, "post": draft["post"]}
     summary = (f"v{draft['version']}: overall {overall}/5 (humanizer {accent['score']}/5), {len(violations)} "
                f"guardrail flag{'s' * (len(violations) != 1)}. {report['critique'][:140]}")
-    out = {k: report[k] for k in ("version", "scores", "critique", "unsupported", "violations", "overall")}
+    out = {k: report[k] for k in ("version", "scores", "critique", "fixes", "unsupported", "violations", "overall")}
     return {"edit_report": report, "candidates": {**state.get("candidates", {}), str(draft["version"]): entry}}, summary, out
 
 
+MUST_BE_HIGH = ("grounding", "take", "logic")  # below 4 on any of these is worth the one rewrite
+
+
 def weak(report: dict) -> bool:
-    return drafting.weak_scores(report["scores"], report["accent"]["score"])
+    return drafting.weak_scores(report["scores"], report["accent"]["score"], must_be_high=MUST_BE_HIGH)
 
 
 # --------------------------------------------------------------------------- fact checker
@@ -265,36 +310,6 @@ def fact_checker(state, ctx, cfg):
     return {"fact_report": report, "candidates": cands}, summary, report
 
 
-# --------------------------------------------------------------------------- logic check
-
-LOGIC_KINDS = ("non_sequitur", "guess_as_fact", "unclear_comparison", "contradiction", "vague_ending", "jargon")
-MIN_LOGIC = 4  # logic or plain words below this sends the draft back; the owner's own posts score 4-5
-
-
-def logic_checker(state, ctx, cfg):
-    """Does each step follow, are guesses marked, are comparisons clear, are the words plain. Facts are the
-    fact-checker's job; this reads the argument the way a reader would."""
-    draft = current(state)
-    try:
-        r = llm.call_json(ctx, _tier(cfg, "logic"), "logic_checker", drafting.fill(cfg.prompt, AUTHOR=AUTHOR),
-                          f"# Post\n{draft['post']}", model=cfg.model)
-    except ValueError:
-        r = {}
-    score = lambda k: max(1, min(5, int(r[k]))) if str(r.get(k, "")).isdigit() else 5  # noqa: E731
-    issues = [{"kind": i.get("kind"), **{k: str(i.get(k) or "")[:300] for k in ("quote", "problem", "fix")}}
-              for i in r.get("issues") or [] if isinstance(i, dict) and i.get("kind") in LOGIC_KINDS][:5]
-    logic, plain = score("logic"), score("plain")
-    report = {"version": draft["version"], "logic": logic, "plain": plain, "issues": issues,
-              "chain": [str(c)[:200] for c in r.get("chain") or [] if isinstance(c, str)][:6],
-              "blocking": bool(issues) and min(logic, plain) < MIN_LOGIC}
-    cands = dict(state.get("candidates", {}))
-    if report["blocking"] and (key := str(draft["version"])) in cands:
-        cands[key] = {**cands[key], "logic_issues": [f"logic ({i['kind']}): {i['quote']}" for i in issues]}
-    summary = (f"v{draft['version']}: logic {logic}/5, plain words {plain}/5, {len(issues)} issue{'s' * (len(issues) != 1)}"
-               + (f". {issues[0]['kind']}: \"{issues[0]['quote'][:80]}\"" if issues else ""))
-    return {"logic_report": report, "candidates": cands}, summary, report
-
-
 # --------------------------------------------------------------------------- final check
 
 def final_check(state, ctx, cfg):
@@ -305,32 +320,21 @@ def final_check(state, ctx, cfg):
     f = state.get("fact_report") or {}
     if f.get("version") == v and f.get("blocking"):
         blockers.append(f"{f['blocking']} unsupported claim{'s' * (f['blocking'] != 1)} from the fact check")
-    lg = state.get("logic_report") or {}
-    if lg.get("version") == v and lg.get("blocking"):
-        blockers.append(f"the argument doesn't hold together (logic {lg['logic']}/5, plain words {lg['plain']}/5): "
-                        + "; ".join(f'{i["kind"]} "{i["quote"]}"' for i in lg["issues"][:3]))
     try:
         r = llm.call_json(ctx, _tier(cfg, "check"), "final_check", drafting.fill(cfg.prompt, AUTHOR=AUTHOR),
-                          f"# Post\n{draft['post']}\n\n# Fact sheet\n{fact_sheet(state)}{_lessons(state)}", model=cfg.model)
+                          f"# Post\n{draft['post']}\n\n# Fact sheet\n{fact_sheet(state)}", model=cfg.model)
     except ValueError:
         r = {"passed": True, "blockers": [], "polish": ["the final read returned nothing usable"]}
     if r.get("passed") is False:
         blockers += [str(b)[:300] for b in r.get("blockers") or [] if isinstance(b, str)] or ["the final read didn't pass it"]
     report = {"version": v, "passed": not blockers, "blockers": blockers,
               "polish": [str(p)[:300] for p in r.get("polish") or [] if isinstance(p, str)][:4]}
+    cands = dict(state.get("candidates", {}))
+    if (key := str(v)) in cands:
+        cands[key] = {**cands[key], "passed_final": report["passed"]}
     summary = f"v{v}: " + ("passed" if report["passed"] else f"{len(blockers)} blocker{'s' * (len(blockers) != 1)}: {blockers[0][:120]}")
-    return {"final_report": report}, summary, report
-
-
-# --------------------------------------------------------------------------- one-pager
-
-def onepager(state, ctx, cfg, post: str | None = None):
-    post = post or current(state)["post"]
-    page = llm.call_json(ctx, _tier(cfg, "writer"), "onepager", cfg.prompt,
-                         f"# Post\n{post}\n\n# Fact sheet\n{fact_sheet(state)}\n\n# Source items\n{drafting.sources_block(state['sources'])}",
-                         model=cfg.model)
-    return {"onepager": page, "onepager_for": post}, f"One-pager: \"{page.get('title', '')}\"", {"title": page.get("title")}
+    return {"final_report": report, "candidates": cands}, summary, report
 
 
 RUNNERS = {"scout": scout, "researcher": researcher, "writer": writer, "editor": editor, "fact_checker": fact_checker,
-           "logic_checker": logic_checker, "final_check": final_check, "onepager": onepager}
+           "final_check": final_check}

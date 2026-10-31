@@ -1,8 +1,8 @@
 """LinkedIn agent: two LangGraph workflows.
 
 collect (daily):  fetch → dedupe → score → store
-draft (weekdays): a coordinator and seven specialists (core/orchestrator.py, agents/market_intel/supervisor.py):
-                  load_items → coordinator ⇄ {scout, researcher, writer, editor, fact_checker, final_check, onepager}
+draft (weekdays): a coordinator and six specialists (core/orchestrator.py, agents/market_intel/supervisor.py):
+                  load_items → coordinator ⇄ {scout, researcher, writer, editor, fact_checker, final_check}
                   → finish (pending approval). Every decision and turn is a row in agent_steps: the live timeline.
 """
 import json
@@ -19,7 +19,6 @@ from core.config import CONFIG, load_json
 from core.drafting import (BANNED, HUMANIZER_WEIGHT, MIN_SCORE, SHORT_POST_WORDS, overall_score,  # noqa: F401 (re-exported)
                            style_examples)
 from core.feeds import fetch_all, fetch_article
-from agents.market_intel.render import render_onepager
 from agents.market_intel import specialists, supervisor
 from agents.market_intel.roster import AGENT, AUTHOR, PROMPTS, SPECIALISTS
 
@@ -29,7 +28,6 @@ SCORE_BATCH = 20
 MAX_CHARS = 1300
 MAX_LIST_ITEMS = 8
 WORDS = (60, 200)  # guardrail band; the prompt targets 80–180
-EXAMPLE_MAX_WORDS = 550  # voice examples: short and mid-length posts, not the long essays
 # Moves the agent kept reusing until every post had the same shape. Any of them sends a draft back for a rewrite.
 TEMPLATE_MOVES = [
     (r"\bnext time (?:a|your) vendor\b", "the \"next time a vendor pitches you\" closer"),
@@ -54,7 +52,9 @@ def ctx_of(config: RunnableConfig) -> llm.RunContext:
 
 
 def style_guide() -> str:
-    return (CONFIG / "style" / "guide.md").read_text()
+    """The owner's voice, distilled from their own posts and edits. (config/style/guide.md was distilled from other
+    writers' posts, and its "one sentence per line, end on a comment prompt" advice is what the owner kept editing out.)"""
+    return (PROMPTS / "voice.md").read_text().strip()
 
 
 # --------------------------------------------------------------------------- collect
@@ -131,6 +131,9 @@ class DraftState(TypedDict, total=False):
     recent_angles: list[str]
     top_posts: list[str]  # published posts the owner said did well with readers
     lessons: str          # what the owner's past decisions taught the agent (core/lessons.py)
+    examples: list[dict]  # the owner's rewrites: [{"id", "draft", "post"}], newest first
+    can_skip: bool        # scheduled runs: finish without a draft when no take passes the scout's take test
+    skip: str             # why the scout found nothing worth posting
     learn: bool           # False in evals: don't consume the owner's queue decisions
     learned: dict
     take: str             # the owner's own one-line take, when they asked for a rewrite around it
@@ -144,11 +147,8 @@ class DraftState(TypedDict, total=False):
     drafts: list[dict]    # [{"version", "post"}]
     edit_report: dict
     fact_report: dict
-    logic_report: dict
     final_report: dict
     candidates: dict      # str(version) -> editor + fact-check results, for picking the best version
-    onepager: dict
-    onepager_for: str
     # orchestration
     settings: dict
     seq: int
@@ -198,6 +198,7 @@ def load_items(state: DraftState, config: RunnableConfig) -> DraftState:
             "recent_posts": state["recent_posts"] if "recent_posts" in state else db.approved_posts(3),
             "top_posts": state["top_posts"] if "top_posts" in state else db.top_posts(3),
             "lessons": state["lessons"] if "lessons" in state else lessons.block(db, AGENT, AUTHOR),
+            "examples": state["examples"] if "examples" in state else db.voice_examples(),
             "recent_angles": state["recent_angles"] if "recent_angles" in state else db.recent_angles(5),
             "seq": 1, "work_steps": 0, "calls": {}, "history": [], "drafts": [], "candidates": {}}
 
@@ -233,40 +234,41 @@ weak_scores = drafting.weak_scores
 
 
 def best(state: DraftState) -> dict | None:
-    """The version to save when none passed: fact-checked beats unchecked, then fewest problems, then the weighted
-    score, then the more human one (core.drafting.rank). Same rule as the Substack agent (agents/substack/ranking.py)."""
+    """The version to save: one that passed the final check beats one that didn't, then fact-checked beats unchecked,
+    then fewest problems, then the editor's weighted score, then the more human one (core.drafting.rank). A rewrite
+    that passes but reads worse than the version before it doesn't replace it."""
     on = state["settings"]["fact_checker"].enabled
-    entries = [{**e, "violations": e["violations"] + e.get("fact_issues", []) + e.get("logic_issues", [])
+    entries = [{**e, "violations": e["violations"] + e.get("fact_issues", [])
                 + ([] if e.get("fact_checked") or not on else ["not fact-checked"])}
                for e in state.get("candidates", {}).values()]
-    return max(entries, key=lambda e: (bool(e.get("fact_checked")) or not on, drafting.rank(e))) if entries else None
+    return max(entries, key=lambda e: (bool(e.get("passed_final")), bool(e.get("fact_checked")) or not on, drafting.rank(e),
+                                       e.get("version") or 0)) if entries else None  # a tie goes to the rewrite: it has the fixes
 
 
 def finish_node(persist: bool):
     def finish(state: DraftState, config: RunnableConfig) -> DraftState:
         ctx, seq = ctx_of(config), state["seq"] + 1
         with step(ctx, AGENT, "supervisor", "work", seq, reason=state.get("finish_reason")) as s:
+            if state.get("skip") and not state.get("drafts"):
+                s.summary, s.output = f"No draft today: {state['skip']}"[:300], {"skipped": state["skip"]}
+                return {"post": "", "scores": {}, "violations": [], "unsupported": [], "accent": {"score": None},
+                        "overall": None, "revisions": 0, "passed": False, "seq": seq, "draft_id": None}
             cur, fr = specialists.current(state), state.get("final_report") or {}
-            passed = bool(cur and fr.get("version") == cur["version"] and fr.get("passed"))
-            chosen = state["candidates"].get(str(cur["version"])) if passed else best(state)
+            chosen = best(state)
+            passed = bool(chosen and chosen.get("passed_final"))  # a failed save shows the latest final check's blockers
             if not chosen:  # the editor never ran (step limit): score what there is
                 chosen = {"post": cur["post"], "scores": {}, "critique": "", "unsupported": [], "violations": [],
                           "accent": humanizer.scan(cur["post"]), "version": cur["version"]}
                 chosen["overall"] = drafting.overall_score({}, chosen["accent"]["score"])
-            update = {}
-            if persist and state.get("onepager_for") != chosen["post"]:  # the one-pager must describe the saved version
-                # (evals don't save or score a one-pager, so they skip it)
-                update, _, _ = specialists.onepager(state, ctx, state["settings"]["onepager"], post=chosen["post"])
-            page = update.get("onepager") or state.get("onepager") or {}
             out = {"post": chosen["post"], "scores": chosen["scores"], "critique": chosen.get("critique", ""),
                    "violations": chosen["violations"], "unsupported": chosen.get("unsupported", []), "accent": chosen["accent"],
-                   "overall": chosen["overall"], "revisions": len(state["drafts"]) - 1, "passed": passed, "seq": seq, **update}
+                   "overall": chosen["overall"], "revisions": len(state["drafts"]) - 1, "passed": passed, "seq": seq}
             draft_id = None
             if persist:
                 sources = [{"url": x["url"], "title": x["title"], "source": x["source"], "origin": x.get("origin", "rss")}
                            for x in state["sources"]]
                 draft = {"week": state["week"], "angle": state["angle"], "post_md": chosen["post"],
-                         "onepager_html": render_onepager(page, sources, state["week"], AUTHOR),
+                         "onepager_html": "",  # posts only since 2026-10-30; old drafts keep their page
                          "sources": sources, "revisions": out["revisions"],
                          "judge_scores": {**chosen["scores"], "violations": chosen["violations"], "humanizer": chosen["accent"]["score"],
                                           "critique": out["critique"], "unsupported_claims": out["unsupported"],
@@ -286,5 +288,5 @@ def finish_node(persist: bool):
 
 
 def build_draft(persist: bool = True):
-    """persist=False (evals): nothing is saved, and the finish step doesn't write a one-pager for the chosen post."""
+    """persist=False (evals): nothing is saved."""
     return orchestrator.build(supervisor.TEAM, DraftState, specialists.RUNNERS, load_items, finish_node(persist))

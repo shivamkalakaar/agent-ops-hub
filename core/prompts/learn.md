@@ -12,6 +12,9 @@ Write lessons that are:
 - about {{AUTHOR}}'s preferences (voice, structure, hooks, endings, topics, length, how facts are framed), not about one story's facts.
 - short: one sentence, at most 25 words.
 - backed by the decisions you were given. Don't invent preferences.
+- never a request for something only {{AUTHOR}} can supply: a person they met, a question they get asked, their own experience. When their edit adds one, that's their material, not a pattern for the agent to imitate; at most, note that the draft should leave room for it.
+- consistent with each other. Before you add one, check it against every current lesson: two lessons that ask for different endings, openings or levels of hedging can't both be followed, so revise the older one into a single rule (or retire it) instead of adding a rival.
+- general only when the evidence is. One edit to one post shows what {{AUTHOR}} wanted there; phrase the lesson as narrowly as that ("when a post compares two numbers, ...") unless several decisions agree.
 
 Merge with the current lessons instead of piling up near-duplicates:
 - `confirm` a current lesson's id when a new decision backs it up.

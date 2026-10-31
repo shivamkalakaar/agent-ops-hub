@@ -5,7 +5,7 @@ Verdicts:
 - hedge: roughly right but stated more strongly than the source (a report stated as fact, an estimate stated as exact).
 - unsupported: not in the sources, or contradicts them.
 
-The author's opinions, predictions and advice ("I'd…", "my guess…") are not factual claims; skip them.
+The author's opinions, predictions and advice ("I'd…", "my guess…") are not factual claims; skip them. So are his readings and reactions ("The detail I keep rereading", "I'd like to see that year-long run", "that's a big gap for the same weights"): skip a sentence unless it adds a number, a name, a date or an event the sources would have to contain.
 
 For every hedge or unsupported claim, give a `fix`: the corrected wording from the sources, or "drop it".
 

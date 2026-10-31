@@ -113,11 +113,15 @@ def summarize(rows: list[dict]) -> dict:
     return {"version": version(), "cases": len(rows), "judge_mean": round(mean(j["overall"] for j in judged), 2),
             "per_dimension": {k: round(mean(j["scores"][k] for j in judged), 2) for k in DIMENSIONS},
             "flagged": [r["case"] for r in rows if r["judge"]["flags"]],
+            **({"kept": round(mean(k), 2)} if (k := [r["kept"] for r in rows if r.get("kept") is not None]) else {}),
             **({"vs_shivam": round(mean((c["score"] + 1) / 2 for c in compared), 2), "vs_shivam_cases": len(compared),
                 "results": {k: sum(c["result"] == k for c in compared) for k in ("win", "tie", "loss")}} if compared else {})}
 
 
-TOLERANCE, VS_SHIVAM_DROP, MAX_FLAGGED = 0.35, 0.25, 1
+TOLERANCE, VS_SHIVAM_DROP, KEPT_DROP, MAX_FLAGGED = 0.35, 0.25, 0.1, 1
+# An absolute floor too: the first baseline sat at 0.00 (three losses), where a relative drop can never fail.
+# 0.25 = on average a tie on half the cases, a loss on the rest.
+MIN_VS_SHIVAM = 0.25
 
 
 def gate(summary: dict, baseline: dict | None) -> list[str]:
@@ -129,12 +133,16 @@ def gate(summary: dict, baseline: dict | None) -> list[str]:
     if len(summary["flagged"]) > allowed:
         reasons.append(f"{len(summary['flagged'])} cases break a hard rule or aren't grounded (baseline allows {allowed}): "
                        f"{', '.join(summary['flagged'])}")
+    if "vs_shivam" in summary and summary["vs_shivam"] < MIN_VS_SHIVAM:
+        reasons.append(f"preferred over Shivam's post {summary['vs_shivam']:.2f} of the time; the floor is {MIN_VS_SHIVAM:.2f}")
     if not same:
         return reasons
     if summary["judge_mean"] < baseline["judge_mean"] - TOLERANCE:
         reasons.append(f"judge mean {summary['judge_mean']} is below baseline {baseline['judge_mean']} - {TOLERANCE}")
     if "vs_shivam" in summary and "vs_shivam" in baseline and summary["vs_shivam"] < baseline["vs_shivam"] - VS_SHIVAM_DROP:
         reasons.append(f"preferred over Shivam's post {summary['vs_shivam']:.2f} of the time, baseline {baseline['vs_shivam']:.2f}")
+    if "kept" in summary and "kept" in baseline and summary["kept"] < baseline["kept"] - KEPT_DROP:
+        reasons.append(f"Shivam would keep {summary['kept']:.0%} of the drafts, baseline {baseline['kept']:.0%}")
     return reasons
 
 

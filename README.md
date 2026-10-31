@@ -4,7 +4,7 @@
 
 Agents run like production systems: **budget-capped, traced, evaluated and human-approved**, for about **$3–4 a month** (the LinkedIn agent alone is ~$1).
 
-Two agents run here today. Agent #1 is a **market-intelligence agent**. Every day it collects AI-industry news from two places: 12 RSS feeds, and the stories in my daily AI Stack Brief email (a separate agent). Every weekday it drafts **one short LinkedIn post** plus a sourced one-pager (a scheduled run skips if 2 drafts are already waiting for approval). Nothing goes out until I approve it in the dashboard. Then one click publishes it to my LinkedIn profile as the next post in the **AI Musing** series.
+Two agents run here today. Agent #1 is a **market-intelligence agent**. Every day it collects AI-industry news from two places: 12 RSS feeds, and the stories in my daily AI Stack Brief email (a separate agent). Every weekday it drafts **one short LinkedIn post** (a scheduled run skips if 2 drafts are already waiting for approval). Nothing goes out until I approve it in the dashboard. Then one click publishes it to my LinkedIn profile as the next post in the **AI Musing** series.
 
 Agent #2 is a **Substack newsroom**: a super agent that manages six specialists (research, writer, editor, fact-checker, illustrator, final check). Twice a week it turns the same news into one 800–1,200 word post with a cover, inline images and a chart. Substack has no API, so an approved draft is copied into the editor with one click. One dashboard page shows every agent live and lets me switch specialists on or off, change their models and edit their prompts.
 
@@ -15,7 +15,7 @@ Agent #2 is a **Substack newsroom**: a super agent that manages six specialists 
 | Observability | Langfuse | One trace per run, per-node cost and latency, every score attached to the trace |
 | Runtime | GitHub Actions cron | Free, no server to babysit |
 | State + auth | Supabase Postgres + RLS | Public read-only ops data; drafts and the LinkedIn token readable only by the owner |
-| Dashboard | Next.js on Vercel | Ops overview, run drill-down, approval queue, LinkedIn publishing, public one-pagers |
+| Dashboard | Next.js on Vercel | Ops overview, run drill-down, approval queue, LinkedIn publishing, public one-pagers (older posts) |
 
 ## The workflows
 
@@ -26,8 +26,8 @@ daily   RSS feeds ─┐
 
 weekday stories since the last draft, minus ones already used (15 from the brief + 10 from RSS) → pick ONE angle → fetch the full articles
         → write post → critic + humanizer + guardrails ─┬─ rewrite ↺ (max 2)
-                                                        └─ keep the best version → one-pager → pending
-        → human approval → Publish → LinkedIn post "AI Musing #N" + one-pager link as the first comment
+                                                        └─ keep the best version → pending
+        → human approval → Publish → LinkedIn post "AI Musing #N"
 
 Wed+Sat stories since the last post (brief-first) + unexpanded musings
         → super agent ⇄ research · writer · editor · fact-checker · illustrator · final check
@@ -109,7 +109,7 @@ uv run python -m agents.substack export <id>      # out/substack/<slot>-<id>.md 
 uv run python -m evals.run_evals --agent substack --cases 1
 ```
 
-**Writing style:** paste LinkedIn posts you admire into `config/style/examples.md`, separated by `---`. The file is git-ignored because the posts belong to their authors. Posts under 250 words are used as examples to imitate; longer essays only inform tone. Run `uv run python -m agents.market_intel style-guide` to distill them into `config/style/guide.md`.
+**Writing style:** the LinkedIn writer and editor work from `agents/market_intel/prompts/voice.md` (how Shivam writes, distilled from his published posts and edits) and see his rewrites as before/after pairs: in production the latest from the database, in evals the frozen `agents/market_intel/voice_examples.json`. The scout tests each take against `prompts/views.md` (his recurring positions). `config/style/examples.md` (git-ignored posts by other writers) and `guide.md` now only feed the Substack agent's long-form guide.
 
 ## Deploy
 

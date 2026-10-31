@@ -179,7 +179,7 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
     setBusy(false);
     setPubMsg(res.ok
       ? `Published as ${SERIES} #${body.seriesNo}.${body.tagged?.length ? ` Tagged ${body.tagged.join(", ")}.` : ""}`
-        + `${body.tagsFailed ? " LinkedIn rejected the tags, so it went out untagged: check those company IDs." : ""} First comment ${body.comment}.`
+        + `${body.tagsFailed ? " LinkedIn rejected the tags, so it went out untagged: check those company IDs." : ""}${body.comment === "none" ? "" : ` First comment ${body.comment}.`}`
       : `Failed: ${body.error}`);
     onChange();
   };
@@ -233,7 +233,7 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
                       className="rounded-lg border border-line px-4 py-2 text-sm disabled:opacity-50">Publish now</button>
                   </>
                 )}
-                <button onClick={() => navigator.clipboard.writeText(`Sources and the full breakdown: ${onepagerUrl}`)} className="rounded-lg border border-line px-4 py-2 text-sm">Copy first comment</button>
+                {draft.onepager_html && <button onClick={() => navigator.clipboard.writeText(`Sources and the full breakdown: ${onepagerUrl}`)} className="rounded-lg border border-line px-4 py-2 text-sm">Copy first comment</button>}
                 <button onClick={() => window.confirm("Write a Substack post that expands this one? It takes about 5 minutes and costs about $0.25.") && onExpand(draft.id)}
                   className="rounded-lg border border-line px-4 py-2 text-sm">Expand to Substack</button>
               </>
@@ -250,14 +250,14 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
                     className="w-full rounded-lg border border-line bg-bg p-2 outline-none focus:border-ink" />
                   <button disabled={busy || !POST_URL.test(liveUrl.trim())} onClick={markLive}
                     className="rounded-lg bg-ink px-4 py-1.5 font-medium text-bg disabled:opacity-50">Mark as live</button>
-                  <p className="text-xs text-muted">Copy first comment adds the one-pager link; LinkedIn posts it under your post when you paste it as a comment.</p>
+                  {draft.onepager_html && <p className="text-xs text-muted">Copy first comment adds the one-pager link; LinkedIn posts it under your post when you paste it as a comment.</p>}
                 </div>
               </details>
             )}
             {draft.linkedin_url && <Performance draft={draft} onChange={onChange} />}
-            <button onClick={() => setPreview(!preview)} className="rounded-lg px-3 py-2 text-sm text-ink-2 hover:underline">
+            {draft.onepager_html && <button onClick={() => setPreview(!preview)} className="rounded-lg px-3 py-2 text-sm text-ink-2 hover:underline">
               {preview ? "Hide" : "Preview"} one-pager
-            </button>
+            </button>}
           </div>
         </div>
 

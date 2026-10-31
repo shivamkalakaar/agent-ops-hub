@@ -44,18 +44,15 @@ def _li_guardrails(state) -> list[str]:
 def _li_flags(name: str, state, out: dict) -> tuple[list[str], list[str]]:
     """(flags, notes) from a reviewer's report: flags are what would send the draft back."""
     from agents.market_intel import specialists
-    if name == "editor":
+    if name == "editor":  # weak scores send the draft back with its fixes; the fixes alone are notes
         r = out["edit_report"]
-        return ([f"weak scores {json.dumps(r['scores'])}, overall {r['overall']}"] if specialists.weak(r) else []) + \
-            [f"unsupported: {c}" for c in r["unsupported"]], [r["critique"][:200]]
+        fixes = [f"{x['kind']}: {x['quote']} ({x['problem']})" for x in r.get("fixes") or []]
+        return ([f"weak scores {json.dumps(r['scores'])}, overall {r['overall']}"] + fixes if specialists.weak(r) else []) + \
+            [f"unsupported: {c}" for c in r["unsupported"]], [] if specialists.weak(r) else fixes
     if name == "fact_checker":
         cl = out["fact_report"]["claims"]
         return [f"unsupported: {c['claim']}" for c in cl if c["verdict"] == "unsupported"], \
             [f"hedge: {c['claim']}" for c in cl if c["verdict"] == "hedge"]
-    if name == "logic_checker":
-        r = out["logic_report"]
-        issues = [f"{i['kind']}: {i['quote']}" for i in r["issues"]]
-        return (issues if r["blocking"] else []), [f"logic {r['logic']}/5, plain {r['plain']}/5"] + ([] if r["blocking"] else issues)
     if name == "final_check":  # its own read only: the guardrails are scored separately and no upstream reports are passed
         r, own = out["final_report"], set(_li_guardrails(state))
         return [b for b in r["blockers"] if b not in own], r["polish"]
@@ -66,7 +63,7 @@ def market_intel() -> dict:
     from agents.market_intel import specialists
     from agents.market_intel.roster import PROMPTS, SPECIALISTS
     return {"name": "LinkedIn agent", "state": _li_state, "guardrails": _li_guardrails, "flags": _li_flags,
-            "runners": {n: specialists.RUNNERS[n] for n in ("editor", "fact_checker", "logic_checker", "final_check")},
+            "runners": {n: specialists.RUNNERS[n] for n in ("editor", "fact_checker", "final_check")},
             "settings": settings.from_files(SPECIALISTS, PROMPTS)}
 
 

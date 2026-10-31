@@ -103,16 +103,18 @@ def test_draft_items_skip_a_reused_url_and_duplicate_stories():
 
 
 def test_summary_and_gate_tolerate_one_noisy_case():
-    def row(case, overall, flags=(), score=-1.0):
+    def row(case, overall, flags=(), score=0.0):
         return {"case": case, "judge": {"overall": overall, "scores": dict.fromkeys(R.DIMENSIONS, round(overall)), "flags": list(flags)},
                 "compare": {"score": score, "result": {1.0: "win", -1.0: "loss"}.get(score, "tie")}}
-    base = R.summarize([row("a", 3.5), row("b", 3.5), row("c", 3.5, score=0.0), row("d", 3.5)])
-    assert (base["judge_mean"], base["vs_shivam"], base["results"]) == (3.5, 0.12, {"win": 0, "tie": 1, "loss": 3})
+    base = R.summarize([row("a", 3.5), row("b", 3.5), row("c", 3.5, score=-1.0), row("d", 3.5)])
+    assert (base["judge_mean"], base["vs_shivam"], base["results"]) == (3.5, 0.38, {"win": 0, "tie": 3, "loss": 1})
     one_bad = R.summarize([row("a", 3.5), row("b", 3.5), row("c", 2.5, ["link in the post body"]), row("d", 3.5)])
     assert R.gate(one_bad, base) == []
     worse = R.summarize([row("a", 3.0, ["x"]), row("b", 3.0, ["y"]), row("c", 3.0), row("d", 3.0)])
     assert len(R.gate(worse, base)) == 2  # two flagged cases, and the mean dropped more than the tolerance
     assert R.gate(R.summarize([row(c, 2.0) for c in "abcd"]), {**base, "version": "older-judge"}) == []  # different yardstick: no comparison
+    losses = R.summarize([row(c, 3.5, score=-1.0) for c in "abcd"])
+    assert R.gate(losses, losses) == ["preferred over Shivam's post 0.00 of the time; the floor is 0.25"]  # even when the baseline is as bad
 
 
 def test_an_empty_compare_reply_is_a_tie_not_a_crash(monkeypatch, ctx):

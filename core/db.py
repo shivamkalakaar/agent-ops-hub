@@ -197,6 +197,14 @@ class DB:
                         " order by approved_at desc limit %s", (limit,))
         return [r["post"] for r in rows]
 
+    def voice_examples(self, limit: int = 8) -> list[dict]:
+        """Published LinkedIn posts the owner rewrote before posting, newest first: the agent's draft and what they
+        actually posted, so the writer learns from the edits themselves."""
+        rows = self.all("select id, post_md, edited_post_md from drafts where status='approved' and edited_post_md is not null"
+                        " order by approved_at desc limit %s", (limit * 2,))
+        return [{"id": r["id"], "draft": r["post_md"].strip(), "post": r["edited_post_md"].strip()} for r in rows
+                if r["edited_post_md"].strip() and r["edited_post_md"].strip() != r["post_md"].strip()][:limit]
+
     def last_draft_at(self) -> str | None:
         row = self.one("select max(created_at) as t from drafts")
         return str(row["t"]) if row and row["t"] else None
