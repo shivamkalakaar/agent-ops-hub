@@ -686,3 +686,47 @@ def test_a_passing_rewrite_that_reads_worse_doesnt_replace_the_better_version():
     assert g.best({"settings": cfg, "candidates": {"1": v(1, 4.6, True), "2": v(2, 4.1, True)}})["version"] == 1
     assert g.best({"settings": cfg, "candidates": {"1": v(1, 4.6, False), "2": v(2, 4.1, True)}})["version"] == 2
     assert g.best({"settings": cfg, "candidates": {"1": v(1, 4.3, True), "2": v(2, 4.3, True)}})["version"] == 2  # tie: the fixed one
+
+
+def test_scout_rotates_post_shapes_and_the_writer_gets_the_chosen_one():
+    from agents.market_intel import specialists
+    from core import settings
+    from core.db import connect
+    from agents.market_intel.roster import PROMPTS, SPECIALISTS
+    good = {"kind": "reaction", "take": "I'd like to see it hold up for a year", "detail": "The arm is strong enough to hurt itself"}
+    llm.FAKE_RESPONSES["scout"] = lambda m: json.dumps({"candidates": [
+        {**good, "item_ids": [0], "angle": "a", "format": "one_pattern"},
+        {**good, "item_ids": [1], "angle": "b", "format": "the_hard_part"}], "pick": 0})
+    cfg = settings.from_files(SPECIALISTS, PROMPTS)["scout"]
+    with connect() as db:
+        ctx = llm.RunContext(db=db, run_id=db.start_run("market_intel", "draft", "t"))
+        items = [dict(i, importance=5) for i in ITEMS]
+        fresh, _, _ = specialists.scout({"items": items, "recent_formats": ["the_hard_part"]}, ctx, cfg)
+        used, _, out = specialists.scout({"items": items, "recent_formats": ["one_pattern"]}, ctx, cfg)
+    assert fresh["angle"]["format"] == "one_pattern"
+    assert used["angle"]["format"] is None  # just used: the writer goes without a shape rather than repeat it
+    assert "the_hard_part" in specialists.FORMATS and specialists.format_line("the_hard_part").startswith("the_hard_part:")
+
+
+def test_the_image_only_shows_numbers_the_post_has_and_is_saved_with_the_draft(monkeypatch):
+    from agents.market_intel import image
+    from core import storage
+    from core.db import connect
+    post = "Eka says its robot picks about 1,500 objects an hour. A human picks about 600.\n\n#ai #robotics"
+    chart = {"kind": "chart", "title": "Picks per hour", "series": [{"label": "Robot", "value": 1500}, {"label": "Human", "value": 600}]}
+    assert image.checked(chart, post)["kind"] == "chart"
+    assert image.checked({**chart, "series": [{"label": "Robot", "value": 1500}, {"label": "Human", "value": 700}]}, post) is None
+    assert image.checked({"kind": "card", "headline": "Twice as fast at 3,000 an hour"}, post) is None  # a number not in the post
+    assert image.fallback(post)["headline"].startswith("Eka says")
+    assert image.render(image.checked(chart, post))[:8] == b"\x89PNG\r\n\x1a\n" and image.card_png("Hello")[:4] == b"\x89PNG"
+
+    saved = {}
+    monkeypatch.setattr(storage, "usable", lambda: True)
+    monkeypatch.setattr(storage, "put", lambda path, data, ct: saved.setdefault("url", f"https://img.example/{path}"))
+    llm.FAKE_RESPONSES["image"] = lambda m: json.dumps({"kind": "card", "headline": "An open model at a tenth of the price",
+                                                         "sub": "", "alt": "card"})
+    assert cli.run("collect") == 0 and cli.run("draft") == 0
+    with connect() as db:
+        d = db.one("select image, week from drafts")
+    img = d["image"] if isinstance(d["image"], dict) else json.loads(d["image"])
+    assert img["url"] == saved["url"] and img["url"].endswith(f"linkedin/{d['week']}/image.png") and img["kind"] == "card"

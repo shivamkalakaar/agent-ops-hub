@@ -19,7 +19,7 @@ from core.config import CONFIG, load_json
 from core.drafting import (BANNED, HUMANIZER_WEIGHT, MIN_SCORE, SHORT_POST_WORDS, overall_score,  # noqa: F401 (re-exported)
                            style_examples)
 from core.feeds import fetch_all, fetch_article
-from agents.market_intel import specialists, supervisor
+from agents.market_intel import image, specialists, supervisor
 from agents.market_intel.roster import AGENT, AUTHOR, PROMPTS, SPECIALISTS
 
 prompt = drafting.prompt_loader(PROMPTS)
@@ -129,6 +129,7 @@ class DraftState(TypedDict, total=False):
     items: list[dict]
     recent_posts: list[str]
     recent_angles: list[str]
+    recent_formats: list[str]  # post shapes of the last two drafts, so the scout rotates
     top_posts: list[str]  # published posts the owner said did well with readers
     lessons: str          # what the owner's past decisions taught the agent (core/lessons.py)
     examples: list[dict]  # the owner's rewrites: [{"id", "draft", "post"}], newest first
@@ -200,6 +201,7 @@ def load_items(state: DraftState, config: RunnableConfig) -> DraftState:
             "lessons": state["lessons"] if "lessons" in state else lessons.block(db, AGENT, AUTHOR),
             "examples": state["examples"] if "examples" in state else db.voice_examples(),
             "recent_angles": state["recent_angles"] if "recent_angles" in state else db.recent_angles(5),
+            "recent_formats": state["recent_formats"] if "recent_formats" in state else db.recent_formats(2),
             "seq": 1, "work_steps": 0, "calls": {}, "history": [], "drafts": [], "candidates": {}}
 
 
@@ -269,6 +271,7 @@ def finish_node(persist: bool):
                            for x in state["sources"]]
                 draft = {"week": state["week"], "angle": state["angle"], "post_md": chosen["post"],
                          "onepager_html": "",  # posts only since 2026-10-30; old drafts keep their page
+                         "image": image.make(ctx, chosen["post"], specialists.fact_sheet(state), state["week"]),
                          "sources": sources, "revisions": out["revisions"],
                          "judge_scores": {**chosen["scores"], "violations": chosen["violations"], "humanizer": chosen["accent"]["score"],
                                           "critique": out["critique"], "unsupported_claims": out["unsupported"],

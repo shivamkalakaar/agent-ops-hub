@@ -98,7 +98,7 @@ export default function Queue() {
         </div>
       )}
       {msg && <p className="text-sm text-ink-2">{msg}</p>}
-      {tab === "linkedin" && drafts.length === 0 && <Card><p className="text-ink-2">No drafts yet. A new one arrives every weekday morning (skipped while 2 are waiting).</p></Card>}
+      {tab === "linkedin" && drafts.length === 0 && <Card><p className="text-ink-2">No drafts yet. A new one arrives every morning (skipped while 2 are waiting).</p></Card>}
       {tab === "linkedin" && drafts.map((d) => <DraftCard key={d.id} draft={d} onChange={load} token={session.access_token} canPublish={!!li?.connected}
         nextSeries={Math.max(0, ...drafts.map((x) => x.series_no ?? 0)) + 1} onExpand={expand} />)}
     </div>
@@ -204,6 +204,16 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
         <div>
           <textarea value={text} onChange={(e) => setText(e.target.value)} disabled={!pending} rows={14}
             className="w-full rounded-lg border border-line bg-bg p-3 text-[15px] leading-relaxed outline-none focus:border-ink" />
+          {draft.image?.url && (
+            <figure className="mt-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={draft.image.url} alt={draft.image.alt} className="w-full max-w-md rounded-lg border border-line" />
+              <figcaption className="mt-1 text-xs text-muted">
+                {draft.image.kind === "chart" ? "Chart" : "Card"} drawn from the post&apos;s own numbers; Publish now posts it with the text.{" "}
+                <a href={draft.image.url} download className="underline underline-offset-4">Download</a> to post it by hand.
+              </figcaption>
+            </figure>
+          )}
           {pending && <p className="mt-1 text-xs text-muted">Make your edits here before approving: what you approve is exactly what gets published, and changing a post once it&apos;s live may cost reach.</p>}
           <div className={`mt-1 text-xs num ${text.length > MAX_CHARS ? "text-ink font-semibold" : "text-muted"}`}>
             {text.length} / {MAX_CHARS} characters · {words} words

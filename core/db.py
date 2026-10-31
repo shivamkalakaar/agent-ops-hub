@@ -161,19 +161,19 @@ class DB:
     def insert_draft(self, d: dict, run_id: str) -> str:
         draft_id = new_id()
         self.execute(
-            "insert into drafts (id, week, angle, post_md, onepager_html, sources, judge_scores, revisions, status, created_at, run_id)"
-            " values (%s,%s,%s,%s,%s,%s,%s,%s,'pending',%s,%s)",
+            "insert into drafts (id, week, angle, post_md, onepager_html, sources, judge_scores, revisions, status, created_at, run_id,"
+            " image) values (%s,%s,%s,%s,%s,%s,%s,%s,'pending',%s,%s,%s)",
             (draft_id, d["week"], self.json(d["angle"]), d["post_md"], d["onepager_html"], self.json(d["sources"]),
-             self.json(d["judge_scores"]), d["revisions"], now(), run_id))
+             self.json(d["judge_scores"]), d["revisions"], now(), run_id, (self.json(d["image"]) if d.get("image") else None)))
         return draft_id
 
     def replace_draft(self, draft_id: str, d: dict, run_id: str):
         """A rewrite of a saved draft (around the owner's take): new text and scores, back to pending."""
         self.execute(
-            "update drafts set angle=%s, post_md=%s, onepager_html=%s, sources=%s, judge_scores=%s, revisions=%s,"
+            "update drafts set angle=%s, post_md=%s, onepager_html=%s, sources=%s, judge_scores=%s, revisions=%s, image=%s,"
             " status='pending', edited_post_md=null, feedback=null, approved_at=null, run_id=%s where id=%s",
             (self.json(d["angle"]), d["post_md"], d["onepager_html"], self.json(d["sources"]), self.json(d["judge_scores"]),
-             d["revisions"], run_id, draft_id))
+             d["revisions"], (self.json(d["image"]) if d.get("image") else None), run_id, draft_id))
 
     def week_taken(self, week: str) -> bool:
         return self.one("select 1 as x from drafts where week=%s", (week,)) is not None
@@ -221,6 +221,11 @@ class DB:
         """Angles of the latest drafts in any status, so a pending or rejected topic isn't picked again."""
         rows = self.all("select angle from drafts order by created_at desc limit %s", (limit,))
         return [r["angle"].get("angle", "") for r in rows if isinstance(r["angle"], dict)]
+
+    def recent_formats(self, limit: int = 2) -> list[str]:
+        """Post shapes (agents/market_intel/prompts/formats.md) of the latest LinkedIn drafts, newest first."""
+        rows = self.all("select angle from drafts order by created_at desc limit %s", (limit,))
+        return [r["angle"].get("format", "") for r in rows if isinstance(r["angle"], dict) and r["angle"].get("format")]
 
     def search_items(self, terms: list[str], since_iso: str, limit: int = 8) -> list[dict]:
         """Recent items whose title or summary mentions any of the terms (research follow-ups; no paid web search)."""
