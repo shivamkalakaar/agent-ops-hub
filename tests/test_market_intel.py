@@ -730,3 +730,16 @@ def test_the_image_only_shows_numbers_the_post_has_and_is_saved_with_the_draft(m
         d = db.one("select image, week from drafts")
     img = d["image"] if isinstance(d["image"], dict) else json.loads(d["image"])
     assert img["url"] == saved["url"] and img["url"].endswith(f"linkedin/{d['week']}/image.png") and img["kind"] == "card"
+
+
+def test_no_lesson_may_ask_for_invented_experience_and_dollar_charts_read_right():
+    from core import lessons
+    from core.db import connect
+    with connect() as db:
+        lessons.apply(db, "market_intel", {"add": [
+            {"lesson": "Convert third-person expert anecdotes into Shivam's first-person experience.", "from": []},
+            {"lesson": "Name the company behind each model the first time it appears.", "from": []}]}, set())
+        assert [r["lesson"] for r in lessons.active(db, "market_intel")] == ["Name the company behind each model the first time it appears."]
+    from agents.market_intel import image
+    png = image.render({"kind": "chart", "title": "t", "unit": "$", "series": [{"label": "a", "value": 7.44}, {"label": "b", "value": 27}]})
+    assert png[:4] == b"\x89PNG"
