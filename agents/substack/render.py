@@ -119,6 +119,7 @@ def chart_png(spec: dict) -> bytes:
     peak = max(abs(s["value"]) for s in series) or 1
     row = (bottom - top) / len(series)
     unit = str(spec.get("unit", ""))[:12]
+    prefix, unit = (unit, "") if unit in ("$", "€", "£") else ("", unit)  # currency goes before the number: $7.44
     for n, s in enumerate(series):
         y = top + n * row
         bh = min(row * 0.62, 70)
@@ -127,7 +128,7 @@ def chart_png(spec: dict) -> bytes:
         x1 = bar_x0 + (bar_x1 - bar_x0) * abs(s["value"]) / peak
         d.rounded_rectangle((bar_x0, cy, max(x1, bar_x0 + 4), cy + bh), radius=6, fill=(194, 65, 12) if n == 0 else (120, 113, 108))
         value = f"{s['value']:,}".rstrip("0").rstrip(".") if isinstance(s["value"], float) else f"{s['value']:,}"
-        d.text((x1 + 16, cy + bh / 2), f"{value}{unit}", fill=(28, 25, 23), font=font(32), anchor="lm")
+        d.text((x1 + 16, cy + bh / 2), f"{prefix}{value}{unit}", fill=(28, 25, 23), font=font(32), anchor="lm")
     if src := str(spec.get("source", ""))[:120]:
         d.text((pad, H - pad), f"Source: {src}", fill=(120, 113, 108), font=font(26), anchor="lm")
     out = io.BytesIO()

@@ -8,6 +8,7 @@ active; the writer and the critic read them on every draft, and the owner can sw
 """
 import difflib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -97,13 +98,19 @@ def learn(db, ctx, agent: str, author: str) -> dict:
         return {"read": 0, "error": str(ex)[:200]}
 
 
+# Lessons that would have the agent invent the owner's own experience. learn.md forbids them, but the model wrote
+# one anyway (2026-10-31: "convert third-person expert anecdotes into Shivam's first-person experience").
+INVENTED_EXPERIENCE = re.compile(r"first[- ]person|personal (?:anecdote|experience|story)|someone (?:he|she|they) met"
+                                 r"|people (?:he|she|they) (?:met|talk)|i get asked|his own experience", re.I)
+
+
 def apply(db, agent: str, ops: dict, draft_ids: set[str], strong: set[str] | None = None) -> dict:
     """strong: drafts readers responded well to; lessons drawn from them start with extra evidence."""
     known = {l["id"]: l for l in active(db, agent)}
     added = confirmed = revised = retired = 0
     for a in (ops.get("add") or [])[:5]:
         text = str(a.get("lesson") or "").strip()
-        if 8 <= len(text) <= 300:
+        if 8 <= len(text) <= 300 and not INVENTED_EXPERIENCE.search(text):
             src = [i for i in a.get("from") or [] if i in draft_ids]
             weight = max(1, len(src)) + 2 * len(set(src) & (strong or set()))  # readers' response counts for more
             db.execute("insert into lessons (id, agent, lesson, kind, evidence, draft_ids, active, created_at, updated_at)"
@@ -117,7 +124,7 @@ def apply(db, agent: str, ops: dict, draft_ids: set[str], strong: set[str] | Non
             confirmed += 1
     for r in ops.get("revise") or []:
         text = str(r.get("lesson") or "").strip()
-        if r.get("id") in known and 8 <= len(text) <= 300:
+        if r.get("id") in known and 8 <= len(text) <= 300 and not INVENTED_EXPERIENCE.search(text):
             db.execute("update lessons set lesson=%s, updated_at=%s where id=%s", (text, now(), r["id"]))
             revised += 1
     for i in ops.get("retire") or []:
