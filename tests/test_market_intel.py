@@ -710,23 +710,22 @@ def test_scout_rotates_post_shapes_and_the_writer_gets_the_chosen_one():
 
 def test_the_image_only_shows_numbers_the_post_has_and_is_saved_with_the_draft(monkeypatch):
     from agents.market_intel import image
-    from core import storage
+    from core import images, storage
     from core.db import connect
     post = "Eka says its robot picks about 1,500 objects an hour. A human picks about 600.\n\n#ai #robotics"
-    chart = {"kind": "chart", "title": "Picks per hour", "series": [{"label": "Robot", "value": 1500}, {"label": "Human", "value": 600}]}
-    assert image.checked(chart, post)["kind"] == "chart"
-    assert image.checked({**chart, "series": [{"label": "Robot", "value": 1500}, {"label": "Human", "value": 700}]}, post) is None
-    assert image.checked({"kind": "card", "headline": "Twice as fast at 3,000 an hour"}, post) is None  # a number not in the post
-    assert image.fallback(post)["headline"].startswith("Eka says")
-    assert image.render(image.checked(chart, post))[:8] == b"\x89PNG\r\n\x1a\n" and image.card_png("Hello")[:4] == b"\x89PNG"
+    plan = {"scene": "A robot arm and a person at two picking bins.", "caption": "1,500 picks an hour against 600", "alt": "sketch"}
+    assert image.checked(plan, post)["caption"] == "1,500 picks an hour against 600"
+    assert image.checked({**plan, "caption": "Twice as fast at 3,000 an hour"}, post) is None  # a number not in the post
+    assert image.fallback(post)["caption"].startswith("Eka says") and not image.fallback(post)["scene"]
+    assert image.sketch_png(images.FAKE_PNG, "Hello")[:4] == b"\x89PNG" and image.card_png("Hello")[:4] == b"\x89PNG"
 
     saved = {}
     monkeypatch.setattr(storage, "usable", lambda: True)
     monkeypatch.setattr(storage, "put", lambda path, data, ct: saved.setdefault("url", f"https://img.example/{path}"))
-    llm.FAKE_RESPONSES["image"] = lambda m: json.dumps({"kind": "card", "headline": "An open model at a tenth of the price",
-                                                         "sub": "", "alt": "card"})
+    llm.FAKE_RESPONSES["image"] = lambda m: json.dumps({"scene": "Two price tags on a workbench.",
+                                                         "caption": "An open model at a tenth of the price", "alt": "sketch"})
     assert cli.run("collect") == 0 and cli.run("draft") == 0
     with connect() as db:
         d = db.one("select image, week from drafts")
     img = d["image"] if isinstance(d["image"], dict) else json.loads(d["image"])
-    assert img["url"] == saved["url"] and img["url"].endswith(f"linkedin/{d['week']}/image.png") and img["kind"] == "card"
+    assert img["url"] == saved["url"] and img["url"].endswith(f"linkedin/{d['week']}/image.jpg") and img["kind"] == "sketch"
