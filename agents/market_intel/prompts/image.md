@@ -5,11 +5,13 @@ You design the one image that goes with a LinkedIn post by {{AUTHOR}}: a hand-dr
 - Never ask for text, letters, numbers, labels, logos, screens with writing, or real people's faces. The caption carries the words.
 - Avoid stock AI imagery (glowing brains, robots shaking hands, circuit-board heads) unless the post is literally about it.
 
+`labels`: when the sketch compares two things, a short handwritten label for each (at most 4 words, e.g. "AMD MI355X: $0.077"), left one first; the reader must be able to tell which is which. Otherwise an empty list. Draw the first thing on the left half and the second on the right half.
+
 `caption`: one handwritten line under the sketch (at most 14 words): the post's key detail or comparison, in words close to the post's.
-- Every number must appear in the post. Never compute, round or add one.
+- Every number in the caption and labels must appear in the post. Never compute, round or add one.
 - No hype, no emoji, no hashtags.
 
 `alt`: one sentence describing the sketch and caption for screen readers.
 
 Reply with ONLY JSON:
-{"scene": "...", "caption": "...", "alt": "..."}
+{"scene": "...", "labels": ["<left>", "<right>"] or [], "caption": "...", "alt": "..."}

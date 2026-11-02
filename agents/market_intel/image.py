@@ -39,12 +39,16 @@ def _numbers(text: str) -> set[str]:
 def checked(spec: dict, post: str) -> dict | None:
     """The plan if its caption only uses numbers the post has; None otherwise."""
     caption = " ".join(str(spec.get("caption") or "").split())
-    if not caption or not _numbers(caption) <= _numbers(post):
+    labels = [" ".join(str(l).split())[:32] for l in spec.get("labels") or [] if str(l).strip()]
+    labels = labels if len(labels) == 2 else []  # a label only makes sense for a left/right comparison
+    if not caption or not _numbers(" ".join([caption, *labels])) <= _numbers(post):
         return None
     words = caption.split()
     caption = " ".join(words[:18]) + ("…" if len(words) > 18 else "")
-    return {"scene": " ".join(str(spec.get("scene") or "").split())[:800], "caption": caption,
-            "alt": str(spec.get("alt") or caption)[:300]}
+    scene = " ".join(str(spec.get("scene") or "").split())[:800]
+    if labels and scene:
+        scene += f" Put {labels[0].split(':')[0]} on the left half and {labels[1].split(':')[0]} on the right half."
+    return {"scene": scene, "labels": labels, "caption": caption, "alt": str(spec.get("alt") or caption)[:300]}
 
 
 def fallback(post: str) -> dict:
@@ -52,7 +56,7 @@ def fallback(post: str) -> dict:
     first = next((l.strip() for l in post.splitlines() if l.strip() and not l.strip().startswith("#")), "")
     words = first.split()
     head = " ".join(words[:16]) + ("…" if len(words) > 16 else "")
-    return {"scene": "", "caption": head, "alt": head}
+    return {"scene": "", "labels": [], "caption": head, "alt": head}
 
 
 def _font(size: int):
@@ -63,8 +67,9 @@ def _font(size: int):
         return ImageFont.load_default(size=size)
 
 
-def sketch_png(sketch: bytes, caption: str, footer: str = "AI Musing") -> bytes:
-    """The sketch on top, the caption handwritten under it on the same paper, a small footer."""
+def sketch_png(sketch: bytes, caption: str, labels: list[str] | None = None, footer: str = "AI Musing",
+               label_x: tuple[float, float] = (0.25, 0.75)) -> bytes:
+    """The sketch on top, a label under each side of a comparison, the caption handwritten under it, a small footer."""
     from PIL import Image, ImageDraw
     art = Image.open(io.BytesIO(sketch)).convert("RGB")
     side = min(art.size)
@@ -79,6 +84,11 @@ def sketch_png(sketch: bytes, caption: str, footer: str = "AI Musing") -> bytes:
     mask = Image.linear_gradient("L").resize((W, fade))
     img.paste(Image.new("RGB", (W, fade), paper), (0, W - fade), mask)
     d = ImageDraw.Draw(img)
+    for label, x in zip(labels or [], label_x):  # on the faded bottom edge, under each half of the drawing
+        size = 50
+        while size > 30 and d.textlength(label, font=_font(size)) > W * 0.46:
+            size -= 4
+        d.text((int(W * x), W - 14), label, fill=ACCENT, font=_font(size), anchor="ms")
     pad, band = 70, H - W
     size = 62
     while size > 40:
@@ -176,7 +186,8 @@ def make(ctx, post: str, facts: str, week: str) -> dict | None:
             raw = {}
         spec = checked(raw if isinstance(raw, dict) else {}, post) or fallback(post)
         sketch = draw(ctx, spec["scene"]) if spec["scene"] else None
-        kind, png = ("sketch", sketch_png(sketch, spec["caption"])) if sketch else ("card", card_png(spec["caption"]))
+        kind, png = (("sketch", sketch_png(sketch, spec["caption"], spec["labels"])) if sketch
+                     else ("card", card_png(spec["caption"], "  vs  ".join(spec["labels"]))))
         url = storage.put(f"linkedin/{week}/image.jpg", storage.to_jpeg(png, max_width=W), "image/jpeg")
         return {"url": url, "alt": spec["alt"], "kind": kind}
     except Exception as ex:  # noqa: BLE001

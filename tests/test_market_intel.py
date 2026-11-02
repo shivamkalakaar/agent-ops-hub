@@ -716,8 +716,11 @@ def test_the_image_only_shows_numbers_the_post_has_and_is_saved_with_the_draft(m
     plan = {"scene": "A robot arm and a person at two picking bins.", "caption": "1,500 picks an hour against 600", "alt": "sketch"}
     assert image.checked(plan, post)["caption"] == "1,500 picks an hour against 600"
     assert image.checked({**plan, "caption": "Twice as fast at 3,000 an hour"}, post) is None  # a number not in the post
+    assert image.checked({**plan, "labels": ["Robot: 1,500", "Human: 600"]}, post)["labels"] == ["Robot: 1,500", "Human: 600"]
+    assert image.checked({**plan, "labels": ["Robot: 1,500", "Human: 700"]}, post) is None  # a label's number is checked too
+    assert image.checked({**plan, "labels": ["Robot"]}, post)["labels"] == []  # one label isn't a comparison
     assert image.fallback(post)["caption"].startswith("Eka says") and not image.fallback(post)["scene"]
-    assert image.sketch_png(images.FAKE_PNG, "Hello")[:4] == b"\x89PNG" and image.card_png("Hello")[:4] == b"\x89PNG"
+    assert image.sketch_png(images.FAKE_PNG, "Hello", ["A", "B"])[:4] == b"\x89PNG" and image.card_png("Hello")[:4] == b"\x89PNG"
 
     saved = {}
     monkeypatch.setattr(storage, "usable", lambda: True)
