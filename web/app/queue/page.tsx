@@ -209,7 +209,7 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={draft.image.url} alt={draft.image.alt} className="w-full max-w-md rounded-lg border border-line" />
               <figcaption className="mt-1 text-xs text-muted">
-                {draft.image.kind === "chart" ? "Chart" : "Card"} drawn from the post&apos;s own numbers; Publish now posts it with the text.{" "}
+                {draft.image.kind === "sketch" ? "Pencil sketch, captioned" : draft.image.kind === "chart" ? "Chart drawn" : "Card drawn"} from the post&apos;s own numbers; Publish now posts it with the text.{" "}
                 <a href={draft.image.url} download className="underline underline-offset-4">Download</a> to post it by hand.
               </figcaption>
             </figure>
