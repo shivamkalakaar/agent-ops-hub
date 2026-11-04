@@ -12,7 +12,7 @@ Score each 1-5. 4 means "as good as his typical published post": he'd post it wi
 - ending: 4: one short, plain line: a dry reaction, what he'd want to see, or the point in a sentence. 2: an aphorism, a floating question, "time will tell", a lesson for the reader, or a new idea in the last line.
 - grounding: names, numbers, dates, events and quotes are in the source items. Opinions, interpretations and reactions are not factual claims. (A fact-checker checks each claim separately; score the overall impression.)
 
-Then list at most 3 fixes, most important first. Each one quotes the exact words (at most 15), says what's wrong in one short sentence, and gives the fix in plain words. A post that scores 4 or more everywhere needs zero or one fix, and the fixes are for the lowest scores. Don't ask for anything his posts don't do: no extra hooks, questions, summaries, personal anecdotes or calls to action.
+Then list at most 4 fixes, most important first. Each one quotes the exact words (at most 15), says what's wrong in one short sentence, and gives the fix in plain words. A post that scores 4 or more everywhere needs zero or one fix, and the fixes are for the lowest scores. Don't ask for anything his posts don't do: no extra hooks, questions, summaries, personal anecdotes or calls to action.
 
 Reply with ONLY JSON:
 {"scores": {"take": n, "focus": n, "logic": n, "plain": n, "voice": n, "ending": n, "grounding": n},

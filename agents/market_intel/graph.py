@@ -31,6 +31,7 @@ MAX_LIST_ITEMS = 8
 # specs and codes (FP8, TP8, NVFP4, KDA, MLA, KV) and run-on sentences, not the count of plain numbers: the debt post
 # that did well has 13 dollar amounts and rates. The best posts have at most 1 code and no sentence over 40 words.
 MAX_CODES = 3
+MAX_NUMBERS = 15  # a ceiling, not the target (the prompt asks for about six): Shivam's own posts run up to 15, the drafts that lost readers 19-20
 MAX_SENTENCE_WORDS = 40
 KNOWN_CODES = {"AI", "AGI", "API", "APIS", "GPU", "GPUS", "CPU", "LLM", "LLMS", "CEO", "CTO", "CFO", "US", "USA", "UK", "EU",
                "IPO", "AMD", "IBM", "MIT", "UIUC", "GPT", "CNN", "ARR", "SAAS", "IT", "OK", "AWS", "TV", "PC", "NVIDIA", "GB", "TB", "MB",
@@ -242,9 +243,12 @@ def guardrail_violations(post: str, source_urls: set[str], sources_text: str | N
 
 
 def readability(post: str) -> list[str]:
-    """Too many unexplained codes, or a sentence too long to take in on a phone."""
+    """Too many numbers or unexplained codes, or a sentence too long to take in on a phone."""
     body = re.sub(r"(?<!\w)#\w+", "", post)
     v = []
+    numbers = {n.replace(",", "") for n in re.findall(r"(?<![\w.\-])\d[\d,]*(?:\.\d+)?", body)}
+    if len(numbers) > MAX_NUMBERS:
+        v.append(f"{len(numbers)} different numbers; keep the six or so that carry the idea and cut the rest")
     # an all-caps acronym (KDA, HBM) or a spec or code name with a digit (FP8, B200, K3); not company names (OpenAI)
     # and not amounts with a unit ($85B, 2x, 304GB)
     codes = {c for c in re.findall(r"\b[A-Za-z][A-Za-z0-9]*\b", body)

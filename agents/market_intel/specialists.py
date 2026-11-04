@@ -283,7 +283,7 @@ def editor(state, ctx, cfg):
                            model=cfg.model)
     scores = {k: max(1, min(5, int(v))) for k, v in (review.get("scores") or {}).items() if str(v).isdigit()}
     fixes = [{"kind": str(x.get("kind") or ""), **{k: str(x.get(k) or "")[:300] for k in ("quote", "problem", "fix")}}
-             for x in review.get("fixes") or [] if isinstance(x, dict)][:3]
+             for x in review.get("fixes") or [] if isinstance(x, dict)][:4]
     critique = " ".join(f'"{x["quote"]}": {x["problem"]} → {x["fix"]}' if x["quote"] else f'{x["problem"]} → {x["fix"]}'
                         for x in fixes) or str(review.get("critique", ""))
     violations = g.guardrail_violations(draft["post"], {s["url"] for s in state["sources"]}, sources_text(state),

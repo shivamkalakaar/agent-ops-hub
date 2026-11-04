@@ -19,7 +19,8 @@ What makes it work:
 - It ends on one short, dry personal line. No summary, no lesson, no "watch X", no question.
 
 Easy to read. His followers know AI well and are technical, and they still stop reading when a post is dense. Write for a smart engineer from a different part of AI, reading on a phone:
-- Only the numbers that carry the idea. Plain ones (dollars, rates, counts, "2.3 times") read fast, and a post can stack several from different companies into one pattern. Specs and units (bit widths, bytes, tokens a second per user) slow everyone down: explain them in plain words or leave them out.
+- Open with a plain sentence that says who did what ("Eka says its robot picks about 1,500 objects an hour"), not a bare number, a model code or a label.
+- Only the numbers that carry the idea, usually about six. Every extra one is something the reader has to hold. Plain ones (dollars, rates, counts, "2.3 times") read fast, and several from different companies can add up to one pattern; a run of counts from one table (125 right, 84 and 85, then 173, 134 and 138) loses everyone. Specs and units (bit widths, bytes, tokens a second per user) slow everyone down: explain them in plain words or leave them out.
 - Say what a thing does, not what it's called. A spec or acronym (FP8, KV cache, TP8, HBM) goes in only if the idea needs it, and then with a few plain words on what it means ("the memory that holds the conversation so far"). Never two in one sentence.
 - One fact per sentence. Most sentences under 20 words; none over 30.
 - Explain the why in everyday words before or instead of the internals: "the model doesn't fit on one server, so it has to talk across the network" beats a list of byte sizes.
