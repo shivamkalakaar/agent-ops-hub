@@ -746,3 +746,14 @@ def test_no_lesson_may_ask_for_invented_experience_and_dollar_charts_read_right(
     from agents.substack.render import chart_png
     png = chart_png({"kind": "chart", "title": "t", "unit": "$", "series": [{"label": "a", "value": 7.44}, {"label": "b", "value": 27}]})
     assert png[:4] == b"\x89PNG"
+
+
+def test_readability_flags_spec_soup_and_run_ons_but_not_plain_numbers():
+    dense = ("vLLM says eight GB300 GPUs hold 36 contexts. With TP8 and FP8 it holds 3. The cache packs an FP8 MLA latent, "
+             "index keys and a KDA state.\n\n#ai #inference")
+    assert any("acronyms or codes" in x for x in graph.readability(dense))
+    money = ("CoreWeave bonds issued at 9.675% now yield 15%, and Bernstein says it needs $85B. Nebius took a $3.5B loan, "
+             "and Meta spent $34.9B last quarter.\n\n#ai #infrastructure")
+    assert graph.readability(money) == []  # plain amounts and rates read fast, however many
+    run_on = " ".join(["word"] * 45) + "."
+    assert any("45-word sentence" in x for x in graph.readability(run_on))

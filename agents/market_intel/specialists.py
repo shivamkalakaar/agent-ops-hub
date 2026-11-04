@@ -300,7 +300,8 @@ def editor(state, ctx, cfg):
     return {"edit_report": report, "candidates": {**state.get("candidates", {}), str(draft["version"]): entry}}, summary, out
 
 
-MUST_BE_HIGH = ("grounding", "take", "logic")  # below 4 on any of these is worth the one rewrite
+MUST_BE_HIGH = ("grounding", "take", "logic", "plain")  # below 4 on any of these is worth the one rewrite.
+# plain joined 2026-11-04: followers (technical, AI-literate) found the posts hard to follow
 
 
 def weak(report: dict) -> bool:
