@@ -283,7 +283,7 @@ def editor(state, ctx, cfg):
                            model=cfg.model)
     scores = {k: max(1, min(5, int(v))) for k, v in (review.get("scores") or {}).items() if str(v).isdigit()}
     fixes = [{"kind": str(x.get("kind") or ""), **{k: str(x.get(k) or "")[:300] for k in ("quote", "problem", "fix")}}
-             for x in review.get("fixes") or [] if isinstance(x, dict)][:3]
+             for x in review.get("fixes") or [] if isinstance(x, dict)][:4]
     critique = " ".join(f'"{x["quote"]}": {x["problem"]} → {x["fix"]}' if x["quote"] else f'{x["problem"]} → {x["fix"]}'
                         for x in fixes) or str(review.get("critique", ""))
     violations = g.guardrail_violations(draft["post"], {s["url"] for s in state["sources"]}, sources_text(state),
@@ -300,7 +300,8 @@ def editor(state, ctx, cfg):
     return {"edit_report": report, "candidates": {**state.get("candidates", {}), str(draft["version"]): entry}}, summary, out
 
 
-MUST_BE_HIGH = ("grounding", "take", "logic")  # below 4 on any of these is worth the one rewrite
+MUST_BE_HIGH = ("grounding", "take", "logic", "plain")  # below 4 on any of these is worth the one rewrite.
+# plain joined 2026-11-04: followers (technical, AI-literate) found the posts hard to follow
 
 
 def weak(report: dict) -> bool:

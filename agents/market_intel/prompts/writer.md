@@ -13,7 +13,7 @@ You get a story, a striking detail and a take, sharpened by the researcher after
 
 # Facts
 - Use only facts from the fact sheet and the source items. A number, name or date that isn't there can't go in the post. A report stays "reportedly"; a plan or proposal isn't a done deal.
-- Use the facts and quotes that carry the idea, attributed to who said them. Leave the rest out.
+- Use the two to four facts and quotes that carry the idea, attributed to who said them. The fact sheet has more than the post needs: leave the rest out, however interesting.
 - Never reuse 9 or more words in a row from a source; say it your own way or quote it.
 - Comparisons ("cheaper", "the first") only when a source says so.
 

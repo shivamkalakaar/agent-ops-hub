@@ -27,6 +27,15 @@ _sources_block = drafting.sources_block
 SCORE_BATCH = 20
 MAX_CHARS = 1300
 MAX_LIST_ITEMS = 8
+# Readability (2026-11-04: technical followers found the posts too dense). What made the hard ones hard was unexplained
+# specs and codes (FP8, TP8, NVFP4, KDA, MLA, KV) and run-on sentences, not the count of plain numbers: the debt post
+# that did well has 13 dollar amounts and rates. The best posts have at most 1 code and no sentence over 40 words.
+MAX_CODES = 3
+MAX_NUMBERS = 15  # a ceiling, not the target (the prompt asks for about six): Shivam's own posts run up to 15, the drafts that lost readers 19-20
+MAX_SENTENCE_WORDS = 40
+KNOWN_CODES = {"AI", "AGI", "API", "APIS", "GPU", "GPUS", "CPU", "LLM", "LLMS", "CEO", "CTO", "CFO", "US", "USA", "UK", "EU",
+               "IPO", "AMD", "IBM", "MIT", "UIUC", "GPT", "CNN", "ARR", "SAAS", "IT", "OK", "AWS", "TV", "PC", "NVIDIA", "GB", "TB", "MB",
+               "GW", "MW", "KW", "USD", "Q1", "Q2", "Q3", "Q4", "H1", "H2"}
 WORDS = (60, 200)  # guardrail band; the prompt targets 80–180
 # Moves the agent kept reusing until every post had the same shape. Any of them sends a draft back for a rewrite.
 TEMPLATE_MOVES = [
@@ -218,6 +227,7 @@ def guardrail_violations(post: str, source_urls: set[str], sources_text: str | N
     if sources_text:
         v += [f"copies a source's words without quoting them (\"{c[:80]}…\"); say it your own way or quote it"
               for c in drafting.copied_spans(post, sources_text)[:2]]
+    v += readability(post)
     if len(post) > MAX_CHARS:
         v.append(f"{len(post)} characters; the cap is {MAX_CHARS}")
     if not WORDS[0] <= words <= WORDS[1]:
@@ -229,6 +239,28 @@ def guardrail_violations(post: str, source_urls: set[str], sources_text: str | N
     for url in re.findall(r"https?://\S+", post):
         v.append("link in the post body (links go in the first comment)" if url.rstrip(").,") in source_urls
                  else f"link not from the sources: {url}")
+    return v
+
+
+def readability(post: str) -> list[str]:
+    """Too many numbers or unexplained codes, or a sentence too long to take in on a phone."""
+    body = re.sub(r"(?<!\w)#\w+", "", post)
+    v = []
+    numbers = {n.replace(",", "") for n in re.findall(r"(?<![\w.\-])\d[\d,]*(?:\.\d+)?", body)}
+    if len(numbers) > MAX_NUMBERS:
+        v.append(f"{len(numbers)} different numbers; keep the six or so that carry the idea and cut the rest")
+    # an all-caps acronym (KDA, HBM) or a spec or code name with a digit (FP8, B200, K3); not company names (OpenAI)
+    # and not amounts with a unit ($85B, 2x, 304GB)
+    codes = {c for c in re.findall(r"\b[A-Za-z][A-Za-z0-9]*\b", body)
+             if ((c.isupper() and len(c) >= 2) or re.search(r"\d", c))
+             and c.upper() not in KNOWN_CODES}
+    if len(codes) > MAX_CODES:
+        v.append(f"{len(codes)} acronyms or codes ({', '.join(sorted(codes)[:6])}); keep the {MAX_CODES} or fewer the idea "
+                 "needs and say in plain words what each one does")
+    for sentence in re.split(r"(?<=[.!?])\s+|\n+", body):
+        if len(sentence.split()) > MAX_SENTENCE_WORDS:
+            v.append(f"a {len(sentence.split())}-word sentence (\"{' '.join(sentence.split()[:8])}…\"); split it")
+            break
     return v
 
 
