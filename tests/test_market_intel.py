@@ -708,33 +708,6 @@ def test_scout_rotates_post_shapes_and_the_writer_gets_the_chosen_one():
     assert "the_hard_part" in specialists.FORMATS and specialists.format_line("the_hard_part").startswith("the_hard_part:")
 
 
-def test_the_image_only_shows_numbers_the_post_has_and_is_saved_with_the_draft(monkeypatch):
-    from agents.market_intel import image
-    from core import images, storage
-    from core.db import connect
-    post = "Eka says its robot picks about 1,500 objects an hour. A human picks about 600.\n\n#ai #robotics"
-    plan = {"scene": "A robot arm and a person at two picking bins.", "caption": "1,500 picks an hour against 600", "alt": "sketch"}
-    assert image.checked(plan, post)["caption"] == "1,500 picks an hour against 600"
-    assert image.checked({**plan, "caption": "Twice as fast at 3,000 an hour"}, post) is None  # a number not in the post
-    assert image.checked({**plan, "labels": ["Robot: 1,500", "Human: 600"]}, post)["labels"] == ["Robot: 1,500", "Human: 600"]
-    assert image.checked({**plan, "labels": ["Robot: 1,500", "Human: 700"]}, post) is None  # a label's number is checked too
-    assert image.checked({**plan, "labels": ["Robot"]}, post)["labels"] == []  # one label isn't a comparison
-    assert image.fallback(post)["caption"].startswith("Eka says") and not image.fallback(post)["scene"]
-    assert image.sketch_png(images.FAKE_PNG, "Hello", ["A", "B"])[:4] == b"\x89PNG" and image.card_png("Hello")[:4] == b"\x89PNG"
-
-    saved = {}
-    monkeypatch.setattr(storage, "usable", lambda: True)
-    monkeypatch.setattr(storage, "put", lambda path, data, ct: saved.setdefault("url", f"https://img.example/{path}"))
-    llm.FAKE_RESPONSES["image"] = lambda m: json.dumps({"scene": "Two price tags on a workbench.",
-                                                         "caption": "An open model at a tenth of the price", "alt": "sketch"})
-    assert cli.run("collect") == 0 and cli.run("draft") == 0
-    with connect() as db:
-        d = db.one("select image, week from drafts")
-    img = d["image"] if isinstance(d["image"], dict) else json.loads(d["image"])
-    assert img["url"] == saved["url"] and img["url"].endswith(f"linkedin/{d['week']}/image.jpg") and img["kind"] == "sketch"
-
-
-
 def test_no_lesson_may_ask_for_invented_experience_and_dollar_charts_read_right():
     from core import lessons
     from core.db import connect

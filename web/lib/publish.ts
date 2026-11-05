@@ -6,24 +6,6 @@ import { findMentions, liFetch, littleText, withSeries, type Org } from "@/lib/l
 export type PublishResult = { ok: true; url: string; seriesNo: number; tagged: string[]; tagsFailed: boolean; comment: string }
   | { ok: false; status: number; error: string; url?: string };
 
-/** LinkedIn Images API: register an upload, PUT the bytes, return the image URN. Null on any failure, so the post
- *  still goes out as text rather than not at all. */
-async function uploadImage(token: string, owner: string, url: string): Promise<string | null> {
-  try {
-    const img = await fetch(url);
-    if (!img.ok) return null;
-    const init = await liFetch("/rest/images?action=initializeUpload", token, {
-      method: "POST", body: JSON.stringify({ initializeUploadRequest: { owner } }),
-    });
-    if (!init.ok) return null;
-    const { value } = await init.json() as { value: { uploadUrl: string; image: string } };
-    const put = await fetch(value.uploadUrl, { method: "PUT", headers: { Authorization: `Bearer ${token}` }, body: await img.arrayBuffer() });
-    return put.ok ? value.image : null;
-  } catch {
-    return null;
-  }
-}
-
 export async function publishDraft(sb: SupabaseClient, draftId: string, origin: string): Promise<PublishResult> {
   const { data: d } = await sb.from("drafts").select("*").eq("id", draftId).maybeSingle();
   if (!d) return { ok: false, status: 404, error: "draft not found" };
@@ -39,12 +21,10 @@ export async function publishDraft(sb: SupabaseClient, draftId: string, origin: 
   const text = withSeries(d.edited_post_md ?? d.post_md, seriesNo);
   const { data: orgs } = await sb.from("linkedin_orgs").select("*");
   const mentions = findMentions(text, (orgs ?? []) as Org[]);
-  const media = d.image?.url ? await uploadImage(li.access_token, li.person_urn, d.image.url) : null;
   const post = (commentary: string) => liFetch("/rest/posts", li.access_token, {
     method: "POST",
     body: JSON.stringify({
       author: li.person_urn, commentary, visibility: "PUBLIC",
-      ...(media ? { content: { media: { id: media, altText: (d.image.alt ?? "").slice(0, 4000) } } } : {}),
       distribution: { feedDistribution: "MAIN_FEED", targetEntities: [], thirdPartyDistributionChannels: [] },
       lifecycleState: "PUBLISHED", isReshareDisabledByAuthor: false,
     }),
