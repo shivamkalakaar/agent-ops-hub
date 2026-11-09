@@ -44,7 +44,7 @@
     {"w": ["holistic"], "sev": 2, "fix": "whole, overall", "why": "Vague wholeness."},
     {"w": ["streamline", "streamlines", "streamlined", "streamlining"], "sev": 2, "fix": "simplify, cut steps", "why": "Business filler verb."},
     {"w": ["foster", "fosters", "fostered", "fostering"], "sev": 2, "fix": "build, encourage, help", "why": "Abstract verb for 'make happen'.", "skip": "\\b(?:care|child|children|parent|parents|home|dog|dogs|cat|cats|kitten|kittens|family|mother|father|kid|kids|puppy)\\b"},
-    {"w": ["harness", "harnesses", "harnessed", "harnessing"], "sev": 2, "fix": "use", "why": "Power metaphor for 'use'.", "skip": "\\b(?:horse|safety|climbing|dog|baby|seat|belt|wiring|cable|rig|parachute)\\b"},
+    {"w": ["harness", "harnesses", "harnessed", "harnessing"], "sev": 2, "fix": "use", "why": "Power metaphor for 'use'.", "skip": "\\b(?:horse|safety|climbing|dog|baby|seat|belt|wiring|cable|rig|parachute|test|tests|testing|eval|evals|benchmark|benchmarks|agent|agents|model|models|coding|llms?|scored?|scores)\\b|\\b(?:the|a|an|one|another|same|each|which|what|its|their|agent|test|eval) harness(?:es)?\\b(?!\\s+the\\s+power)\\b"},
     {"w": ["bolster", "bolsters", "bolstered", "bolstering"], "sev": 2, "fix": "strengthen, support", "why": "Formal filler verb."},
     {"w": ["garner", "garners", "garnered", "garnering"], "sev": 2, "fix": "get, win, earn", "why": "Formal filler verb."},
     {"w": ["showcase", "showcases", "showcased", "showcasing"], "sev": 2, "fix": "show", "why": "Stagey verb for 'show'."},

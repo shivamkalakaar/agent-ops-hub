@@ -11,7 +11,7 @@ import { RejectButton, TakeBox, type Feedback } from "@/components/Feedback";
 const COMPOSER = "https://www.linkedin.com/feed/?shareActive=true";
 const POST_URL = /^https:\/\/(www\.)?linkedin\.com\/(feed\/update|posts)\/\S+$/;
 
-const MAX_CHARS = 1300;
+const MAX_CHARS = 1500;
 
 export default function Queue() {
   const { session } = useSession();

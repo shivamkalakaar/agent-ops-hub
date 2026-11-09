@@ -25,7 +25,7 @@ from agents.market_intel.roster import AGENT, AUTHOR, PROMPTS, SPECIALISTS
 prompt = drafting.prompt_loader(PROMPTS)
 _sources_block = drafting.sources_block
 SCORE_BATCH = 20
-MAX_CHARS = 1300
+MAX_CHARS = 1500  # his structured posts run ~1,250; LinkedIn allows 3,000
 MAX_LIST_ITEMS = 8
 # Readability (2026-11-04: technical followers found the posts too dense). What made the hard ones hard was unexplained
 # specs and codes (FP8, TP8, NVFP4, KDA, MLA, KV) and run-on sentences, not the count of plain numbers: the debt post
@@ -36,7 +36,7 @@ MAX_SENTENCE_WORDS = 40
 KNOWN_CODES = {"AI", "AGI", "API", "APIS", "GPU", "GPUS", "CPU", "LLM", "LLMS", "CEO", "CTO", "CFO", "US", "USA", "UK", "EU",
                "IPO", "AMD", "IBM", "MIT", "UIUC", "GPT", "CNN", "ARR", "SAAS", "IT", "OK", "AWS", "TV", "PC", "NVIDIA", "GB", "TB", "MB",
                "GW", "MW", "KW", "USD", "Q1", "Q2", "Q3", "Q4", "H1", "H2"}
-WORDS = (60, 200)  # guardrail band; the prompt targets 80–180
+WORDS = (60, 240)  # guardrail band; the prompt targets 150–220 (his eight-step structure)
 # Moves the agent kept reusing until every post had the same shape. Any of them sends a draft back for a rewrite.
 TEMPLATE_MOVES = [
     (r"\bnext time (?:a|your) vendor\b", "the \"next time a vendor pitches you\" closer"),
@@ -231,7 +231,7 @@ def guardrail_violations(post: str, source_urls: set[str], sources_text: str | N
     if len(post) > MAX_CHARS:
         v.append(f"{len(post)} characters; the cap is {MAX_CHARS}")
     if not WORDS[0] <= words <= WORDS[1]:
-        v.append(f"{words} words; keep it between 80 and 180")
+        v.append(f"{words} words; keep it between {WORDS[0]} and {WORDS[1]}")
     if len(re.findall(r"(?<!\w)#\w+", post)) > 2:
         v.append("more than 2 hashtags")
     if len(re.findall(r"^\s*(?:[-•*]|\d+[.)])\s", post, flags=re.M)) > MAX_LIST_ITEMS:

@@ -320,9 +320,33 @@
     "The sources do not say whether the discount is a flat rate cut, credits, or tied to volume commitments, so the exact economics are unknown.",
     "Replit's CEO publicly framed the default switch around cost, performance and partnership, not price alone, and Claude models are still offered on the platform."
    ]
+  },
+  "6b893e8a5b99": {
+   "items": [
+    {
+     "url": "https://the-decoder.com/ai-coding-agents-still-need-human-cleanup-on-nearly-three-out-of-four-tasks-in-a-real-world-test/",
+     "title": "Alibaba's Co-Design Bench: the best coding agent fully completes only 26.4% of real user change requests",
+     "source": "The Decoder",
+     "summary": "The benchmark takes tasks from real coding sessions, focusing on requests users had to rephrase or roll back, and has an AI judge test each finished web app in a browser. GPT-6 Astra met about 70% of requirements on average but got the whole task right only 26.4% of the time. All ten models did worse as requests mixed more kinds of change, and the same model's score moved a lot depending on the harness (Qwen3.8-27B scored 75% in one and 56% in another on large overhauls).",
+     "why": "Older coding benchmarks are saturated above 99%, so tests built from real user requests like this one are now the useful evals and RL environments. The harness swing also shows the harness is part of the product.",
+     "origin": "brief"
+    }
+   ]
   }
  },
  "cases": [
+  {
+   "id": "own-coding-bench-edited",
+   "label": "Shivam's rewrite of the Co-Design Bench draft (2026-11-09): the structure he wants for every post (claim, what happened, key result, So, question, second finding, recommendation, reader's check)",
+   "kind": "own",
+   "sources": "6b893e8a5b99",
+   "expect": {
+    "guardrails": "pass",
+    "editor": "pass",
+    "final_check": "pass"
+   },
+   "post": "AI coding benchmark scores can look much better than they really are.\n\nAlibaba and several Asian universities released a new coding benchmark for agents. It’s built from real user change requests on existing web apps, and it focuses on the messy ones, where the user had to rephrase the request or roll back a change.\n\nThe best model met about 70% of each task’s requirements. But it completed the full task correctly only 26.4% of the time.\n\nSo high requirement coverage doesn’t mean the task got done. Most of the time the agent did part of the job and left the rest for a person to fix.\n\nWhy a new benchmark? Older coding benchmarks are saturated. Models score above 99% on them once they’re allowed to test and repair their own work.\n\nWhat surprised me more is the harness effect. Qwen3.8-27B scored 75% on larger overhauls in one harness and 56% in another. That’s a nineteen-point gap, and the model itself didn’t change. Even the model rankings depended on the harness.\n\nThe authors recommend always reporting the model and the harness together, and evaluating them as a pair before you pick an agent.\n\nNext time you see a coding eval score, ask two questions. Is it requirement coverage or full task completion? And what harness produced it?\n\n#ai #coding"
+  },
   {
    "id": "own-kimi-edited",
    "label": "Shivam's edit of the Kimi K3 provider-gap post; he kept two of the brief's lines [an average post (Shivam, 2026-10-30): the editor's verdict on it isn't scored]",
