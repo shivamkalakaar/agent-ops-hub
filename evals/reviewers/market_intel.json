@@ -337,7 +337,7 @@
  "cases": [
   {
    "id": "own-coding-bench-edited",
-   "label": "Shivam's rewrite of the Co-Design Bench draft (2026-11-09): the structure he wants for every post (claim, what happened, key result, So, question, second finding, recommendation, reader's check)",
+   "label": "Shivam's rewrite of the Co-Design Bench draft (2026-11-09): the structure he wants for every post (claim, what happened, key result, So, question, second finding, recommendation, reader's check) [the authors' universities come from the full article, which this case's brief summary doesn't include]",
    "kind": "own",
    "sources": "6b893e8a5b99",
    "expect": {
@@ -345,7 +345,11 @@
     "editor": "pass",
     "final_check": "pass"
    },
-   "post": "AI coding benchmark scores can look much better than they really are.\n\nAlibaba and several Asian universities released a new coding benchmark for agents. It’s built from real user change requests on existing web apps, and it focuses on the messy ones, where the user had to rephrase the request or roll back a change.\n\nThe best model met about 70% of each task’s requirements. But it completed the full task correctly only 26.4% of the time.\n\nSo high requirement coverage doesn’t mean the task got done. Most of the time the agent did part of the job and left the rest for a person to fix.\n\nWhy a new benchmark? Older coding benchmarks are saturated. Models score above 99% on them once they’re allowed to test and repair their own work.\n\nWhat surprised me more is the harness effect. Qwen3.8-27B scored 75% on larger overhauls in one harness and 56% in another. That’s a nineteen-point gap, and the model itself didn’t change. Even the model rankings depended on the harness.\n\nThe authors recommend always reporting the model and the harness together, and evaluating them as a pair before you pick an agent.\n\nNext time you see a coding eval score, ask two questions. Is it requirement coverage or full task completion? And what harness produced it?\n\n#ai #coding"
+   "post": "AI coding benchmark scores can look much better than they really are.\n\nAlibaba and several Asian universities released a new coding benchmark for agents. It’s built from real user change requests on existing web apps, and it focuses on the messy ones, where the user had to rephrase the request or roll back a change.\n\nThe best model met about 70% of each task’s requirements. But it completed the full task correctly only 26.4% of the time.\n\nSo high requirement coverage doesn’t mean the task got done. Most of the time the agent did part of the job and left the rest for a person to fix.\n\nWhy a new benchmark? Older coding benchmarks are saturated. Models score above 99% on them once they’re allowed to test and repair their own work.\n\nWhat surprised me more is the harness effect. Qwen3.8-27B scored 75% on larger overhauls in one harness and 56% in another. That’s a nineteen-point gap, and the model itself didn’t change. Even the model rankings depended on the harness.\n\nThe authors recommend always reporting the model and the harness together, and evaluating them as a pair before you pick an agent.\n\nNext time you see a coding eval score, ask two questions. Is it requirement coverage or full task completion? And what harness produced it?\n\n#ai #coding",
+   "accept": [
+    "universities",
+    "several Asian"
+   ]
   },
   {
    "id": "own-kimi-edited",
@@ -379,12 +383,11 @@
   },
   {
    "id": "own-debt",
-   "label": "Approved CoreWeave/Nebius/Meta debt post (one of his two posts that did best)",
+   "label": "Approved CoreWeave/Nebius/Meta debt post (one of his two posts that did best) [2026-11-09: its dry one-line ending is the old style; the editor now expects a reader's practical check, so it no longer gates on this post]",
    "kind": "own",
    "sources": "977b5049c201",
    "expect": {
     "guardrails": "pass",
-    "editor": "pass",
     "fact_checker": "pass",
     "final_check": "pass"
    },
