@@ -14,8 +14,8 @@ Importance, 1–5:
 Judge importance, not virality. Be stingy with 4s and 5s.
 
 Separately, rate appeal, 1–5: how well a short LinkedIn post about this item would do with PMs, founders and operators.
-5 = a surprising hard number or a clear winner and loser among names everyone knows (OpenAI, Nvidia, AWS, Meta), with money, jobs or prices at stake, that people will want to repeat or argue with
-4 = a concrete number or move from a well-known company that has an obvious "so what" for people building or buying AI
+5 = a result that challenges a reasonable expectation and gives a builder or buyer a specific comparison they could pass to a colleague making a decision
+4 = a concrete finding that changes what a builder or buyer would test, measure or pay for
 3 = interesting to insiders, but it takes explaining
 2 = niche, technical, or hard to say anything about in a few lines
 1 = nothing to say beyond the headline

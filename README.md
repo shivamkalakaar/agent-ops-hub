@@ -109,7 +109,9 @@ uv run python -m agents.substack export <id>      # out/substack/<slot>-<id>.md 
 uv run python -m evals.run_evals --agent substack --cases 1
 ```
 
-**Writing style:** the LinkedIn writer and editor work from `agents/market_intel/prompts/voice.md` (how Shivam writes, distilled from his published posts and edits) and see his rewrites as before/after pairs: in production the latest from the database, in evals the frozen `agents/market_intel/voice_examples.json`. The scout tests each take against `prompts/views.md` (his recurring positions). `config/style/examples.md` (git-ignored posts by other writers) and `guide.md` now only feed the Substack agent's long-form guide.
+**LinkedIn writing.** The writer and editor use Shivam’s benchmark rewrite in `agents/market_intel/prompts/voice.md` and before/after pairs from his approved edits. A new database starts with the saved pairs in `agents/market_intel/voice_examples.json`. Reference evals exclude the pair for the story under test. When two or more distinct drafts clear the automatic checks, one extra review call picks the version that would need the least editing. A voice or ending score below 4/5 triggers a rewrite when one is available and flags the draft if it still falls short.
+
+**Reader feedback.** In the queue, mark how a published post performed. The scout sees posts marked as doing well and looks for a fresh finding a similar reader could use. Its selection note names the intended reader and the decision the story informs.
 
 ## Deploy
 

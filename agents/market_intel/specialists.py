@@ -7,6 +7,7 @@ import json
 import re
 
 from core import drafting, humanizer, llm, novelty
+from core.budget import BudgetExceeded
 from agents.market_intel.roster import AUTHOR, PROMPTS
 
 SCOUT_REPEAT = 0.4  # an angle this close to a recent one loses to a fresher candidate
@@ -28,7 +29,7 @@ def _g():
 
 
 def _tier(cfg, default: str) -> str:
-    return cfg.tier or default
+    return cfg.tier if cfg and cfg.tier else default
 
 
 def _take(state) -> str:
@@ -68,8 +69,9 @@ def _numbered(sources: list[dict]) -> str:
 def scout(state, ctx, cfg):
     recent = "\n".join(f"- {a}" for a in state.get("recent_angles") or []) or "(none yet)"
     shapes = ", ".join(state.get("recent_formats") or []) or "(none yet)"
+    top = "\n\n---\n\n".join(state.get("top_posts") or []) or "(no reader feedback yet)"
     r = llm.call_json(ctx, _tier(cfg, "judge"), "scout", drafting.fill(cfg.prompt, AUTHOR=AUTHOR, RECENT=recent, VIEWS=views(),
-                                                                      FORMATS=formats(), RECENT_FORMATS=shapes),
+                                                                      FORMATS=formats(), RECENT_FORMATS=shapes, TOP_POSTS=top),
                       listing(state["items"]) + _take(state), model=cfg.model)
     items = state["items"]
     cands = [c for c in (r.get("candidates") or ([r] if r.get("item_ids") else [])) if isinstance(c, dict)]
@@ -91,8 +93,9 @@ def scout(state, ctx, cfg):
         why = "; ".join(f"{c.get('kind') or 'no take'}: {str(c.get('take') or c.get('angle'))[:80]}" for c in cands)
         return {"angle": {k: cands[pick].get(k) for k in ANGLE_KEYS}, "skip": f"no take passed the take test ({why})"}, \
             f"No post today: none of {len(cands)} takes passed the take test", {"candidates": cands, "pick": None, "why": why}
-    if cands[pick]["repeat"] >= SCOUT_REPEAT and (fresher := min(cands, key=lambda c: (c["repeat"] >= SCOUT_REPEAT, not c["passes"],
-                                                                                       c["repeat"])))["repeat"] < SCOUT_REPEAT:
+    fresh = [candidate for candidate in cands if candidate["repeat"] < SCOUT_REPEAT and candidate["passes"] >= cands[pick]["passes"]]
+    if cands[pick]["repeat"] >= SCOUT_REPEAT and fresh:
+        fresher = min(fresh, key=lambda candidate: (not candidate["passes"], candidate["repeat"]))
         pick, note = cands.index(fresher), f"switched: the first pick was too close to a recent post ({cands[pick]['repeat']})"
     if cands[pick].get("thesis") and (plain := [c for c in cands if not c.get("thesis") and c["repeat"] < SCOUT_REPEAT
                                                 and c["passes"] >= cands[pick]["passes"]]):
@@ -187,7 +190,8 @@ def _feedback(state) -> str:
     v, parts = version(state), []
     if (e := state.get("edit_report")) and e.get("version") == v:
         fixes = "\n".join(f'- {x["kind"]}: "{x["quote"]}": {x["problem"]} → {x["fix"]}' for x in e.get("fixes") or [])
-        parts.append(f"# Editor (overall {e['overall']}/5, scores {json.dumps(e['scores'])})\n{fixes or e.get('critique', '')}")
+        priority = " (must fix)" if weak(e) else ""
+        parts.append(f"# Editor{priority} (overall {e['overall']}/5, scores {json.dumps(e['scores'])})\n{fixes or e.get('critique', '')}")
         if e.get("violations"):
             parts.append("# Rule violations (must fix)\n" + "\n".join(f"- {x}" for x in e["violations"]))
         if e.get("unsupported"):
@@ -209,7 +213,11 @@ def _clean(text: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", text)
 
 
-TARGET_WORDS = 150  # the owner's rewrites run longer than the agent's drafts: they explain what the agent skips
+TARGET_WORDS = (150, 220)
+
+
+def saved_examples() -> list[dict]:
+    return json.loads((PROMPTS.parent / "voice_examples.json").read_text())
 
 
 def pairs(examples: list[dict], seed: str, n: int = PAIRS) -> str:
@@ -221,33 +229,59 @@ def pairs(examples: list[dict], seed: str, n: int = PAIRS) -> str:
                        for k, e in enumerate(picked, 1))
 
 
+def review_prompt(template: str, state) -> str:
+    return drafting.fill(template, AUTHOR=AUTHOR, STYLE_GUIDE=_g().style_guide(),
+                         EXAMPLES=pairs(state.get("examples") or [], str(state.get("week")), n=1))
+
+
+def choose_draft(state, ctx, best: dict, scored: list[dict]) -> tuple[dict, str]:
+    """Compare distinct clean drafts blind. Keep the deterministic pick if the optional read is unavailable."""
+    clean = {candidate["text"]: candidate for candidate in scored if candidate["score"][0] == 0}
+    if len(clean) < 2:
+        return best, ""
+    options = list(clean.values())
+    posts = "\n\n".join(f"# Candidate {index}\n{option['text']}" for index, option in enumerate(options, 1))
+    user = (f"# Sources\n{sources_text(state)}\n\n# Intended take\n{state['angle'].get('take') or state['angle'].get('angle')}"
+            + _take(state) + _lessons(state) + "\n\n" + _feedback(state) + f"\n\n{posts}")
+    editor_cfg = state.get("settings", {}).get("editor")
+    system = review_prompt((PROMPTS / "choose_draft.md").read_text(), state)
+    try:
+        reply = llm.call(ctx, _tier(editor_cfg, "review"), "choose_draft", system, user,
+                         model=editor_cfg.model if editor_cfg else None)
+        result = llm.parse_json(reply)
+    except BudgetExceeded:
+        raise
+    except Exception:
+        return best, ""
+    choice = result.get("choice") if isinstance(result, dict) else None
+    if type(choice) is int and 1 <= choice <= len(options):
+        return options[choice - 1], str(result.get("reason") or "Selected by voice review")[:300]
+    return best, ""
+
+
 def writer(state, ctx, cfg):
-    """Best of N: the draft is written by each candidate model (repeats get different voice examples), and the code's
-    own checks pick one: fewest guardrail flags (invented facts, template moves, repeats), then the more human one,
-    then the length closest to TARGET_WORDS. First drafts use every candidate; rewrites use two."""
+    """Generate candidates, filter with guardrails, then compare clean alternatives against the author's edits."""
     g = _g()
     a = state["angle"]
     user = (f"Angle: {a.get('angle')}\nThe take (the post's one idea): {a.get('take') or a.get('angle')}\n"
             f"The striking detail: {a.get('detail') or '(see the fact sheet)'}\n"
             + (f"The shape (use it, loosely): {format_line(a.get('format'))}\n" if a.get("format") else "")
-            + f"Candidate hook: {a.get('hook')}\nWhy now: {a.get('why_now')}\n\n"
-            f"# Fact sheet\n{fact_sheet(state)}\n\n# Source items\n"
+            + f"\n# Fact sheet\n{fact_sheet(state)}\n\n# Source items\n"
             # summaries only: the researcher already pulled the facts and quotes out of the article text, and with
             # 700 words a source in front of it the writer copied whole sentences and picked up stray figures
             f"{drafting.sources_block([{k: v for k, v in x.items() if k != 'body'} for x in state['sources']])}")
     if top := "\n\n---\n\n".join(state.get("top_posts") or []):
-        user += (f"\n\n# {AUTHOR}'s posts that did well with readers (the best guide there is: use the same kind of moves,"
-                 f" such as how they stack facts, where the opinion sits and how they end, on today's story. Don't copy their"
-                 f" wording or topic)\n{top}")
+        user += (f"\n\n# {AUTHOR}'s posts that did well with readers (notice how he explains the evidence. "
+                 f"Use the current voice guide for the opening, order and ending)\n{top}")
     if recent := "\n\n---\n\n".join(state.get("recent_posts") or []):
-        user += (f"\n\n# {AUTHOR}'s last few posts (already published: don't reuse their hook pattern, structure, "
-                 f"stance line or closing move; this post should feel different)\n{recent}")
+        user += (f"\n\n# {AUTHOR}'s last few posts (avoid repeating their topics and wording; "
+                 f"keep his usual structure)\n{recent}")
     user += _take(state) + _lessons(state)
     draft = current(state)
     if draft:
         user += (f"\n\n# Current draft (v{draft['version']})\n{draft['post']}\n\n{_feedback(state)}\n\n"
-                 "Fix what the notes mark must-fix, and should-fix where it's easy. Keep every other sentence as it is: "
-                 "don't restructure the post or add a new opening or closing line the notes didn't ask for.")
+                 "Address the required edits first. Move or rewrite the surrounding sentences if the reader needs "
+                 "them to follow the point. Preserve passages that already work.")
     if state.get("instructions"):
         user += f"\n\n# Coordinator's note\n{state['instructions']}"
     tier = _tier(cfg, "voice")
@@ -261,14 +295,16 @@ def writer(state, ctx, cfg):
 
     def score(post: str) -> tuple:
         flags = g.guardrail_violations(post, urls, text, state.get("recent_posts"))
-        return len(flags), -humanizer.scan(post)["score"], abs(len(post.split()) - TARGET_WORDS)
+        words = len(post.split())
+        return len(flags), -humanizer.scan(post)["score"], max(TARGET_WORDS[0] - words, words - TARGET_WORDS[1], 0)
     best, scored = drafting.pick(outs, score)
+    best, reason = choose_draft(state, ctx, best, scored)
     post, n = best["text"], version(state) + 1
     short = lambda m: m.split("/")[-1]  # noqa: E731
     summary = (f"{'Rewrote' if draft else 'Wrote'} v{n}: {len(post.split())} words"
                + (f", best of {len(scored)} ({', '.join(short(d['model']) for d in scored)}): kept {short(best['model'])}"
                   if len(scored) > 1 else ""))
-    out = {"version": n, "post": post, "model": best["model"],
+    out = {"version": n, "post": post, "model": best["model"], "selection": reason or "Automatic checks",
            "candidates": [{"model": d["model"], "flags": d["score"][0], "humanizer": -d["score"][1], "words": len(d["text"].split())}
                           for d in scored]}
     return {"drafts": (state.get("drafts") or []) + [{"version": n, "post": post}]}, summary, out
@@ -278,9 +314,8 @@ def writer(state, ctx, cfg):
 
 def editor(state, ctx, cfg):
     g, draft = _g(), current(state)
-    user = f"# Source items\n{sources_text(state)}\n\n# Post\n{draft['post']}" + _lessons(state)
-    review = llm.call_json(ctx, _tier(cfg, "review"), "editor", drafting.fill(cfg.prompt, STYLE_GUIDE=g.style_guide()), user,
-                           model=cfg.model)
+    user = f"# Source items\n{sources_text(state)}" + _take(state) + _lessons(state) + f"\n\n# Post\n{draft['post']}"
+    review = llm.call_json(ctx, _tier(cfg, "review"), "editor", review_prompt(cfg.prompt, state), user, model=cfg.model)
     scores = {k: max(1, min(5, int(v))) for k, v in (review.get("scores") or {}).items() if str(v).isdigit()}
     fixes = [{"kind": str(x.get("kind") or ""), **{k: str(x.get(k) or "")[:300] for k in ("quote", "problem", "fix")}}
              for x in review.get("fixes") or [] if isinstance(x, dict)][:4]
@@ -300,8 +335,8 @@ def editor(state, ctx, cfg):
     return {"edit_report": report, "candidates": {**state.get("candidates", {}), str(draft["version"]): entry}}, summary, out
 
 
-MUST_BE_HIGH = ("grounding", "take", "logic", "plain")  # below 4 on any of these is worth the one rewrite.
-# plain joined 2026-11-04: followers (technical, AI-literate) found the posts hard to follow
+VOICE_SCORES = ("voice", "ending")
+MUST_BE_HIGH = ("grounding", "take", "logic", "plain", *VOICE_SCORES)
 
 
 def weak(report: dict) -> bool:
@@ -336,12 +371,18 @@ def final_check(state, ctx, cfg):
     v = draft["version"]
     blockers = g.guardrail_violations(draft["post"], {s["url"] for s in state["sources"]}, sources_text(state),
                                       state.get("recent_posts"))
+    edit = state.get("edit_report") or {}
+    if edit.get("version") == v:
+        for dimension in VOICE_SCORES:
+            score = edit["scores"].get(dimension)
+            if score is not None and score < drafting.MIN_SCORE:
+                blockers.append(f"Editor rated {dimension} {score}/5; needs {drafting.MIN_SCORE}/5")
     f = state.get("fact_report") or {}
     if f.get("version") == v and f.get("blocking"):
         blockers.append(f"{f['blocking']} unsupported claim{'s' * (f['blocking'] != 1)} from the fact check")
     try:
         r = llm.call_json(ctx, _tier(cfg, "check"), "final_check", drafting.fill(cfg.prompt, AUTHOR=AUTHOR),
-                          f"# Post\n{draft['post']}\n\n# Fact sheet\n{fact_sheet(state)}", model=cfg.model)
+                          f"# Source items\n{sources_text(state)}\n\n# Post\n{draft['post']}", model=cfg.model)
     except ValueError:
         r = {"passed": True, "blockers": [], "polish": ["the final read returned nothing usable"]}
     if r.get("passed") is False:
@@ -350,7 +391,7 @@ def final_check(state, ctx, cfg):
               "polish": [str(p)[:300] for p in r.get("polish") or [] if isinstance(p, str)][:4]}
     cands = dict(state.get("candidates", {}))
     if (key := str(v)) in cands:
-        cands[key] = {**cands[key], "passed_final": report["passed"]}
+        cands[key] = {**cands[key], "passed_final": report["passed"], "final_blockers": blockers}
     summary = f"v{v}: " + ("passed" if report["passed"] else f"{len(blockers)} blocker{'s' * (len(blockers) != 1)}: {blockers[0][:120]}")
     return {"final_report": report, "candidates": cands}, summary, report
 

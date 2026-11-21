@@ -208,7 +208,7 @@ def load_items(state: DraftState, config: RunnableConfig) -> DraftState:
             "recent_posts": state["recent_posts"] if "recent_posts" in state else db.approved_posts(3),
             "top_posts": state["top_posts"] if "top_posts" in state else db.top_posts(3),
             "lessons": state["lessons"] if "lessons" in state else lessons.block(db, AGENT, AUTHOR),
-            "examples": state["examples"] if "examples" in state else db.voice_examples(),
+            "examples": state["examples"] if "examples" in state else db.voice_examples() or specialists.saved_examples(),
             "recent_angles": state["recent_angles"] if "recent_angles" in state else db.recent_angles(5),
             "recent_formats": state["recent_formats"] if "recent_formats" in state else db.recent_formats(2),
             "seq": 1, "work_steps": 0, "calls": {}, "history": [], "drafts": [], "candidates": {}}
@@ -289,7 +289,7 @@ def finish_node(persist: bool):
                         "overall": None, "revisions": 0, "passed": False, "seq": seq, "draft_id": None}
             cur, fr = specialists.current(state), state.get("final_report") or {}
             chosen = best(state)
-            passed = bool(chosen and chosen.get("passed_final"))  # a failed save shows the latest final check's blockers
+            passed = bool(chosen and chosen.get("passed_final"))
             if not chosen:  # the editor never ran (step limit): score what there is
                 chosen = {"post": cur["post"], "scores": {}, "critique": "", "unsupported": [], "violations": [],
                           "accent": humanizer.scan(cur["post"]), "version": cur["version"]}
@@ -307,7 +307,7 @@ def finish_node(persist: bool):
                          "judge_scores": {**chosen["scores"], "violations": chosen["violations"], "humanizer": chosen["accent"]["score"],
                                           "critique": out["critique"], "unsupported_claims": out["unsupported"],
                                           "overall": chosen["overall"], "passed_review": passed, "version": chosen.get("version"),
-                                          "final_blockers": fr.get("blockers", []) if not passed else [],
+                                          "final_blockers": chosen.get("final_blockers", fr.get("blockers", [])) if not passed else [],
                                           "finish_reason": state.get("finish_reason", "")}}
                 if state.get("redraft_id"):
                     ctx.db.replace_draft(state["redraft_id"], draft, ctx.run_id)

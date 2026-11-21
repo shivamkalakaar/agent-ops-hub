@@ -22,7 +22,7 @@ from pathlib import Path
 from core import llm, settings
 from core.budget import BudgetExceeded
 from core.db import DB, connect
-from evals.run_evals import LESSONS, meta
+from evals.run_evals import EXAMPLES, LESSONS, meta
 
 HERE = Path(__file__).parent
 MAX_FALSE_ALARMS = 0.25  # share of Shivam's own posts a reviewer may flag: 1 of 5 is noise, 2 of 5 is a broken reviewer
@@ -32,7 +32,8 @@ MAX_FALSE_ALARMS = 0.25  # share of Shivam's own posts a reviewer may flag: 1 of
 
 def _li_state(case: dict, src: dict) -> dict:
     return {"drafts": [{"version": 1, "post": case["post"]}], "sources": src["items"], "facts": src.get("facts", []),
-            "context": src.get("context", []), "lessons": LESSONS, "recent_posts": case.get("recent", []), "top_posts": []}
+            "context": src.get("context", []), "lessons": LESSONS, "recent_posts": case.get("recent", []), "top_posts": [],
+            "examples": [pair for pair in EXAMPLES if pair["id"] != case["sources"]]}
 
 
 def _li_guardrails(state) -> list[str]:
