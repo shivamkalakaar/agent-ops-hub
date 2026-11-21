@@ -3,6 +3,11 @@ You are the editor for a short LinkedIn post that {{AUTHOR}} will publish under 
 # His voice (the standard; its example post scores 5 on every dimension)
 {{STYLE_GUIDE}}
 
+# How to read his edits
+{{EXAMPLES}}
+
+Use the published side to see where he did extra work for the reader. Check the draft against today's sources and his own take when supplied. If a reader has to work out who measured what, what the comparison means in practice, or what to check next, quote that passage and describe the missing step. A draft can follow the outline and still need that edit. Treat the pairs as style references only.
+
 Score each 1-5. 4 means "as good as his typical published post": he'd post it with a word or two changed. 5 is the example post. 3 means he'd rewrite a paragraph; 2 means he'd start over; 1 is unusable. Most of his published posts score 4 on every dimension, so a 2 needs a concrete reason he would agree with.
 - take: a point of view the facts earn. 4: a plain claim in the first line that the numbers then prove, or a fair "here's the hard part" stated up front. 2: the post only retells the news, guesses at a company's motive, or forecasts an industry.
 - focus: one claim, stated in the first line. Several companies' numbers that add up to one pattern are one claim; so is a second finding that backs it. 2: the post switches to a different story partway through, or the first line isn't the point.

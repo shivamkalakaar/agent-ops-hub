@@ -253,6 +253,28 @@ def test_writer_sees_the_owners_rewrites_as_pairs_rotated_by_seed():
     assert a != b  # each writer candidate sees a different set, so no one example gets copied
     assert "none yet" in specialists.pairs([], "x")
 
+
+def test_voice_examples_reach_editor_and_respect_an_explicit_empty_eval_set(monkeypatch):
+    from agents.market_intel import specialists
+    from core import settings
+    from core.db import connect
+    from agents.market_intel.roster import PROMPTS, SPECIALISTS
+    cfg = settings.from_files(SPECIALISTS, PROMPTS)
+    with connect() as db:
+        ctx = llm.RunContext(db=db, run_id=db.start_run("market_intel", "draft", "t"))
+        config = {"configurable": {"ctx": ctx, "settings": cfg}}
+        seed = {"items": ITEMS, "learn": False, "week": "fixture"}
+        live = graph.load_items(seed, config)
+        assert live["examples"] == specialists.saved_examples() and live["examples"]
+        assert graph.load_items({**seed, "examples": []}, config)["examples"] == []
+        messages = []
+        monkeypatch.setitem(llm.FAKE_RESPONSES, "editor", lambda request: messages.extend(request) or '{"scores":{"voice":5}}')
+        specialists.editor({**live, "take": "My take on this story", "drafts": [{"version": 1, "post": GOOD_POST}],
+                            "sources": ITEMS}, ctx, cfg["editor"])
+    assert any(pair["post"] in messages[0].content for pair in live["examples"])
+    assert "{{" not in messages[0].content and "My take on this story" in messages[-1].content
+
+
 def test_learns_from_edits_and_rejections_then_uses_the_lessons():
     from core import lessons
     from core.db import connect
@@ -584,6 +606,78 @@ def test_writer_keeps_the_best_of_several_candidates(monkeypatch):
     assert update["drafts"][-1]["post"] == GOOD_POST and out["model"] == "deepseek/deepseek-v4.1-flash"
     flags = [c["flags"] for c in out["candidates"]]
     assert flags[2] < flags[0] and flags[2] < flags[1] and "best of 3" in summary
+    clean = GOOD_POST.split("\n\nI'd bet")[0] + "\n\n#ai #models"
+    clearer = clean.replace("I had to read that twice.", "The price matters when a job takes several tries.")
+    replies = iter([clean, clearer, invented])
+    monkeypatch.setitem(llm.FAKE_RESPONSES, "choose_draft", lambda messages: '{"choice": 2, "reason": "Explains the price"}')
+    with connect() as db:
+        ctx = llm.RunContext(db=db, run_id=db.start_run("market_intel", "draft", "t"))
+        update, _, out = specialists.writer(state, ctx, settings.from_files(SPECIALISTS, PROMPTS)["writer"])
+    assert update["drafts"][-1]["post"] == clearer and out["selection"] == "Explains the price"
+
+
+def test_voice_review_compares_only_clean_drafts_and_respects_the_authors_take(monkeypatch):
+    from agents.market_intel import specialists
+    from core.budget import BudgetExceeded
+    options = [{"text": post, "model": model, "score": (flags, -5, 0)} for post, model, flags in [
+        ("The shorter post", "short-model", 0), ("An invented price", "bad-model", 1),
+        ("The post that explains the result", "long-model", 0)]]
+    state = {"angle": {"take": "The original angle"}, "take": "My own angle", "sources": [],
+             "examples": [{"id": "owner", "draft": "Compressed draft", "post": "My edit"}]}
+    seen = []
+    def choose(ctx, tier, node, system, user, **kwargs):
+        seen.append((system, user))
+        return '{"choice": 2, "reason": "Explains what was measured"}'
+    monkeypatch.setattr(llm, "call", choose)
+    assert specialists.choose_draft(state, None, options[0], options) == (options[2], "Explains what was measured")
+    system, user = seen[0]
+    assert "My edit" in system and "{{" not in system and "My own angle" in user
+    assert all(text not in user for text in ("An invented price", "short-model", "long-model"))
+    assert specialists.choose_draft(state, None, options[0], [*options[:2], options[0]]) == (options[0], "")
+    assert len(seen) == 1
+    for reply in ('{"choice": true}', '{"choice": 3}', '[]', 'unparseable'):
+        monkeypatch.setattr(llm, "call", lambda *args, **kwargs: reply)
+        assert specialists.choose_draft(state, None, options[0], options) == (options[0], "")
+    def over_budget(*args, **kwargs):
+        raise BudgetExceeded("daily cap")
+    monkeypatch.setattr(llm, "call", over_budget)
+    with pytest.raises(BudgetExceeded):
+        specialists.choose_draft(state, None, options[0], options)
+
+
+@pytest.mark.parametrize("dimension", ["voice", "ending"])
+def test_weak_voice_or_ending_blocks_only_the_reviewed_version(dimension):
+    from agents.market_intel import specialists
+    from agents.market_intel.roster import PROMPTS, SPECIALISTS
+    from core import settings
+    from core.db import connect
+    cfg = settings.from_files(SPECIALISTS, PROMPTS)
+    scores = dict.fromkeys(specialists.MUST_BE_HIGH, 5) | {dimension: 3}
+    edit = {"version": 1, "scores": scores, "accent": {"score": 5}, "overall": 4.8, "fixes": []}
+    state = {"angle": {"angle": "angle"}, "researched": True, "drafts": [{"version": 1, "post": GOOD_POST}],
+             "sources": ITEMS, "candidates": {"1": {}}, "edit_report": edit, "fact_report": {"version": 1, "blocking": 0, "claims": []}}
+    assert specialists.weak(edit) and "must fix" in specialists._feedback(state)
+    with connect() as db:
+        ctx = llm.RunContext(db=db, run_id=db.start_run("market_intel", "draft", "t"))
+        update, _, report = specialists.final_check(state, ctx, cfg["final_check"])
+        assert not report["passed"] and any(dimension in blocker for blocker in report["blockers"])
+        assert update["candidates"]["1"]["final_blockers"] == report["blockers"]
+        assert supervisor.allowed({**state, **update}, cfg) == ["writer"]
+        state["drafts"].append({"version": 2, "post": GOOD_POST})
+        _, _, report = specialists.final_check(state, ctx, cfg["final_check"])
+        assert report["passed"]
+
+
+def test_final_read_can_verify_a_detail_omitted_from_the_fact_sheet(monkeypatch):
+    from agents.market_intel import specialists
+    from agents.market_intel.roster import PROMPTS, SPECIALISTS
+    from core import settings
+    messages = []
+    monkeypatch.setattr(llm, "call_json", lambda *args, **kwargs: messages.append(args[4]) or {"passed": True})
+    source = dict(ITEMS[0], body="The provider confirmed the signed contract in its filing.")
+    state = {"drafts": [{"version": 1, "post": GOOD_POST}], "sources": [source], "facts": []}
+    specialists.final_check(state, None, settings.from_files(SPECIALISTS, PROMPTS)["final_check"])
+    assert source["body"] in messages[0] and GOOD_POST in messages[0]
 
 
 def test_rejection_cases_are_reported_not_gated(tmp_path):
@@ -628,12 +722,14 @@ def test_posts_that_did_well_teach_the_most_and_guide_the_writer():
                                                     "from": [d["id"]]}]}, {d["id"]}, strong={d["id"]})
         assert lessons.active(db, "market_intel")[0]["evidence"] == 3
         db.execute("update drafts set sources=%s", (db.json([]),))  # free the stories for the next draft
-    prompts = []
-    write = llm.FAKE_RESPONSES["writer"]
+    prompts, scout_prompts = [], []
+    write, scout = llm.FAKE_RESPONSES["writer"], llm.FAKE_RESPONSES["scout"]
     llm.FAKE_RESPONSES["writer"] = lambda m: (prompts.append(m[-1].content), write(m))[1]
+    llm.FAKE_RESPONSES["scout"] = lambda m: (scout_prompts.append(m[0].content), scout(m))[1]
     llm.FAKE_RESPONSES["learn"] = lambda m: json.dumps({"add": [], "confirm": [], "revise": [], "retire": []})
     assert cli.run("draft") == 0
     assert "posts that did well with readers" in prompts[0] and d["post_md"][:40] in prompts[0]
+    assert d["post_md"] in scout_prompts[0]
 
 
 def test_flags_a_brief_line_passed_off_as_the_authors_own():
@@ -706,6 +802,24 @@ def test_scout_rotates_post_shapes_and_the_writer_gets_the_chosen_one():
     assert fresh["angle"]["format"] == "one_pattern"
     assert used["angle"]["format"] is None  # just used: the writer goes without a shape rather than repeat it
     assert "the_hard_part" in specialists.FORMATS and specialists.format_line("the_hard_part").startswith("the_hard_part:")
+
+
+def test_scout_uses_reader_feedback_and_keeps_a_supported_take_over_a_fresh_recap(monkeypatch):
+    from agents.market_intel import specialists
+    from agents.market_intel.roster import PROMPTS, SPECIALISTS
+    from core import settings
+    preferred = {"angle": ITEMS[0]["title"], "item_ids": [0], "kind": "claim", "take": "Price changes which jobs pay off",
+                 "detail": "The test holds the score constant"}
+    recap = {"angle": ITEMS[1]["title"], "item_ids": [1], "kind": "recap"}
+    seen = []
+    def scout_reply(ctx, tier, node, system, user, **kwargs):
+        seen.append(system)
+        return {"pick": 0, "candidates": [preferred, recap], "why": "A buyer could compare costs on the same task"}
+    monkeypatch.setattr(llm, "call_json", scout_reply)
+    state = {"items": ITEMS, "recent_angles": [preferred["angle"]], "top_posts": ["The post readers passed around"]}
+    update, _, out = specialists.scout(state, None, settings.from_files(SPECIALISTS, PROMPTS)["scout"])
+    assert state["top_posts"][0] in seen[0] and update["angle"]["take"] == preferred["take"]
+    assert out["candidates"][0]["repeat"] >= specialists.SCOUT_REPEAT and out["pick"] == 0
 
 
 def test_no_lesson_may_ask_for_invented_experience_and_dollar_charts_read_right():

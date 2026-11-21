@@ -30,14 +30,14 @@ from core.budget import BudgetExceeded
 from core.config import git_sha
 from core.db import connect
 from core.steps import step
-from agents.market_intel import graph
+from agents.market_intel import graph, specialists
 from evals import reference as ref
 
 HERE = Path(__file__).parent
 BASELINES = {"market_intel": HERE / "baseline.json", "substack": HERE / "baseline.substack.json"}
 LESSONS = (HERE / "lessons.fixture.md").read_text().strip()
 # The owner's rewrites, frozen like the lessons. A reference case never sees the pair built from its own post.
-EXAMPLES = json.loads((HERE.parent / "agents" / "market_intel" / "voice_examples.json").read_text())
+EXAMPLES = specialists.saved_examples()
 TOLERANCE = 0.3
 # The Substack agent saves its best version even when nothing passes, flagged for the owner, so one flagged post in
 # the 2-case run isn't a regression; two are. LinkedIn is gated by the fixed judge instead (see check()).

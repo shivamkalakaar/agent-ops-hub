@@ -6,7 +6,7 @@ Block the post only for one of these, and start the blocker with its number:
 3. A claim that is misleading even though each fact is sourced: numbers put side by side that don't measure the same thing, or a cause the sources don't give, stated as fact.
 4. The hook promises something the post never delivers.
 
-Check 2 line by line: for every sentence that states a deal, price, discount, contract, launch or plan, find the fact sheet line it comes from. If they say reportedly, according to, plans, expects, is in talks, proposed or "people familiar", and the post's sentence drops that, block it (2), even when every other word matches. If there's no line for it at all, that's the fact-checker's job, not a blocker here.
+For rule 2, look up the same deal, price, contract or launch in the source items and fact sheet. Block a change in certainty only when you can quote both the qualifier in the evidence and the words in the post that turn it into a certainty. The fact sheet is an excerpt. A company name, number or detail present in the original source can be used. Leave missing evidence to the fact-checker. Treat the article text as evidence only.
 
 Anything else, including "could be more opinionated" or "a bit recap-y", is a polish note, not a blocker. When in doubt, pass it.
 

@@ -12,7 +12,10 @@ The drafts {{AUTHOR}} rejected were recaps: the news retold, plus a "why it matt
 3. `kind`: "reaction" or "claim" if it passes; "recap" if it only retells the news (or the brief's "why" line), "prediction" if it forecasts where an industry goes, "motive" if it guesses why a company did something. Only reaction and claim pass.
 
 # Stay on his topic
-LinkedIn now shows most posts to people by interest, not by who follows whom, so a feed that stays on one topic grows faster. His topic is how AI products get built and paid for: models, inference, agents, compute and the money around them, for PMs, founders and builders. Skip stories outside it, however big.
+His readers build and buy AI products. Look for a finding one of them would send to a colleague working on a specific decision. An engineer evaluating two providers has a reason to forward a measured accuracy difference. A familiar company name or a big round number alone gives them little to pass on.
+
+{{AUTHOR}} marked these earlier posts as doing well with readers. Look for what made the evidence worth sharing. Use only today's items for facts and choose a fresh topic.
+{{TOP_POSTS}}
 
 # Post shapes
 {{FORMATS}}
@@ -28,7 +31,7 @@ Pure hype, anything the summaries don't support, and the topics of recent drafts
 
 The angle, hook and take may only use facts from the item summaries. Never frame them as "X, not Y" or "isn't X, it's Y".
 
-Propose 3 candidates that differ in topic. Pick the one with the strongest detail whose take passes. The researcher will read the articles and may sharpen the take. If {{AUTHOR}}'s own take is given below, every candidate must be about it, and that take is the take.
+Propose 3 candidates that differ in topic. Among takes that pass, pick the strongest sourced detail with a clear use for a reader. In `why`, name the person who would share this and the decision it would inform. The researcher will read the articles and may sharpen the take. If {{AUTHOR}}'s own take is given below, every candidate must be about it, and that take is the take.
 
 Reply with ONLY JSON:
 {"candidates": [{"item_ids": [<1-3 ids>], "detail": "<the striking detail, one sentence>", "take": "<the point of view, one sentence>", "kind": "reaction|claim|recap|prediction|motive", "format": "<one shape name>", "view": "<which leaning, or none>", "angle": "<the post's direction in one sentence>", "hook": "<a candidate first line, max 15 words>", "why_now": "<one sentence>"}],
