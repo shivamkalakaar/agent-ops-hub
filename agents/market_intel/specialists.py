@@ -287,7 +287,8 @@ def writer(state, ctx, cfg):
     tier = _tier(cfg, "voice")
 
     def make_system(i: int) -> str:
-        return drafting.fill(cfg.prompt, AUTHOR=AUTHOR, STYLE_GUIDE=g.style_guide(), HUMANIZER=humanizer.rules(),
+        return drafting.fill(cfg.prompt, AUTHOR=AUTHOR, STYLE_GUIDE=g.style_guide(),
+                             HUMANIZER=humanizer.rules() if "{{HUMANIZER}}" in cfg.prompt else "",
                              EXAMPLES=pairs(state.get("examples") or [], f"{state.get('week')}-{i}"))
     outs = drafting.write_candidates(ctx, tier, "writer", drafting.candidates(tier, cfg.model, n=2 if draft else None),
                                      make_system, user, _clean, max_words=3 * g.WORDS[1], min_words=int(0.6 * g.WORDS[0]))
@@ -347,9 +348,10 @@ def weak(report: dict) -> bool:
 
 def fact_checker(state, ctx, cfg):
     draft = current(state)
+    note = f"\n\n# {AUTHOR}'s note for this story\n{state['take']}" if state.get("take") else ""
     try:
         r = llm.call_json(ctx, _tier(cfg, "check"), "fact_checker", drafting.fill(cfg.prompt, AUTHOR=AUTHOR),
-                          f"{sources_text(state)}\n\n# Post\n{draft['post']}", model=cfg.model)
+                          f"{sources_text(state)}{note}\n\n# Post\n{draft['post']}", model=cfg.model)
     except ValueError:
         r = {}
     claims = [{"claim": str(c.get("claim", ""))[:300], "verdict": c.get("verdict"), "fix": str(c.get("fix") or "")[:300]}

@@ -19,10 +19,10 @@ Picture one reader sending this to a colleague. What could they now test, compar
 - Never reuse 9 or more words in a row from a source; say it your own way or quote it.
 - Comparisons ("cheaper", "the first") only when a source says so.
 
-# Sound like a person
-A scanner checks every draft against these, and drafts that fail go back:
-{{HUMANIZER}}
-Also never: "X isn't Y. It's Z." pivots, labelled lead-ins ("My take:", "Why it matters:", "The catch:"), dress-up metaphors, aphorism closers, a punchline on every line. A short reader question that the next sentence answers ("Why a new benchmark?") is fine.
+# Write it as he would say it
+Keep the setup and result together when they make more sense in one paragraph. Read the line after the result aloud. If all it says is that the result is surprising or important, cut it. Spend those words on what stayed the same, what changed, or what the reader would have expected. A reaction earns its place when it tells us which detail caught his attention and why.
+
+Use his personal observations when he supplied them for this story. A past post about someone he met is never a memory to borrow. Skip labels like "My take:", staged reversals, and tidy punchlines. End as soon as the reader knows how to use the finding.
 
 # When you're rewriting
 You'll get the current draft and a few notes. Fix the flagged passages and keep the ones that work. If the reader meets a number before knowing what was measured, move its explanation earlier. If the ending could go on a different story, give the reader a specific comparison or decision from this one. Keep attribution in the post. Omit editorial notes and drop unsupported claims.
