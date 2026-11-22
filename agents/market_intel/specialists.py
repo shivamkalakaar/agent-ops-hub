@@ -37,6 +37,12 @@ def _take(state) -> str:
             f"meaning and as much of its phrasing as fits)\n{state['take']}") if state.get("take") else ""
 
 
+def _structure(state) -> str:
+    section = format_line((state.get("angle") or {}).get("format"))
+    return (f"\n\n# The structure this post was asked to follow (judge its opening, flow, length and ending against "
+            f"this)\n{section}") if section else ""
+
+
 def _lessons(state) -> str:
     return f"\n\n{state['lessons']}" if state.get("lessons") else ""
 
@@ -81,8 +87,10 @@ def scout(state, ctx, cfg):
         c["repeat"] = round(max([novelty.jaccard(text, novelty.words(a)) for a in state.get("recent_angles") or []] or [0]), 2)
         c["thesis"] = drafting.thesis_contrast(f"{c.get('angle', '')} {c.get('hook', '')}")
         c["passes"] = passes_take_test(c)
-        if c.get("format") not in FORMATS or c["format"] in (state.get("recent_formats") or []):
-            c["format"] = None  # an unknown or just-used shape: the writer goes without one
+        if state.get("force_format") in FORMATS:
+            c["format"] = state["force_format"]  # a manual run asked for this structure
+        elif c.get("format") not in FORMATS or c["format"] in (state.get("recent_formats") or []):
+            c["format"] = least_recent_format(state.get("recent_formats") or [])  # unknown or just used
     cands = [c for c in cands if c["item_ids"]] or [{"item_ids": [0], "angle": items[0]["title"], "hook": "", "why_now": "",
                                                      "repeat": 0, "passes": False}]
     pick = r.get("pick") if isinstance(r.get("pick"), int) and 0 <= r.get("pick") < len(cands) else 0
@@ -120,12 +128,41 @@ def formats() -> str:
     return (PROMPTS / "formats.md").read_text().strip()
 
 
-FORMATS = {line.split(":", 1)[0][2:] for line in formats().splitlines() if line.startswith("- ") and ":" in line}
+def format_sections() -> dict[str, str]:
+    """formats.md's `## name` sections, in file order: each is one post structure (when, opening, flow, ending, length)."""
+    out, name = {}, None
+    for line in formats().splitlines():
+        if line.startswith("## "):
+            name = line[3:].strip()
+            out[name] = []
+        elif name and line.strip():
+            out[name].append(line.strip())
+        elif name:
+            name = None  # a blank line ends the section; the closing paragraph applies to every structure
+    return {k: "\n".join(v) for k, v in out.items()}
+
+
+FORMATS = list(format_sections())  # file order, so the fallback is stable
+RECENT_FORMATS = 3  # the scout never repeats a structure from the last three drafts
 
 
 def format_line(name: str | None) -> str:
-    """The one shape the scout chose, as the writer sees it."""
-    return next((l[2:] for l in formats().splitlines() if name and l.startswith(f"- {name}:")), "")
+    """The structure the scout chose, as the writer and editor see it."""
+    section = format_sections().get(name or "")
+    return f"{name}\n{section}" if section else ""
+
+
+def format_words(name: str | None) -> tuple[int, int]:
+    """The structure's length band ("Length: 80-140 words"), or the default."""
+    m = re.search(r"Length:\s*(\d+)\s*-\s*(\d+)", format_sections().get(name or "", ""))
+    return (int(m[1]), int(m[2])) if m else TARGET_WORDS
+
+
+def least_recent_format(recent: list[str]) -> str:
+    """For a candidate with no usable structure: one the last few drafts didn't use, else the one used longest ago.
+    (It used to get none, and the writer fell back to the same outline every time.)"""
+    unused = [f for f in FORMATS if f not in recent]
+    return unused[0] if unused else max(FORMATS, key=lambda f: recent.index(f) if f in recent else len(recent))
 
 
 def passes_take_test(c: dict) -> bool:
@@ -263,9 +300,11 @@ def writer(state, ctx, cfg):
     """Generate candidates, filter with guardrails, then compare clean alternatives against the author's edits."""
     g = _g()
     a = state["angle"]
+    lo, hi = format_words(a.get("format"))  # the structure's length band: a single number runs short, a story long
     user = (f"Angle: {a.get('angle')}\nThe take (the post's one idea): {a.get('take') or a.get('angle')}\n"
             f"The striking detail: {a.get('detail') or '(see the fact sheet)'}\n"
-            + (f"The shape (use it, loosely): {format_line(a.get('format'))}\n" if a.get("format") else "")
+            + (f"\n# The structure (follow its opening, flow, length and ending)\n{format_line(a.get('format'))}\n"
+               if format_line(a.get("format")) else "")
             + f"\n# Fact sheet\n{fact_sheet(state)}\n\n# Source items\n"
             # summaries only: the researcher already pulled the facts and quotes out of the article text, and with
             # 700 words a source in front of it the writer copied whole sentences and picked up stray figures
@@ -297,7 +336,7 @@ def writer(state, ctx, cfg):
     def score(post: str) -> tuple:
         flags = g.guardrail_violations(post, urls, text, state.get("recent_posts"))
         words = len(post.split())
-        return len(flags), -humanizer.scan(post)["score"], max(TARGET_WORDS[0] - words, words - TARGET_WORDS[1], 0)
+        return len(flags), -humanizer.scan(post)["score"], max(lo - words, words - hi, 0)
     best, scored = drafting.pick(outs, score)
     best, reason = choose_draft(state, ctx, best, scored)
     post, n = best["text"], version(state) + 1
@@ -315,7 +354,8 @@ def writer(state, ctx, cfg):
 
 def editor(state, ctx, cfg):
     g, draft = _g(), current(state)
-    user = f"# Source items\n{sources_text(state)}" + _take(state) + _lessons(state) + f"\n\n# Post\n{draft['post']}"
+    user = (f"# Source items\n{sources_text(state)}" + _take(state) + _structure(state) + _lessons(state)
+            + f"\n\n# Post\n{draft['post']}")
     review = llm.call_json(ctx, _tier(cfg, "review"), "editor", review_prompt(cfg.prompt, state), user, model=cfg.model)
     scores = {k: max(1, min(5, int(v))) for k, v in (review.get("scores") or {}).items() if str(v).isdigit()}
     fixes = [{"kind": str(x.get("kind") or ""), **{k: str(x.get(k) or "")[:300] for k in ("quote", "problem", "fix")}}

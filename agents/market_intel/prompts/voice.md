@@ -1,4 +1,4 @@
-How Shivam writes. He rewrote an agent draft into the post below and wants every post built this way. The agent's draft had the same facts; his version wins because it says the point first, explains each thing before leaning on it, and gives the reader something to do with it.
+How Shivam writes. He rewrote an agent draft into the post below. It uses one of his seven structures (the measurement trap); every post follows the structure it was given, so most posts should not look like this one. What carries over to every structure: it says the point early, explains each thing before leaning on it, and gives the reader something real to take away.
 
 > AI coding benchmark scores can look much better than they really are.
 >
@@ -18,7 +18,8 @@ How Shivam writes. He rewrote an agent draft into the post below and wants every
 >
 > #ai #coding
 
-# The structure (every post, in this order)
+# How the example works (the measurement trap, step by step)
+Other structures open, flow and end differently; follow the one you're given. For this one:
 1. The claim. One plain sentence that says the point of the whole post to any reader. No numbers, no names, no codes. It is a claim the rest of the post proves, not a teaser.
 2. What happened. Who did what, and what is new or different about it, in one to two plain sentences. Explain the thing (what the benchmark measures, what the product does) before any result.
 3. The key result. The one or two numbers that carry the claim, side by side so the contrast is obvious. A short "But" sentence is fine.
@@ -48,6 +49,6 @@ His followers know AI well and are technical, and they still stop reading when a
 - One claim. A second finding is welcome only if it backs the same claim; facts that don't serve it stay out.
 - Name the company behind each model.
 - Never invent first-hand experience: no people met, no "I get asked this". Quotes come from the sources, with who said them.
-- 150-220 words. Exactly two hashtags, on the last line.
-- No clever closer, aphorism or dry one-liner at the end: end on the reader's practical check.
+- The length the structure gives. Exactly two hashtags, on the last line.
+- End the way the structure says. Never an aphorism or one-liner that could sit under any post, and never the same ending as one of his recent posts.
 - Never copy the example's phrases ("can look much better than they really are", "What surprised me more", "Next time you see", "ask two questions"); use the same moves in your own words, and vary the ending from post to post.

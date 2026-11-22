@@ -656,6 +656,21 @@
    "post": "The same weights can score 15 points apart depending on who serves them.\n\nVals AI ran Kimi K3 on its legal benchmark: 75.8% through Moonshot, 60.6% through Baseten. The likely culprits are FP8 quantization, KV cache eviction and TP8 sharding choices.\n\nSo the provider is part of the model.\n\nBefore you switch providers for price, run your own legal questions through both and compare.\n\n#ai #inference"
   },
   {
+   "id": "planted-repeated-closer",
+   "label": "Ends with a 'Before you …' closer right after a recent post ended the same way, in different words",
+   "kind": "planted",
+   "sources": "4a50be497600",
+   "expect": {
+    "guardrails": [
+     "same kind of closer"
+    ]
+   },
+   "recent": [
+    "Anthropic's commitments are growing faster than its revenue.\n\nBefore you buy any frontier-lab growth story, find the commitments line and divide it by revenue.\n\n#ai #ipo"
+   ],
+   "post": "The company hosting a model can change how well it does on legal work.\n\nVals AI put the same model through the same legal test with two providers. It scored 75.8% with Moonshot and 60.6% with Baseten.\n\nSo the cheaper host can cost you 15 points, and the price sheet won't show it.\n\nBefore you switch providers to save money, send each one the same legal questions and compare the answers.\n\n#ai #inference"
+  },
+  {
    "id": "planted-empty-reaction",
    "label": "A detachable reaction interrupts a grounded comparison. The editor should identify the empty sentence.",
    "kind": "planted",

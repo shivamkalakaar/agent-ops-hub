@@ -800,24 +800,71 @@ def test_a_passing_rewrite_that_reads_worse_doesnt_replace_the_better_version():
     assert g.best({"settings": cfg, "candidates": {"1": v(1, 4.3, True), "2": v(2, 4.3, True)}})["version"] == 2  # tie: the fixed one
 
 
-def test_scout_rotates_post_shapes_and_the_writer_gets_the_chosen_one():
+def test_scout_rotates_post_structures_and_the_writer_gets_the_chosen_one():
     from agents.market_intel import specialists
     from core import settings
     from core.db import connect
     from agents.market_intel.roster import PROMPTS, SPECIALISTS
     good = {"kind": "reaction", "take": "I'd like to see it hold up for a year", "detail": "The arm is strong enough to hurt itself"}
     llm.FAKE_RESPONSES["scout"] = lambda m: json.dumps({"candidates": [
-        {**good, "item_ids": [0], "angle": "a", "format": "one_pattern"},
-        {**good, "item_ids": [1], "angle": "b", "format": "the_hard_part"}], "pick": 0})
+        {**good, "item_ids": [0], "angle": "a", "format": "connect_the_dots"},
+        {**good, "item_ids": [1], "angle": "b", "format": "contrarian"}], "pick": 0})
     cfg = settings.from_files(SPECIALISTS, PROMPTS)["scout"]
     with connect() as db:
         ctx = llm.RunContext(db=db, run_id=db.start_run("market_intel", "draft", "t"))
         items = [dict(i, importance=5) for i in ITEMS]
-        fresh, _, _ = specialists.scout({"items": items, "recent_formats": ["the_hard_part"]}, ctx, cfg)
-        used, _, out = specialists.scout({"items": items, "recent_formats": ["one_pattern"]}, ctx, cfg)
-    assert fresh["angle"]["format"] == "one_pattern"
-    assert used["angle"]["format"] is None  # just used: the writer goes without a shape rather than repeat it
-    assert "the_hard_part" in specialists.FORMATS and specialists.format_line("the_hard_part").startswith("the_hard_part:")
+        fresh, _, _ = specialists.scout({"items": items, "recent_formats": ["contrarian"]}, ctx, cfg)
+        recent = ["connect_the_dots", "measurement_trap", "story"]
+        used, _, _ = specialists.scout({"items": items, "recent_formats": recent}, ctx, cfg)
+        forced, _, _ = specialists.scout({"items": items, "recent_formats": [], "force_format": "single_number"}, ctx, cfg)
+    assert fresh["angle"]["format"] == "connect_the_dots"
+    assert used["angle"]["format"] not in recent  # just used: the least recently used structure instead, never none
+    assert used["angle"]["format"] == specialists.least_recent_format(recent)
+    assert forced["angle"]["format"] == "single_number"
+
+
+def test_seven_structures_parse_with_their_own_length_and_ending():
+    from agents.market_intel import specialists
+    assert specialists.FORMATS == ["measurement_trap", "story", "contrarian", "explainer", "connect_the_dots",
+                                   "single_number", "open_question"]
+    for name in specialists.FORMATS:
+        section = specialists.format_line(name)
+        assert section.startswith(name + "\n") and all(k in section for k in ("When:", "Opening:", "Flow:", "Ending:", "Length:"))
+    assert specialists.format_words("single_number") == (80, 140) and specialists.format_words(None) == specialists.TARGET_WORDS
+    assert "What kills" not in specialists.format_line("open_question")  # the closing paragraph isn't part of a structure
+
+
+def test_least_recent_structure_skips_the_recent_ones_and_falls_back_to_the_oldest():
+    from agents.market_intel.specialists import FORMATS, least_recent_format
+    assert least_recent_format([]) == FORMATS[0]
+    assert least_recent_format(["measurement_trap"]) == "story"
+    everything_newest_first = list(reversed(FORMATS))
+    assert least_recent_format(everything_newest_first) == FORMATS[0]  # used longest ago
+
+
+def test_editor_is_told_which_structure_the_post_follows(monkeypatch):
+    from agents.market_intel import specialists
+    from agents.market_intel.roster import PROMPTS, SPECIALISTS
+    from core import settings
+    cfg = settings.from_files(SPECIALISTS, PROMPTS)["editor"]
+    seen = []
+    monkeypatch.setattr(llm, "call_json", lambda *args, **kwargs: seen.append(args[4]) or {"scores": {"voice": 4}})
+    state = {"drafts": [{"version": 1, "post": GOOD_POST}], "sources": ITEMS, "angle": {"format": "open_question"}}
+    specialists.editor(state, None, cfg)
+    specialists.editor({**state, "angle": {}}, None, cfg)
+    assert "open_question" in seen[0] and "specific question to readers" in seen[0]
+    assert "structure this post was asked to follow" not in seen[1]
+
+
+def test_an_ending_from_the_same_family_as_a_recent_post_goes_back():
+    from core import novelty
+    recent = ["Prices fell again.\n\nBefore you buy any growth story, divide commitments by revenue.\n\n#ai #ipo"]
+    same = "A new chip shipped.\n\nBefore you pick a GPU vendor, run your model on both.\n\n#ai #chips"
+    fresh = "A new chip shipped.\n\nIn my opinion the second source arrives within a year.\n\n#ai #chips"
+    assert any("same kind of closer" in v for v in novelty.check(same, recent))
+    assert not any("closer" in v or "ends the same" in v for v in novelty.check(fresh, recent))
+    assert novelty.ending_family("So the next time someone quotes a doubling time, ask which tasks set it.")
+    assert novelty.ending_family("If your agent costs more than you expect, measure the tools first.")
 
 
 def test_scout_uses_reader_feedback_and_keeps_a_supported_take_over_a_fresh_recap(monkeypatch):
