@@ -680,6 +680,22 @@ def test_final_read_can_verify_a_detail_omitted_from_the_fact_sheet(monkeypatch)
     assert source["body"] in messages[0] and GOOD_POST in messages[0]
 
 
+def test_fact_checker_receives_only_the_current_authors_note(monkeypatch):
+    from agents.market_intel import specialists
+    from agents.market_intel.roster import PROMPTS, SPECIALISTS
+    from core import settings
+    cfg = settings.from_files(SPECIALISTS, PROMPTS)["fact_checker"]
+    messages = []
+    monkeypatch.setattr(llm, "call_json", lambda *args, **kwargs: messages.append(args[4]) or {"claims": []})
+    note = "I ran the comparison at work this week."
+    older = "I met the team at a conference."
+    state = {"drafts": [{"version": 1, "post": GOOD_POST}], "sources": ITEMS, "recent_posts": [older]}
+    specialists.fact_checker(state, None, cfg)
+    specialists.fact_checker({**state, "take": note}, None, cfg)
+    assert note not in messages[0] and note in messages[1]
+    assert all(older not in message for message in messages)
+
+
 def test_rejection_cases_are_reported_not_gated(tmp_path):
     from evals import run_evals
     results = [{"case": "2026-10-19", "mean": 4.5, "humanizer": 5, "violations": [], "scores": {"hook": 5}},

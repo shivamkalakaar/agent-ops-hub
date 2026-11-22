@@ -33,9 +33,9 @@ Then exactly two hashtags on their own last line.
 - The point comes first, in plain words, and every paragraph after it proves or explains it. A reader who stops after line one still got the idea.
 - Nothing is used before it is explained. A term the post needs (here "harness", "requirement coverage") is introduced in context, then used the same way every time. Never swap in a synonym for variety.
 - Numbers are few and compared. Each one is followed by what it means.
-- Paragraphs are one to three short sentences. Connecting words ("But", "So", "Why ...?", "Even") carry the reader from one step to the next.
+- Keep the sentences that explain one another in the same paragraph. A short result can stand alone once the reader knows what it measures. The numbered steps describe the order of ideas. Two steps can fit in one sentence, and the optional ones can disappear.
 - Attribution stays: who made the claim, who ran the test, who recommends what.
-- His voice is in short honest reactions ("What surprised me more") and in the ending's advice, not in clever lines.
+- In the benchmark post, the surprise has a reason: the scores changed while the model stayed the same. That observation still works if you delete the words that announce surprise.
 
 # Easy to read
 His followers know AI well and are technical, and they still stop reading when a post is dense. Write for a smart engineer from a different part of AI, reading on a phone:

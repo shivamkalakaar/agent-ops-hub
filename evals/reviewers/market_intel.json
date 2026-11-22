@@ -395,6 +395,7 @@
   },
   {
    "id": "own-derm-edited",
+   "take": "Is \"data\" a moat? I get asked this question a lot.",
    "label": "Shivam's edit of the skin-lesion data-moat post, hashtags cut from 4 to his usual 2 [an average post (Shivam, 2026-10-30): the editor's verdict on it isn't scored]",
    "kind": "own",
    "sources": "3fcc2862c829",
@@ -611,6 +612,22 @@
     ]
    },
    "post": "Some CoreWeave bonds were issued at 9.675%. They now reportedly yield around 15%, and the stock closed at a 52-week low of $55.60 after Bernstein estimated it needs about $85B to fund its backlog.\n\nSame week, Nebius took a $3.5B loan from Citi at SOFR + 2.75%, which can step up to 3.50%. It matures in 364 days and pays for data centers and GPUs. So Nebius will need longer-term money behind it soon. It says it has over $40B of investment-grade contracts to borrow against, which is how it gets to pick its timing.\n\nThen Meta. $34.9B of capex last quarter, free cash flow of negative $2.1B versus $10.6B a year ago, and a new nonvoting Class C stock to help fund the buildout.\n\nWe talk about GPU supply and power. This week the interest rate sets the pace, because lenders have decided AI is a bubble.\n\nOn the call, Zuckerberg said it's \"going to be very important to get the math on all of this to work out.\" I'd read that literally."
+  },
+  {
+   "id": "planted-empty-reaction",
+   "label": "A detachable reaction interrupts a grounded comparison. The editor should identify the empty sentence.",
+   "kind": "planted",
+   "sources": "4a50be497600",
+   "expect": {"guardrails": "pass", "editor": ["read that twice"]},
+   "post": "The company hosting a model can change how well it does on legal work. Vals AI put the same model through the same test using two different providers. It scored 75.8% with Moonshot and 60.6% with Baseten.\n\nI had to read that twice. Take a moment and let that sink in.\n\nIf you're choosing a provider, give each one the same legal questions and compare the answers you get back.\n\n#ai #inference"
+  },
+  {
+   "id": "planted-borrowed-experiment",
+   "label": "The source describes Vals running the test. The writer claims to have run it personally.",
+   "kind": "planted",
+   "sources": "4a50be497600",
+   "expect": {"fact_checker": ["I ran"]},
+   "post": "I ran the legal benchmark myself through Moonshot and Baseten. The same model scored 75.8% through Moonshot and 60.6% through Baseten.\n\n#ai #inference"
   },
   {
    "id": "planted-vague-ending",

@@ -62,7 +62,7 @@ A single writing loop produced decent LinkedIn posts. A 1,000-word essay needs m
 
 The hard part wasn't generating posts. It was making them not read like AI.
 
-- **Humanizer skill** (`skills/humanizer`, MIT): its scanner checks every draft for stock AI words, em dashes and even rhythm. Its rules go into the writer's prompt word for word.
+- **Humanizer skill** (`skills/humanizer`, MIT): its scanner checks every draft for stock AI words, em dashes and even rhythm. The LinkedIn writer takes its rhythm from Shivam's own edits.
 - **Structural tells**: the scanner rated an obviously AI-sounding draft 2/100 ("Clean") because it had no stock words. What gave it away was structure: a dress-up metaphor hook, an "X isn't Y. It's Z." reversal and a "My take:" closer. `core/humanizer.py` catches these and takes a point off the humanizer score for each one.
 - **Weighting**: the overall score is **40% humanizer**, with the critic's seven dimensions (hook, focus, brevity, concreteness, voice, human, grounding) sharing the other 60%. Across the first draft and its rewrites, the best-ranked version is saved, so a rewrite that sounds more like AI never replaces a better one.
 - **Grounding**: drafts kept failing because one-line RSS summaries forced the writer to pad. The agent now fetches the full article for the chosen story, treated strictly as data. The critic only asks for sources on factual claims, not on opinions framed as mine.
