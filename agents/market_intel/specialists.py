@@ -320,20 +320,39 @@ def editor(state, ctx, cfg):
     scores = {k: max(1, min(5, int(v))) for k, v in (review.get("scores") or {}).items() if str(v).isdigit()}
     fixes = [{"kind": str(x.get("kind") or ""), **{k: str(x.get(k) or "")[:300] for k in ("quote", "problem", "fix")}}
              for x in review.get("fixes") or [] if isinstance(x, dict)][:4]
+    scores, fixes, jargon = cap_plain(scores, fixes, review.get("unexplained"), draft["post"])
     critique = " ".join(f'"{x["quote"]}": {x["problem"]} → {x["fix"]}' if x["quote"] else f'{x["problem"]} → {x["fix"]}'
                         for x in fixes) or str(review.get("critique", ""))
     violations = g.guardrail_violations(draft["post"], {s["url"] for s in state["sources"]}, sources_text(state),
                                         state.get("recent_posts"))
     accent = humanizer.scan(draft["post"])
     overall = drafting.overall_score(scores, accent["score"])
-    report = {"version": draft["version"], "scores": scores, "critique": critique, "fixes": fixes,
+    report = {"version": draft["version"], "scores": scores, "critique": critique, "fixes": fixes, "unexplained": jargon,
               "unsupported": [c for c in review.get("unsupported_claims") or [] if isinstance(c, str)],
               "violations": violations, "accent": accent, "overall": overall}
     entry = {**report, "post": draft["post"]}
     summary = (f"v{draft['version']}: overall {overall}/5 (humanizer {accent['score']}/5), {len(violations)} "
                f"guardrail flag{'s' * (len(violations) != 1)}. {report['critique'][:140]}")
-    out = {k: report[k] for k in ("version", "scores", "critique", "fixes", "unsupported", "violations", "overall")}
+    out = {k: report[k] for k in ("version", "scores", "critique", "fixes", "unexplained", "unsupported", "violations", "overall")}
     return {"edit_report": report, "candidates": {**state.get("candidates", {}), str(draft["version"]): entry}}, summary, out
+
+
+def cap_plain(scores: dict, fixes: list[dict], unexplained, post: str) -> tuple[dict, list[dict], list[str]]:
+    """The editor's own plain score ran high on posts full of jargon (it gave 4/5 to a post that never explained
+    Lean, GRH or 'axioms'). So it lists the unexplained terms, and two or more cap plain at 2, which sends the draft
+    back. One term is only a fix: his own posts use a field word or two ("harness") and he posts them as is.
+    Terms that aren't in the post are dropped."""
+    terms = [t for t in dict.fromkeys(str(t).strip() for t in unexplained or [] if str(t).strip())
+             if t.lower() in post.lower()][:8]
+    if not terms:
+        return scores, fixes, []
+    if len(terms) > 1:
+        scores = {**scores, "plain": min(scores.get("plain", 5), 2)}
+    noted = " ".join(f["quote"] + " " + f["fix"] for f in fixes if f["kind"] == "plain").lower()
+    extra = {"kind": "plain", "quote": ", ".join(t for t in terms if t.lower() not in noted)[:300],
+             "problem": "A reader outside this field won't know these terms, and the post doesn't explain them.",
+             "fix": "Explain each one in a few everyday words where it first appears, or cut it."}
+    return scores, (([extra] if extra["quote"] else []) + fixes)[:4], terms
 
 
 VOICE_SCORES = ("voice", "ending")
