@@ -860,3 +860,24 @@ def test_readability_flags_spec_soup_and_run_ons_but_not_plain_numbers():
     assert graph.readability(money) == []  # plain amounts and rates read fast, however many
     run_on = " ".join(["word"] * 45) + "."
     assert any("45-word sentence" in x for x in graph.readability(run_on))
+
+
+def test_unexplained_terms_cap_the_plain_score_and_become_a_fix():
+    from agents.market_intel.specialists import cap_plain
+    post = "He released only Lean code. Glazer confirms the formal statement is GRH."
+    scores = {"plain": 4, "voice": 4}
+    capped, fixes, terms = cap_plain(scores, [], ["Lean", "GRH", "formal statement"], post)
+    assert capped == {"plain": 2, "voice": 4} and terms == ["Lean", "GRH", "formal statement"]
+    assert fixes[0]["kind"] == "plain" and "GRH" in fixes[0]["quote"]
+    one, one_fix, _ = cap_plain(scores, [], ["Lean"], post)
+    assert one["plain"] == 4 and one_fix[0]["quote"] == "Lean"  # one term is a fix, not a rewrite
+
+
+def test_plain_cap_ignores_terms_not_in_the_post_and_an_empty_list():
+    from agents.market_intel.specialists import cap_plain
+    scores = {"plain": 4}
+    assert cap_plain(scores, [], [], "Plain words only.") == (scores, [], [])
+    assert cap_plain(scores, [], ["KV cache"], "Plain words only.") == (scores, [], [])
+    already = [{"kind": "plain", "quote": "Lean code", "problem": "jargon", "fix": "say what Lean is"}]
+    _, fixes, _ = cap_plain(scores, already, ["Lean"], "He released only Lean code.")
+    assert fixes == already  # no duplicate fix for a term the editor already flagged
