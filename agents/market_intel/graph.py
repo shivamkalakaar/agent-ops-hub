@@ -26,6 +26,7 @@ prompt = drafting.prompt_loader(PROMPTS)
 _sources_block = drafting.sources_block
 SCORE_BATCH = 20
 MAX_CHARS = 1500  # his structured posts run ~1,250; LinkedIn allows 3,000
+MAX_HASHTAGS = 3
 MAX_LIST_ITEMS = 8
 # Readability (2026-11-04: technical followers found the posts too dense). What made the hard ones hard was unexplained
 # specs and codes (FP8, TP8, NVFP4, KDA, MLA, KV) and run-on sentences, not the count of plain numbers: the debt post
@@ -233,8 +234,8 @@ def guardrail_violations(post: str, source_urls: set[str], sources_text: str | N
         v.append(f"{len(post)} characters; the cap is {MAX_CHARS}")
     if not WORDS[0] <= words <= WORDS[1]:
         v.append(f"{words} words; keep it between {WORDS[0]} and {WORDS[1]}")
-    if len(re.findall(r"(?<!\w)#\w+", post)) > 2:
-        v.append("more than 2 hashtags")
+    if len(re.findall(r"(?<!\w)#\w+", post)) > MAX_HASHTAGS:
+        v.append(f"more than {MAX_HASHTAGS} hashtags")
     if len(re.findall(r"^\s*(?:[-•*]|\d+[.)])\s", post, flags=re.M)) > MAX_LIST_ITEMS:
         v.append(f"more than {MAX_LIST_ITEMS} list items")
     for url in re.findall(r"https?://\S+", post):

@@ -76,9 +76,11 @@ def scout(state, ctx, cfg):
     recent = "\n".join(f"- {a}" for a in state.get("recent_angles") or []) or "(none yet)"
     shapes = ", ".join(state.get("recent_formats") or []) or "(none yet)"
     top = "\n\n---\n\n".join(state.get("top_posts") or []) or "(no reader feedback yet)"
+    forced = (f"\n\n# This run's structure\nEvery candidate uses the {state['force_format']} structure. Pick the stories "
+              f"that suit it best.") if state.get("force_format") in FORMATS else ""
     r = llm.call_json(ctx, _tier(cfg, "judge"), "scout", drafting.fill(cfg.prompt, AUTHOR=AUTHOR, RECENT=recent, VIEWS=views(),
                                                                       FORMATS=formats(), RECENT_FORMATS=shapes, TOP_POSTS=top),
-                      listing(state["items"]) + _take(state), model=cfg.model)
+                      listing(state["items"]) + _take(state) + forced, model=cfg.model)
     items = state["items"]
     cands = [c for c in (r.get("candidates") or ([r] if r.get("item_ids") else [])) if isinstance(c, dict)]
     for c in cands:

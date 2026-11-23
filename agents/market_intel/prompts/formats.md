@@ -1,4 +1,4 @@
-Post structures. Each one decides how the post opens, what order the ideas come in, how long it runs and how it ends. Pick the ONE whose "When" fits the story best, and not one his last three posts used. The voice guide's rules (plain words, explain before using, one idea, nothing invented, two hashtags) apply to every structure.
+Post structures. Each one decides how the post opens, what order the ideas come in, how long it runs and how it ends. Pick the ONE whose "When" fits the story best, and not one his last three posts used. The voice guide's rules (plain words, explain before using, one idea, nothing invented, two or three hashtags, at most 1,500 characters) apply to every structure.
 
 ## measurement_trap
 When: a benchmark, a price, or two providers compared, where the headline number hides what matters.
@@ -12,13 +12,13 @@ Example move: "the best model met 70% of the requirements but finished the task 
 When: a launch, a company decision or a founder's choice, where what happened, in order, is the interesting part.
 Opening: a specific moment from the sources, told plainly ("The team had a working product and waited seven months to ship it."). Never a moment from his own life unless he supplied it.
 Flow: what happened, in the order it happened. Then the turning point: the decision, the trade-off or the surprise. Then what it teaches, in plain words.
-Ending: the lesson for people building something, in one or two lines that only this story could support.
-Length: 150-250 words.
+Ending: the lesson for people building something, in one or two lines that only this story could support. Not a checklist for the reader.
+Length: 150-210 words.
 
 ## contrarian
 When: news that most people are reading one way, and the sources give a good reason to read it another way.
 Opening: the popular reading, stated fairly in one sentence ("Most coverage reads this as a price war.").
-Flow: why he reads it differently. Two pieces of evidence from the sources. Then the strongest argument against his reading, stated honestly, and why he still leans his way.
+Flow: his different reading, in one plain sentence right after the opening. Then two pieces of evidence from the sources. Then the strongest argument against his reading, stated honestly, and why he still leans his way.
 Ending: his opinion, clearly marked as his ("In my opinion ...", "My bet is ..."), in one or two sentences. Not a forecast for a whole industry.
 Length: 150-220 words.
 
@@ -32,7 +32,7 @@ Length: 120-200 words.
 ## connect_the_dots
 When: several stories from different companies this week point the same way.
 Opening: the pattern, stated plainly in one sentence.
-Flow: three facts from three different companies, one short paragraph each, each with its number. Then who gains and who loses if the pattern holds.
+Flow: three facts from three different companies (not three facts about one company), one short paragraph each, each with its number. Then who gains and who loses if the pattern holds.
 Ending: one concrete thing to watch that would confirm or break the pattern, with a date or a trigger ("If X happens at the next earnings call, ...").
 Length: 150-220 words.
 Example move: one company's bond yields, another's short-term loan, a third's new share class → "money is setting the pace now".
@@ -41,7 +41,7 @@ Example move: one company's bond yields, another's short-term loan, a third's ne
 When: one figure is the whole story and it cuts against what readers assume.
 Opening: the number on its own, or the number in a very short sentence ("40 of 41.").
 Flow: what the number counts and who measured it. Why it's surprising. The most likely reason, marked as a guess.
-Ending: one short, sharp line that sums up the change is allowed here, as long as it comes from this story's facts.
+Ending: one short, sharp line that sums up the change is allowed here, as long as it comes from this story's facts. Never a forecast.
 Length: 80-140 words.
 Example move: voters rejected data centers in 40 of 41 local ballots → "permits used to be paperwork; now they're a price".
 

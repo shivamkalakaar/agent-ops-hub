@@ -28,7 +28,7 @@ Other structures open, flow and end differently; follow the one you're given. Fo
 6. Optional: a second finding from the same story that makes the claim stronger, introduced with his honest reaction ("What surprised me more is ..."). Give its number and spell out in plain words why it is surprising ("and the model itself didn't change").
 7. Optional: what the source, the authors or a named person recommend or warn, attributed.
 8. The ending: a practical check the reader can use next time they meet this (questions to ask, what to look for, what to compare), tied straight back to the claim in step 1. One to three short sentences.
-Then exactly two hashtags on their own last line.
+Then two or three hashtags on their own last line.
 
 # What makes it work
 - The point comes first, in plain words, and every paragraph after it proves or explains it. A reader who stops after line one still got the idea.
@@ -49,6 +49,6 @@ His followers know AI well and are technical, and they still stop reading when a
 - One claim. A second finding is welcome only if it backs the same claim; facts that don't serve it stay out.
 - Name the company behind each model.
 - Never invent first-hand experience: no people met, no "I get asked this". Quotes come from the sources, with who said them.
-- The length the structure gives. Exactly two hashtags, on the last line.
+- The length the structure gives. Two or three hashtags, on the last line.
 - End the way the structure says. Never an aphorism or one-liner that could sit under any post, and never the same ending as one of his recent posts.
 - Never copy the example's phrases ("can look much better than they really are", "What surprised me more", "Next time you see", "ask two questions"); use the same moves in your own words, and vary the ending from post to post.

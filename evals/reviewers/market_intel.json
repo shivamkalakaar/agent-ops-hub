@@ -448,9 +448,6 @@
    "kind": "bad",
    "sources": "942e36b0112d",
    "expect": {
-    "guardrails": [
-     "more than 2 hashtags"
-    ],
     "editor": [
      "closing the gap",
      "ending"
@@ -579,12 +576,12 @@
   },
   {
    "id": "planted-hashtags",
-   "label": "Four hashtags (the rule is at most 2)",
+   "label": "Four hashtags (the rule is at most 3)",
    "kind": "planted",
    "sources": "977b5049c201",
    "expect": {
     "guardrails": [
-     "more than 2 hashtags"
+     "more than 3 hashtags"
     ]
    },
    "post": "Some CoreWeave bonds were issued at 9.675%. They now reportedly yield around 15%, and the stock closed at a 52-week low of $55.60 after Bernstein estimated it needs about $85B to fund its backlog.\n\nSame week, Nebius took a $3.5B loan from Citi at SOFR + 2.75%, which can step up to 3.50%. It matures in 364 days and pays for data centers and GPUs. So Nebius will need longer-term money behind it soon. It says it has over $40B of investment-grade contracts to borrow against, which is how it gets to pick its timing.\n\nThen Meta. $34.9B of capex last quarter, free cash flow of negative $2.1B versus $10.6B a year ago, and a new nonvoting Class C stock to help fund the buildout.\n\nWe talk about GPU supply and power. This week the number setting the pace looks like the interest rate.\n\nOn the call, Zuckerberg said it's \"going to be very important to get the math on all of this to work out.\" I'd read that literally.\n\n#ai #infra #debt #gpus"

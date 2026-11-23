@@ -46,7 +46,7 @@ def test_catches_planted_defects_and_passes_own_posts(tmp_path):
                 {"id": "planted-lender", "kind": "planted", "post": POST.replace("Acme", "Globex"), "expect": {"fact_checker": ["Globex"]}},
                 {"id": "planted-so", "kind": "planted", "post": POST.replace("I had to", "So prices will fall. I had to"),
                  "expect": {"editor": ["logic: So prices"]}},
-                {"id": "planted-tags", "kind": "planted", "post": POST + " #a #b", "expect": {"guardrails": ["more than 2 hashtags"]}})
+                {"id": "planted-tags", "kind": "planted", "post": POST + " #a #b #c", "expect": {"guardrails": ["more than 3 hashtags"]}})
     (tmp_path / "f.json").write_text(json.dumps(f))
     assert rev.run("market_intel", 4, tmp_path / "f.json") == 0
     out = json.loads((tmp_path / "results" / "reviewers.json").read_text())

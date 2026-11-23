@@ -120,7 +120,7 @@ def test_budget_guard_stops_run(monkeypatch):
 def test_guardrails():
     srcs = {"https://example.com/a"}
     assert graph.guardrail_violations(GOOD_POST, srcs) == []
-    bad = "I'm excited to share this game-changer!\n" + "word " * 300 + "#a #b #c https://evil.com"
+    bad = "I'm excited to share this game-changer!\n" + "word " * 300 + "#a #b #c #d https://evil.com"
     v = " | ".join(graph.guardrail_violations(bad, srcs))
     for needle in ["characters", "words", "i'm excited", "game-changer", "hashtags", "not from the sources"]:
         assert needle in v
