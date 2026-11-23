@@ -17,9 +17,9 @@ His readers build and buy AI products. Look for a finding one of them would send
 {{AUTHOR}} marked these earlier posts as doing well with readers. Look for what made the evidence worth sharing. Use only today's items for facts and choose a fresh topic.
 {{TOP_POSTS}}
 
-# Post shapes
+# Post structures
 {{FORMATS}}
-His last two posts used: {{RECENT_FORMATS}}. Give each candidate the `format` that fits its story best, and not one of those two.
+His last three posts used: {{RECENT_FORMATS}}. Give each candidate the `format` whose "When" fits that story's content best, and not one of those three. Different candidates can have different structures. Say in `why` why the picked structure fits.
 
 # What {{AUTHOR}} tends to notice
 {{VIEWS}}

@@ -5,7 +5,7 @@ import sys
 from core import llm, runner
 from core.config import CONFIG, git_sha
 from core.db import connect
-from agents.market_intel import graph
+from agents.market_intel import graph, specialists
 
 AGENT = "market_intel"
 PROMPT_VERSION = "v1"
@@ -21,7 +21,7 @@ def redraft_state(draft_id: str) -> dict:
     return {"items": items, "take": d.get("my_take") or "", "week": d["week"], "redraft_id": draft_id, "recent_angles": []}
 
 
-def run(kind: str, skip_if_pending: int | None = None, redraft: str | None = None) -> int:
+def run(kind: str, skip_if_pending: int | None = None, redraft: str | None = None, fmt: str | None = None) -> int:
     builder = {"collect": graph.build_collect, "draft": graph.build_draft}[kind]
     if kind == "draft" and skip_if_pending:
         with connect() as db:
@@ -32,6 +32,8 @@ def run(kind: str, skip_if_pending: int | None = None, redraft: str | None = Non
                 return 0
     # a scheduled run may skip a day with no take worth posting; "Generate a new draft" and redrafts always write
     init = redraft_state(redraft) if redraft else {"can_skip": bool(skip_if_pending)}
+    if fmt:
+        init["force_format"] = fmt
     return runner.run_graph(AGENT, kind, builder(), init, lambda state: summarize(kind, state),
                             prompt_version=PROMPT_VERSION, scores=trace_scores)
 
@@ -83,8 +85,11 @@ def main() -> int:
     ap.add_argument("command", choices=["collect", "draft", "style-guide"])
     ap.add_argument("--skip-if-pending", type=int, help="draft: do nothing if this many drafts are waiting for approval")
     ap.add_argument("--redraft", help="draft: rewrite this saved draft around the owner's take, in place")
+    ap.add_argument("--format", choices=specialists.FORMATS, help="draft: use this post structure (prompts/formats.md)")
     args = ap.parse_args()
-    return build_style_guide() if args.command == "style-guide" else run(args.command, args.skip_if_pending, args.redraft)
+    if args.command == "style-guide":
+        return build_style_guide()
+    return run(args.command, args.skip_if_pending, args.redraft, args.format)
 
 
 if __name__ == "__main__":

@@ -26,6 +26,7 @@ prompt = drafting.prompt_loader(PROMPTS)
 _sources_block = drafting.sources_block
 SCORE_BATCH = 20
 MAX_CHARS = 1500  # his structured posts run ~1,250; LinkedIn allows 3,000
+MAX_HASHTAGS = 3
 MAX_LIST_ITEMS = 8
 # Readability (2026-11-04: technical followers found the posts too dense). What made the hard ones hard was unexplained
 # specs and codes (FP8, TP8, NVFP4, KDA, MLA, KV) and run-on sentences, not the count of plain numbers: the debt post
@@ -138,7 +139,8 @@ class DraftState(TypedDict, total=False):
     items: list[dict]
     recent_posts: list[str]
     recent_angles: list[str]
-    recent_formats: list[str]  # post shapes of the last two drafts, so the scout rotates
+    recent_formats: list[str]  # structures of the last few drafts, so the scout rotates
+    force_format: str  # a manual run's chosen structure (draft --format NAME)
     top_posts: list[str]  # published posts the owner said did well with readers
     lessons: str          # what the owner's past decisions taught the agent (core/lessons.py)
     examples: list[dict]  # the owner's rewrites: [{"id", "draft", "post"}], newest first
@@ -205,12 +207,12 @@ def load_items(state: DraftState, config: RunnableConfig) -> DraftState:
         s.output = {"items": len(items), "learned": learned, "prompt_versions": {k: v.prompt_version for k, v in cfg.items()},
                     "disabled": [k for k, v in cfg.items() if not v.enabled]}
     return {"items": items, "week": week, "learned": learned, "settings": cfg,
-            "recent_posts": state["recent_posts"] if "recent_posts" in state else db.approved_posts(3),
+            "recent_posts": state["recent_posts"] if "recent_posts" in state else db.approved_posts(5),
             "top_posts": state["top_posts"] if "top_posts" in state else db.top_posts(3),
             "lessons": state["lessons"] if "lessons" in state else lessons.block(db, AGENT, AUTHOR),
             "examples": state["examples"] if "examples" in state else db.voice_examples() or specialists.saved_examples(),
             "recent_angles": state["recent_angles"] if "recent_angles" in state else db.recent_angles(5),
-            "recent_formats": state["recent_formats"] if "recent_formats" in state else db.recent_formats(2),
+            "recent_formats": state["recent_formats"] if "recent_formats" in state else db.recent_formats(specialists.RECENT_FORMATS),
             "seq": 1, "work_steps": 0, "calls": {}, "history": [], "drafts": [], "candidates": {}}
 
 
@@ -232,8 +234,8 @@ def guardrail_violations(post: str, source_urls: set[str], sources_text: str | N
         v.append(f"{len(post)} characters; the cap is {MAX_CHARS}")
     if not WORDS[0] <= words <= WORDS[1]:
         v.append(f"{words} words; keep it between {WORDS[0]} and {WORDS[1]}")
-    if len(re.findall(r"(?<!\w)#\w+", post)) > 2:
-        v.append("more than 2 hashtags")
+    if len(re.findall(r"(?<!\w)#\w+", post)) > MAX_HASHTAGS:
+        v.append(f"more than {MAX_HASHTAGS} hashtags")
     if len(re.findall(r"^\s*(?:[-•*]|\d+[.)])\s", post, flags=re.M)) > MAX_LIST_ITEMS:
         v.append(f"more than {MAX_LIST_ITEMS} list items")
     for url in re.findall(r"https?://\S+", post):
