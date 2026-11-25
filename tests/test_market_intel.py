@@ -860,3 +860,38 @@ def test_readability_flags_spec_soup_and_run_ons_but_not_plain_numbers():
     assert graph.readability(money) == []  # plain amounts and rates read fast, however many
     run_on = " ".join(["word"] * 45) + "."
     assert any("45-word sentence" in x for x in graph.readability(run_on))
+
+
+def test_score_edit_scores_both_versions_side_by_side_and_keeps_the_agent_scores():
+    from core.db import connect
+    assert cli.run("collect") == 0 and cli.run("draft") == 0
+    edit = GOOD_POST.replace("I had to read that twice.", "That's a tenth of last year's price.")
+    with connect() as db:
+        d = db.one("select * from drafts")
+        db.execute("update drafts set edited_post_md=%s where id=%s", (edit, d["id"]))
+        before = dict(d["judge_scores"])
+    seen = []
+    llm.FAKE_RESPONSES["editor"] = lambda m: (seen.append(m[-1].content), json.dumps(
+        {"scores": dict.fromkeys(["take", "voice"], 5 if "tenth" in m[-1].content else 3), "fixes": []}))[1]
+    llm.FAKE_RESPONSES["fact_checker"] = lambda m: json.dumps({"claims": [{"claim": "costs $0.20", "verdict": "supported"}]})
+    llm.FAKE_RESPONSES["writer"] = lambda m: (_ for _ in ()).throw(AssertionError("scoring never rewrites"))
+    assert cli.score_edit_main(d["id"]) == 0
+    with connect() as db:
+        row = db.one("select * from drafts where id=%s", (d["id"],))
+        js = dict(row["judge_scores"])
+    check = js.pop("edit_check")
+    assert js == before and row["post_md"] == d["post_md"] and row["status"] == "pending"
+    assert check["text"] == edit and check["agent"]["scores"] == {"take": 3, "voice": 3} and check["edit"]["scores"] == {"take": 5, "voice": 5}
+    assert check["edit"]["overall"] > check["agent"]["overall"] and check["edit"]["unsupported"] == []
+    assert len(seen) == 2 and all("Lab Blog" in s for s in seen)  # same sources for both versions
+
+
+def test_score_edit_without_an_edit_says_so():
+    from core.db import connect
+    assert cli.run("collect") == 0 and cli.run("draft") == 0
+    with connect() as db:
+        d = db.one("select * from drafts")
+    assert cli.score_edit_main(d["id"]) == 0
+    with connect() as db:
+        check = db.one("select judge_scores from drafts")["judge_scores"]["edit_check"]
+    assert check["error"] == "no edits to score yet" and "agent" not in check

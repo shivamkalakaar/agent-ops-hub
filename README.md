@@ -111,6 +111,8 @@ uv run python -m evals.run_evals --agent substack --cases 1
 
 **LinkedIn writing.** The writer and editor use Shivam’s benchmark rewrite in `agents/market_intel/prompts/voice.md` and before/after pairs from his approved edits. A new database starts with the saved pairs in `agents/market_intel/voice_examples.json`. Reference evals exclude the pair for the story under test. When two or more distinct drafts clear the automatic checks, one extra review call picks the version that would need the least editing. A voice or ending score below 4/5 triggers a rewrite when one is available and flags the draft if it still falls short.
 
+**Score my edit.** After editing a draft in the queue, "Score my edit" saves the edit and scores it next to the agent's version, with the same reviewers on the same sources (`agents/market_intel/score_edit.py`, about a minute and $0.02 on GitHub Actions). The queue shows each score before and after, the flags your edit fixed or added, why the humanizer score moved, the editor's notes on your version and a word-level diff. Nothing is rewritten or approved.
+
 **Reader feedback.** In the queue, mark how a published post performed. The scout sees posts marked as doing well and looks for a fresh finding a similar reader could use. Its selection note names the intended reader and the decision the story informs.
 
 ## Deploy

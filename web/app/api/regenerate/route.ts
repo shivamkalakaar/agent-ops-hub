@@ -1,11 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 
 // Workflows the dashboard may start, and the inputs each accepts. Anything else is refused.
-const WORKFLOWS: Record<string, string[]> = { "weekly.yml": ["revise_draft_id"], "substack.yml": ["seed_draft_id", "revise_draft_id"] };
+const WORKFLOWS: Record<string, string[]> = { "weekly.yml": ["revise_draft_id", "score_draft_id"], "substack.yml": ["seed_draft_id", "revise_draft_id"] };
 
 /** Owner-only: trigger an agent workflow on GitHub Actions (workflow_dispatch).
  *  Body (optional): { workflow?: "weekly.yml" | "substack.yml", seed_draft_id?: string, revise_draft_id?: string }
- *  revise_draft_id on weekly.yml rewrites a LinkedIn draft around the owner's take (saved on the draft first). */
+ *  revise_draft_id on weekly.yml rewrites a LinkedIn draft around the owner's take (saved on the draft first);
+ *  score_draft_id scores the owner's saved edit of a draft next to the agent's version, without rewriting it. */
 export async function POST(req: Request) {
   const token = req.headers.get("authorization")?.replace(/^Bearer /, "");
   if (!token) return Response.json({ error: "sign in first" }, { status: 401 });
