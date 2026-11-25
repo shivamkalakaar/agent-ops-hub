@@ -8,6 +8,7 @@ import { SERIES, withSeries } from "@/lib/linkedin";
 import { SignIn, useSession } from "@/components/auth";
 import { SubstackQueue } from "@/components/SubstackQueue";
 import { RejectButton, TakeBox, type Feedback } from "@/components/Feedback";
+import { EditScore, type EditCheck } from "@/components/EditScore";
 const COMPOSER = "https://www.linkedin.com/feed/?shareActive=true";
 const POST_URL = /^https:\/\/(www\.)?linkedin\.com\/(feed\/update|posts)\/\S+$/;
 
@@ -119,6 +120,29 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
   const overall = typeof draft.judge_scores?.overall === "number" ? (draft.judge_scores.overall as number) : null;
   const violations = (draft.judge_scores?.violations as string[] | undefined) ?? [];
   const onepagerUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${draft.week}` : "";
+  const check = draft.judge_scores?.edit_check as unknown as EditCheck | undefined;
+  const [scoring, setScoring] = useState(false);
+
+  /** Save the edit, then score it next to the agent's version on GitHub Actions (about a minute) and wait for the result. */
+  const scoreEdit = async () => {
+    setScoring(true);
+    setPubMsg("Saving your edit and scoring it next to the agent's draft. This takes about a minute…");
+    await supabase.from("drafts").update({ edited_post_md: text }).eq("id", draft.id);
+    const res = await fetch("/api/regenerate", {
+      method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ workflow: "weekly.yml", score_draft_id: draft.id }),
+    });
+    if (!res.ok) { setScoring(false); setPubMsg(`Failed: ${(await res.json()).error}`); return; }
+    const since = check?.scored_at ?? "";
+    for (let n = 0; n < 60; n++) {  // up to 10 minutes: a draft run already in progress goes first
+      await new Promise((r) => setTimeout(r, 10000));
+      const { data } = await supabase.from("drafts").select("judge_scores").eq("id", draft.id).single();
+      const c = (data?.judge_scores as Record<string, unknown> | null)?.edit_check as EditCheck | undefined;
+      if (c && c.scored_at !== since) { setScoring(false); setPubMsg(c.error ? `Scoring: ${c.error}` : ""); onChange(); return; }
+    }
+    setScoring(false);
+    setPubMsg("Still scoring. Refresh in a minute; the Runs page shows the score_edit run.");
+  };
 
   const decide = async (status: "approved" | "rejected", feedback: Feedback | null = null) => {
     setBusy(true);
@@ -218,6 +242,12 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
                 </button>
                 <RejectButton busy={busy} onReject={(fb) => decide("rejected", fb)} />
                 <TakeBox busy={busy} initial={draft.my_take} onRewrite={rewrite} cost="about 3 min · about $0.05" />
+                {text.trim() !== draft.post_md.trim() && (
+                  <button disabled={busy || scoring} onClick={scoreEdit} title="About a minute · about $0.02. Saves your edit; doesn't approve it."
+                    className="rounded-lg border border-line px-4 py-2 text-sm disabled:opacity-50">
+                    {scoring ? "Scoring…" : check?.edit && check.text.trim() !== text.trim() ? "Score my edit again" : "Score my edit"}
+                  </button>
+                )}
               </>
             ) : draft.status === "approved" && (
               <>
@@ -292,6 +322,7 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
           </div>
         </aside>
       </div>
+      {check && (check.edit || check.error) && <EditScore check={check} text={text} original={draft.post_md} />}
       {preview && <iframe title="One-pager preview" srcDoc={draft.onepager_html} sandbox="" className="mt-4 h-[70vh] w-full rounded-lg border border-line" />}
     </Card>
   );

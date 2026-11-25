@@ -1,4 +1,4 @@
-"""CLI: uv run python -m agents.market_intel {collect|draft|style-guide}"""
+"""CLI: uv run python -m agents.market_intel {collect|draft|score-edit|style-guide}"""
 import argparse
 import sys
 
@@ -56,6 +56,11 @@ def summarize(kind: str, state: dict) -> dict:
             **({"skipped": state["skip"]} if state.get("skip") else {})}
 
 
+def score_edit_main(draft_id: str) -> int:
+    from agents.market_intel.score_edit import score_edit
+    return score_edit(draft_id)
+
+
 def build_style_guide() -> int:
     examples = graph.style_examples(n=50, short_only=False)
     if len(examples) < 3:
@@ -80,10 +85,15 @@ def build_style_guide() -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(prog="agents.market_intel")
-    ap.add_argument("command", choices=["collect", "draft", "style-guide"])
+    ap.add_argument("command", choices=["collect", "draft", "score-edit", "style-guide"])
     ap.add_argument("--skip-if-pending", type=int, help="draft: do nothing if this many drafts are waiting for approval")
     ap.add_argument("--redraft", help="draft: rewrite this saved draft around the owner's take, in place")
+    ap.add_argument("--draft", help="score-edit: score the owner's saved edit of this draft next to the agent's version")
     args = ap.parse_args()
+    if args.command == "score-edit":
+        if not args.draft:
+            ap.error("score-edit needs --draft")
+        return score_edit_main(args.draft)
     return build_style_guide() if args.command == "style-guide" else run(args.command, args.skip_if_pending, args.redraft)
 
 

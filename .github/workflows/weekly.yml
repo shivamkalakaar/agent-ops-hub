@@ -5,6 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       revise_draft_id: { description: "Rewrite this saved draft around the owner's take (from the queue)", required: false, default: "" }
+      score_draft_id: { description: "Score the owner's edit of this draft next to the agent's version (from the queue)", required: false, default: "" }
 concurrency: { group: market-intel, cancel-in-progress: false }
 jobs:
   draft:
@@ -20,9 +21,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --frozen --no-dev
-      - run: uv run python -m agents.market_intel collect   # scores stories pushed from that morning's brief
+      - if: inputs.score_draft_id != ''
+        run: uv run python -m agents.market_intel score-edit --draft "$DRAFT_ID"   # about a minute; nothing is rewritten
+        env: { DRAFT_ID: "${{ inputs.score_draft_id }}" }
+      - if: inputs.score_draft_id == ''
+        run: uv run python -m agents.market_intel collect   # scores stories pushed from that morning's brief
       # a scheduled run skips when 2 drafts are already waiting; "Generate a new draft" in the queue always drafts
-      - if: inputs.revise_draft_id == ''
+      - if: inputs.revise_draft_id == '' && inputs.score_draft_id == ''
         run: uv run python -m agents.market_intel draft ${{ github.event_name == 'schedule' && '--skip-if-pending 2' || '' }}
       - if: inputs.revise_draft_id != ''
         run: uv run python -m agents.market_intel draft --redraft "$DRAFT_ID"

@@ -175,6 +175,14 @@ class DB:
             (self.json(d["angle"]), d["post_md"], d["onepager_html"], self.json(d["sources"]), self.json(d["judge_scores"]),
              d["revisions"], (self.json(d["image"]) if d.get("image") else None), run_id, draft_id))
 
+    def set_edit_check(self, draft_id: str, check: dict):
+        """Save the score of the owner's edit (agents/market_intel/score_edit.py) inside judge_scores, next to the
+        agent's own scores. Read-modify-write: only the scoring job writes judge_scores on a saved draft."""
+        row = self.one("select judge_scores from drafts where id=%s", (draft_id,))
+        js = (row or {}).get("judge_scores") or {}
+        js = json.loads(js) if isinstance(js, str) else dict(js)
+        self.execute("update drafts set judge_scores=%s where id=%s", (self.json({**js, "edit_check": check}), draft_id))
+
     def week_taken(self, week: str) -> bool:
         return self.one("select 1 as x from drafts where week=%s", (week,)) is not None
 
