@@ -123,11 +123,12 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
   const check = draft.judge_scores?.edit_check as unknown as EditCheck | undefined;
   const [scoring, setScoring] = useState(false);
 
-  /** Save the edit, then score it next to the agent's version on GitHub Actions (about a minute) and wait for the result. */
-  const scoreEdit = async () => {
+  /** Score the saved edit next to the agent's version on GitHub Actions (about a minute) and wait for the result.
+   *  `save` writes the textarea first; approving already saved it. */
+  const scoreEdit = async (save = true) => {
     setScoring(true);
-    setPubMsg("Saving your edit and scoring it next to the agent's draft. This takes about a minute…");
-    await supabase.from("drafts").update({ edited_post_md: text }).eq("id", draft.id);
+    setPubMsg("Scoring your edit next to the agent's draft. This takes about a minute…");
+    if (save) await supabase.from("drafts").update({ edited_post_md: text }).eq("id", draft.id);
     const res = await fetch("/api/regenerate", {
       method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({ workflow: "weekly.yml", score_draft_id: draft.id }),
@@ -152,7 +153,13 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
     }).eq("id", draft.id);
     setBusy(false);
     onChange();
+    // Approving with edits scores them too, unless this exact text was already scored.
+    if (status === "approved" && edited && !(check?.edit && check.text.trim() === edited.trim())) await scoreEdit(false);
   };
+
+  // An edit with no score yet, or a score for older text (e.g. approved before auto-scoring, or final text pasted from LinkedIn).
+  const unscored = draft.edited_post_md != null && draft.edited_post_md.trim() !== draft.post_md.trim()
+    && !(check?.edit && check.text.trim() === draft.edited_post_md.trim());
 
   const rewrite = async (take: string) => {
     setBusy(true);
@@ -243,7 +250,7 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
                 <RejectButton busy={busy} onReject={(fb) => decide("rejected", fb)} />
                 <TakeBox busy={busy} initial={draft.my_take} onRewrite={rewrite} cost="about 3 min · about $0.05" />
                 {text.trim() !== draft.post_md.trim() && (
-                  <button disabled={busy || scoring} onClick={scoreEdit} title="About a minute · about $0.02. Saves your edit; doesn't approve it."
+                  <button disabled={busy || scoring} onClick={() => scoreEdit()} title="About a minute · about $0.02. Saves your edit; doesn't approve it."
                     className="rounded-lg border border-line px-4 py-2 text-sm disabled:opacity-50">
                     {scoring ? "Scoring…" : check?.edit && check.text.trim() !== text.trim() ? "Score my edit again" : "Score my edit"}
                   </button>
@@ -266,6 +273,12 @@ function DraftCard({ draft, onChange, token, canPublish, nextSeries, onExpand }:
                 {draft.onepager_html && <button onClick={() => navigator.clipboard.writeText(`Sources and the full breakdown: ${onepagerUrl}`)} className="rounded-lg border border-line px-4 py-2 text-sm">Copy first comment</button>}
                 <button onClick={() => window.confirm("Write a Substack post that expands this one? It takes about 5 minutes and costs about $0.25.") && onExpand(draft.id)}
                   className="rounded-lg border border-line px-4 py-2 text-sm">Expand to Substack</button>
+                {(unscored || scoring) && (
+                  <button disabled={busy || scoring} onClick={() => scoreEdit(false)} title="About a minute · about $0.02"
+                    className="rounded-lg border border-line px-4 py-2 text-sm disabled:opacity-50">
+                    {scoring ? "Scoring…" : check?.edit ? "Score my edit again" : "Score my edit"}
+                  </button>
+                )}
               </>
             )}
             {pubMsg && <span className="self-center text-sm text-ink-2">{pubMsg}</span>}
