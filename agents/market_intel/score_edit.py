@@ -51,8 +51,10 @@ def score_edit(draft_id: str) -> int:
             items = [db.item(s["url"]) or {**s, "summary": "", "importance": 3} for s in d["sources"] or []]
             items = drafting.read_sources(items, words=specialists.WORDS_PER_SOURCE * max(1, len(items)), fetch=graph.fetch_article)
             base = {"sources": items, "facts": [], "context": [], "take": d.get("my_take") or "", "week": d["week"],
-                    "lessons": lessons.block(db, AGENT, AUTHOR), "recent_posts": db.approved_posts(3),
-                    "examples": db.voice_examples() or specialists.saved_examples()}
+                    "lessons": lessons.block(db, AGENT, AUTHOR),
+                    # leave this draft out: once approved, it would count as a recent post and be compared with itself
+                    "recent_posts": db.approved_posts(3, exclude=draft_id),
+                    "examples": db.voice_examples(exclude=draft_id) or specialists.saved_examples()}
             versions = {"agent": d["post_md"], "edit": edit}
             with ThreadPoolExecutor(max_workers=2) as pool:  # psycopg serializes the shared connection
                 reports = dict(zip(versions, pool.map(
