@@ -200,16 +200,17 @@ class DB:
                 .get("performance") == "well"]
         return good[:limit]
 
-    def approved_posts(self, limit: int = 3) -> list[str]:
-        rows = self.all("select coalesce(edited_post_md, post_md) as post from drafts where status='approved'"
-                        " order by approved_at desc limit %s", (limit,))
+    def approved_posts(self, limit: int = 3, exclude: str = "") -> list[str]:
+        """`exclude` leaves out one draft, so scoring an approved draft doesn't compare it with itself."""
+        rows = self.all("select coalesce(edited_post_md, post_md) as post from drafts where status='approved' and id <> %s"
+                        " order by approved_at desc limit %s", (exclude, limit))
         return [r["post"] for r in rows]
 
-    def voice_examples(self, limit: int = 8) -> list[dict]:
+    def voice_examples(self, limit: int = 8, exclude: str = "") -> list[dict]:
         """Published LinkedIn posts the owner rewrote before posting, newest first: the agent's draft and what they
         actually posted, so the writer learns from the edits themselves."""
         rows = self.all("select id, post_md, edited_post_md from drafts where status='approved' and edited_post_md is not null"
-                        " order by approved_at desc limit %s", (limit * 2,))
+                        " and id <> %s order by approved_at desc limit %s", (exclude, limit * 2))
         return [{"id": r["id"], "draft": r["post_md"].strip(), "post": r["edited_post_md"].strip()} for r in rows
                 if r["edited_post_md"].strip() and r["edited_post_md"].strip() != r["post_md"].strip()][:limit]
 

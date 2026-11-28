@@ -895,3 +895,20 @@ def test_score_edit_without_an_edit_says_so():
     with connect() as db:
         check = db.one("select judge_scores from drafts")["judge_scores"]["edit_check"]
     assert check["error"] == "no edits to score yet" and "agent" not in check
+
+
+def test_score_edit_on_an_approved_draft_does_not_compare_it_with_itself():
+    from core.db import connect
+    assert cli.run("collect") == 0 and cli.run("draft") == 0
+    edit = GOOD_POST.replace("I had to read that twice.", "That's a tenth of last year's price.")
+    with connect() as db:
+        d = db.one("select * from drafts")
+        db.execute("update drafts set edited_post_md=%s, status='approved', approved_at=%s where id=%s", (edit, datetime.now(timezone.utc).isoformat(), d["id"]))
+        assert db.approved_posts(3) == [edit] and db.approved_posts(3, exclude=d["id"]) == []
+        assert db.voice_examples(exclude=d["id"]) == []
+    llm.FAKE_RESPONSES["editor"] = lambda m: json.dumps({"scores": {"take": 4, "voice": 4}, "fixes": []})
+    llm.FAKE_RESPONSES["fact_checker"] = lambda m: json.dumps({"claims": []})
+    assert cli.score_edit_main(d["id"]) == 0
+    with connect() as db:
+        check = db.one("select judge_scores from drafts")["judge_scores"]["edit_check"]
+    assert not any("recent post" in v for v in check["edit"]["violations"]), check["edit"]["violations"]
